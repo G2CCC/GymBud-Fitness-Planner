@@ -295,7 +295,7 @@ git commit -m "feat: add cycle scheduling and closure rules"
 - `listAvailableExercises(userId, location): Promise<Exercise[]>`
 - `createConfirmedCustomExercise(userId, input): Promise<Exercise>`
 
-- [ ] **Step 1: Write failing location tests**
+- [x] **Step 1: Write failing location tests**
 
 ```ts
 it("allows bodyweight exercises in both locations", () => {
@@ -307,25 +307,25 @@ it("rejects an equipment exercise tagged HOME", () => {
 });
 ```
 
-- [ ] **Step 2: Run the tests and verify they fail**
+- [x] **Step 2: Run the tests and verify they fail**
 
 Run: `npm test -- shared/tests/domain/exercise-location.test.ts`
 
 Expected: FAIL because the location functions do not exist.
 
-- [ ] **Step 3: Implement location validation and ownership filtering**
+- [x] **Step 3: Implement location validation and ownership filtering**
 
 The query must return system exercises plus the current user's confirmed custom exercises, and must filter both by `aiEligible` only when the caller is generating an AI plan. Never return another user's custom exercise.
 
-- [ ] **Step 4: Add system seed exercises and custom-exercise routes**
+- [x] **Step 4: Add system seed exercises and custom-exercise routes**
 
 Seed bodyweight examples with both locations and equipment examples with `GYM` only. The custom-exercise endpoint accepts user-confirmed metadata; unconfirmed AI extraction is not persisted.
 
-- [ ] **Step 5: Implement the picker behavior**
+- [x] **Step 5: Implement the picker behavior**
 
 `ExercisePicker` receives `location` and renders only exercises returned for that location. When a workout location changes, incompatible planned exercises are marked but not silently replaced.
 
-- [ ] **Step 6: Run tests and commit**
+- [x] **Step 6: Run tests and commit**
 
 Run: `npm test -- shared/tests/domain/exercise-location.test.ts server/tests/integration/exercises.test.ts`.
 

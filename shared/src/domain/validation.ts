@@ -26,6 +26,8 @@ export const cycleDraftInputSchema = profileInputSchema.extend({
   timezone: timeZoneSchema,
 }).strict();
 
+export { customExerciseInputSchema } from "./exercises/validation";
+
 export const scheduledWorkoutInputSchema = z.object({
   activityType: z.enum(activityTypes),
   scheduledDate: dateSchema,

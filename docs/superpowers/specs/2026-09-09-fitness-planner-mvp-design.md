@@ -68,13 +68,15 @@ Each scheduled workout stores one `location`. It defaults from `UserProfile.defa
 
 ## 4. Exercise and location model
 
-Every strength exercise stores `availableLocations`, a non-empty array containing `GYM`, `HOME`, or both.
+Every strength exercise stores `availableLocations`, a non-empty array containing
+`GYM`, `HOME`, or both. The MVP treats bodyweight exercises as usable in both
+locations, so a confirmed bodyweight exercise must carry both tags.
 
 Validation rules:
 
 | Exercise capability | Valid location tags |
 |---|---|
-| Bodyweight/no equipment | `GYM`, `HOME`, or both |
+| Bodyweight/no equipment | `GYM` and `HOME` |
 | Requires equipment | `GYM` only |
 
 The action picker filters exercises by the scheduled workout's location. An exercise tagged for both locations appears in both contexts.
@@ -161,7 +163,7 @@ Before the next cycle is generated:
 
 An auto-cancelled workout can be restored only before the next cycle is generated. Restoring it changes it back to `PLANNED` and requires a new date. Once the next cycle exists, the old cycle is read-only.
 
-If the cycle has zero completed workouts, the system does not generate a new cycle. It pauses and asks the user to reset goal, weekly days, duration, and default location. Historical cycles, logs, and exercises remain intact.
+If the cycle has zero completed workouts, the system does not generate a new cycle. It closes the cycle with `nextCycleEligibility = RESET_REQUIRED` and asks the user to reset or confirm goal, weekly days, duration, and default location. Historical cycles, logs, and exercises remain intact.
 
 ## 8. AI behavior
 

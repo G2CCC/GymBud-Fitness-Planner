@@ -4,5 +4,7 @@ export * from "./domain/validation";
 export * from "./brand";
 export * from "./domain/cycles/close-cycle";
 export * from "./domain/cycles/review-status";
+export * from "./domain/exercises/location";
+export * from "./domain/exercises/validation";
 export * from "./domain/scheduling/distribute-week";
 export * from "./domain/time/timezone";
