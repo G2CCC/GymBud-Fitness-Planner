@@ -10,6 +10,9 @@ export type WorkoutStatus = (typeof workoutStatuses)[number];
 export const workoutSources = ["ORIGINAL", "EXTRA"] as const;
 export type WorkoutSource = (typeof workoutSources)[number];
 
+export const cancellationReasons = ["USER", "AUTO_CYCLE_CLOSE"] as const;
+export type CancellationReason = (typeof cancellationReasons)[number];
+
 export const cycleStatuses = ["DRAFT", "ACTIVE", "CLOSED", "PAUSED"] as const;
 export type CycleStatus = (typeof cycleStatuses)[number];
 

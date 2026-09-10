@@ -30,6 +30,11 @@ enum WorkoutSource {
   EXTRA
 }
 
+enum CancellationReason {
+  USER
+  AUTO_CYCLE_CLOSE
+}
+
 enum CycleStatus {
   DRAFT
   ACTIVE
@@ -83,24 +88,25 @@ model TrainingCycle {
 }
 
 model ScheduledWorkout {
-  id               String             @id @default(cuid())
-  userId           String
-  user             User               @relation(fields: [userId], references: [id], onDelete: Cascade)
-  cycleId          String
-  cycle            TrainingCycle      @relation(fields: [cycleId], references: [id], onDelete: Restrict)
-  activityType     ActivityType
-  scheduledDate    DateTime
-  location         Location
-  durationMinutes  Int
-  status           WorkoutStatus      @default(PLANNED)
-  source           WorkoutSource      @default(ORIGINAL)
-  completedAt      DateTime?
-  plannedDetails   Json?
-  createdAt        DateTime           @default(now())
-  updatedAt        DateTime           @updatedAt
-  plannedExercises PlannedExercise[]
-  workoutLog       WorkoutLog?
-  recommendations  AIRecommendation[]
+  id                 String              @id @default(cuid())
+  userId             String
+  user               User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  cycleId            String
+  cycle              TrainingCycle       @relation(fields: [cycleId], references: [id], onDelete: Restrict)
+  activityType       ActivityType
+  scheduledDate      DateTime
+  location           Location
+  durationMinutes    Int
+  status             WorkoutStatus       @default(PLANNED)
+  source             WorkoutSource       @default(ORIGINAL)
+  cancellationReason CancellationReason?
+  completedAt        DateTime?
+  plannedDetails     Json?
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  plannedExercises   PlannedExercise[]
+  workoutLog         WorkoutLog?
+  recommendations    AIRecommendation[]
 
   @@index([userId, scheduledDate])
   @@index([cycleId, status])

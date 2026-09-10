@@ -235,7 +235,7 @@ git commit -m "feat: add fitness planner persistence schema"
 - `CycleService.createDraft(userId, profile): Promise<CycleDraft>`
 - `CycleService.close(userId, cycleId, now): Promise<ClosedCycleResult>`
 
-- [ ] **Step 1: Write failing scheduling tests**
+- [x] **Step 1: Write failing scheduling tests**
 
 ```ts
 it("distributes three sessions over the next seven days", () => {
@@ -246,25 +246,25 @@ it("distributes three sessions over the next seven days", () => {
 });
 ```
 
-- [ ] **Step 2: Write failing cycle-close tests**
+- [x] **Step 2: Write failing cycle-close tests**
 
 Cover these cases: unresolved planned workout becomes cancelled in the old cycle; an auto-cancelled workout can be restored before the next cycle exists; restoration is rejected after closure; a backfilled workout requires `completedAt`; a cycle with zero completed workouts becomes `PAUSED`; a closed cycle rejects later writes.
 
-- [ ] **Step 3: Run the domain tests and verify they fail**
+- [x] **Step 3: Run the domain tests and verify they fail**
 
 Run: `npm test -- shared/tests/domain/scheduling.test.ts shared/tests/domain/close-cycle.test.ts`
 
 Expected: FAIL because scheduling and closure functions do not exist.
 
-- [ ] **Step 4: Implement pure scheduling and closure functions**
+- [x] **Step 4: Implement pure scheduling and closure functions**
 
 The closure function must return a transaction plan containing the old cycle status, cancelled workout IDs, immutable objective summary, and whether a next-cycle draft may be generated. It must not call the AI client.
 
-- [ ] **Step 5: Implement transactional server services and routes**
+- [x] **Step 5: Implement transactional server services and routes**
 
 The close route must re-check ownership and cycle status inside the transaction. It must reject any write to a `CLOSED` cycle and must never move auto-cancelled workouts into the new cycle.
 
-- [ ] **Step 6: Run tests and commit**
+- [x] **Step 6: Run tests and commit**
 
 Run: `npm test -- shared/tests/domain/scheduling.test.ts shared/tests/domain/close-cycle.test.ts`.
 
