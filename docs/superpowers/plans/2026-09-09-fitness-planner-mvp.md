@@ -170,7 +170,7 @@ enum ActivityType { STRENGTH CARDIO SPORT }
 enum Location { GYM HOME }
 enum WorkoutStatus { PLANNED COMPLETED CANCELLED }
 enum WorkoutSource { ORIGINAL EXTRA }
-enum CycleStatus { DRAFT ACTIVE CLOSED PAUSED }
+enum CycleStatus { DRAFT ACTIVE CLOSED }
 ```
 
 Add unique ownership-safe identifiers and indexes on `(userId, scheduledDate)`, `(cycleId, status)`, `(ownerId, name)`, and `(exerciseId, createdAt)`.
@@ -181,7 +181,7 @@ The minimum persisted fields are:
 User: id, email, createdAt
 UserProfile: userId, primaryGoal, secondaryOutcome, weeklyTrainingDays,
   sessionDurationMinutes, defaultLocation
-TrainingCycle: id, userId, startDate, endDate, status, closedAt
+TrainingCycle: id, userId, startDate, endDate, timezone, status, closedAt
 ScheduledWorkout: id, userId, cycleId, activityType, scheduledDate,
   location, durationMinutes, status, source, completedAt, createdAt
 PlannedExercise: id, workoutId, exerciseId, sortOrder, restSeconds
@@ -232,7 +232,9 @@ git commit -m "feat: add fitness planner persistence schema"
 **Interfaces:**
 - `distributeFirstWeek(start: Date, trainingDays: number): Date[]`
 - `closeCycle(input: CloseCycleInput, now: Date): CloseCycleResult`
-- `CycleService.createDraft(userId, profile): Promise<CycleDraft>`
+- `CycleService.createDraft(userId, profileWithTimezone): Promise<CycleDraft>`
+- `CycleService.activateDraft(userId, cycleId, timezone): Promise<ActiveCycle>`
+- `CycleService.getReviewStatus(userId, cycleId): Promise<CycleReviewStatus>`
 - `CycleService.close(userId, cycleId, now): Promise<ClosedCycleResult>`
 
 - [x] **Step 1: Write failing scheduling tests**
@@ -248,7 +250,7 @@ it("distributes three sessions over the next seven days", () => {
 
 - [x] **Step 2: Write failing cycle-close tests**
 
-Cover these cases: unresolved planned workout becomes cancelled in the old cycle; an auto-cancelled workout can be restored before the next cycle exists; restoration is rejected after closure; a backfilled workout requires `completedAt`; a cycle with zero completed workouts becomes `PAUSED`; a closed cycle rejects later writes.
+Cover these cases: unresolved planned workout becomes cancelled in the old cycle; an auto-cancelled workout can be restored before the next cycle exists; restoration is rejected after closure; a backfilled workout requires `completedAt`; a cycle with zero completed workouts becomes `CLOSED` with `RESET_REQUIRED`; a closed cycle rejects later writes.
 
 - [x] **Step 3: Run the domain tests and verify they fail**
 
@@ -539,7 +541,7 @@ Build the objective summary from database rows. Add the optional user text to th
 
 - [ ] **Step 5: Enforce cycle closure ordering**
 
-The service must resolve unresolved workouts and save the old-cycle snapshot before creating a next-cycle draft. If the cycle has zero completed workouts, save a paused objective snapshot and do not generate a calendar draft.
+The service must resolve unresolved workouts and save the old-cycle snapshot before creating a next-cycle draft. If the cycle has zero completed workouts, save a `CLOSED` objective snapshot with `RESET_REQUIRED` eligibility and do not generate a calendar draft.
 
 - [ ] **Step 6: Run tests and commit**
 

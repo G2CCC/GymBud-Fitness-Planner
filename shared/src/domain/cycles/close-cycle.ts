@@ -25,9 +25,11 @@ export type CycleObjectiveSummary = {
   autoCancelledWorkouts: number;
 };
 
+export type NextCycleEligibility = "ELIGIBLE" | "RESET_REQUIRED";
+
 export type CloseCycleResult = {
   cycleId: string;
-  cycleStatus: Extract<CycleStatus, "CLOSED" | "PAUSED">;
+  cycleStatus: "CLOSED";
   cancelledWorkoutIds: string[];
   workoutUpdates: Array<{
     id: string;
@@ -36,6 +38,7 @@ export type CloseCycleResult = {
   }>;
   objectiveSummary: CycleObjectiveSummary;
   nextCycleMayBeGenerated: boolean;
+  nextCycleEligibility: NextCycleEligibility;
   restoreableWorkoutIds: string[];
 };
 
@@ -72,11 +75,11 @@ export function closeCycle(
     (workout) => workout.status === "PLANNED",
   );
   const cancelledWorkoutIds = unresolvedWorkouts.map((workout) => workout.id);
-  const cycleStatus = completedWorkouts.length > 0 ? "CLOSED" : "PAUSED";
+  const nextCycleMayBeGenerated = completedWorkouts.length > 0;
 
   return {
     cycleId: input.cycleId,
-    cycleStatus,
+    cycleStatus: "CLOSED",
     cancelledWorkoutIds,
     workoutUpdates: unresolvedWorkouts.map((workout) => ({
       id: workout.id,
@@ -90,7 +93,10 @@ export function closeCycle(
       unresolvedWorkouts: unresolvedWorkouts.length,
       autoCancelledWorkouts: unresolvedWorkouts.length,
     },
-    nextCycleMayBeGenerated: completedWorkouts.length > 0,
+    nextCycleMayBeGenerated,
+    nextCycleEligibility: nextCycleMayBeGenerated
+      ? "ELIGIBLE"
+      : "RESET_REQUIRED",
     restoreableWorkoutIds: cancelledWorkoutIds,
   };
 }
@@ -106,8 +112,8 @@ export function restoreAutoCancelledWorkout(
     throw new Error("The cycle is read-only after the next cycle exists");
   }
 
-  if (input.cycleStatus !== "CLOSED" && input.cycleStatus !== "PAUSED") {
-    throw new Error("Only a closed or paused cycle can restore a workout");
+  if (input.cycleStatus !== "CLOSED") {
+    throw new Error("Only a closed cycle can restore a workout");
   }
 
   if (

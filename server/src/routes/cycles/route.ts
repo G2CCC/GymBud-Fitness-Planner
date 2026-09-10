@@ -1,5 +1,8 @@
 import { Router, type Response } from "express";
-import { profileInputSchema } from "@fitness/shared/domain/validation";
+import {
+  cycleDraftInputSchema,
+  timeZoneSchema,
+} from "@fitness/shared/domain/validation";
 import { CycleService, CycleServiceError } from "../../cycles/service";
 import { getCurrentUserId } from "../../current-user";
 import { db } from "../../db";
@@ -9,12 +12,16 @@ const restoreWorkoutInputSchema = z.object({
   scheduledDate: z.coerce.date(),
 }).strict();
 
+const activateCycleInputSchema = z.object({
+  timezone: timeZoneSchema,
+}).strict();
+
 const cycleService = new CycleService(db);
 
 export const cycleRouter = Router();
 
 cycleRouter.post("/", async (request, response) => {
-  const parsed = profileInputSchema.safeParse(request.body);
+  const parsed = cycleDraftInputSchema.safeParse(request.body);
 
   if (!parsed.success) {
     return response.status(400).json({
@@ -29,6 +36,44 @@ cycleRouter.post("/", async (request, response) => {
     const userId = await getCurrentUserId();
     const draft = await cycleService.createDraft(userId, parsed.data);
     return response.status(201).json({ data: draft });
+  } catch (error) {
+    return sendRouteError(response, error);
+  }
+});
+
+cycleRouter.post("/:cycleId/activate", async (request, response) => {
+  const parsed = activateCycleInputSchema.safeParse(request.body);
+
+  if (!parsed.success) {
+    return response.status(400).json({
+      error: {
+        code: "VALIDATION_ERROR",
+        message: parsed.error.message,
+      },
+    });
+  }
+
+  try {
+    const userId = await getCurrentUserId();
+    const active = await cycleService.activateDraft(
+      userId,
+      request.params.cycleId,
+      parsed.data.timezone,
+    );
+    return response.json({ data: active });
+  } catch (error) {
+    return sendRouteError(response, error);
+  }
+});
+
+cycleRouter.get("/:cycleId/review-status", async (request, response) => {
+  try {
+    const userId = await getCurrentUserId();
+    const reviewStatus = await cycleService.getReviewStatus(
+      userId,
+      request.params.cycleId,
+    );
+    return response.json({ data: reviewStatus });
   } catch (error) {
     return sendRouteError(response, error);
   }

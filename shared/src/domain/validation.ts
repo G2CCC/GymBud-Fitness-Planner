@@ -6,6 +6,7 @@ import {
   workoutSources,
   workoutStatuses,
 } from "./enums";
+import { isValidTimeZone } from "./time/timezone";
 
 const dateSchema = z.coerce.date();
 
@@ -15,6 +16,14 @@ export const profileInputSchema = z.object({
   defaultLocation: z.enum(locations),
   primaryGoal: z.string().trim().min(1),
   secondaryOutcome: z.string().trim().min(1).optional(),
+}).strict();
+
+export const timeZoneSchema = z.string().trim().min(1).refine(isValidTimeZone, {
+  message: "timezone must be a valid IANA timezone",
+});
+
+export const cycleDraftInputSchema = profileInputSchema.extend({
+  timezone: timeZoneSchema,
 }).strict();
 
 export const scheduledWorkoutInputSchema = z.object({

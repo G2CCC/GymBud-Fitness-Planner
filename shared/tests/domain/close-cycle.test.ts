@@ -83,7 +83,7 @@ describe("cycle closure", () => {
     ).toThrow(/completedAt/);
   });
 
-  it("pauses a cycle with zero completed workouts", () => {
+  it("closes a cycle with zero completed workouts and requires a reset", () => {
     const result = closeCycle(
       {
         cycleId: "cycle-1",
@@ -93,8 +93,9 @@ describe("cycle closure", () => {
       now,
     );
 
-    expect(result.cycleStatus).toBe("PAUSED");
+    expect(result.cycleStatus).toBe("CLOSED");
     expect(result.nextCycleMayBeGenerated).toBe(false);
+    expect(result.nextCycleEligibility).toBe("RESET_REQUIRED");
   });
 
   it("rejects normal writes to a closed cycle", () => {
