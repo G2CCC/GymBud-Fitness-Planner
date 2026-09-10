@@ -49,17 +49,30 @@ describe.skipIf(!hasDatabase)("cycle persistence", () => {
         weeklyTrainingDays: 3,
         sessionDurationMinutes: 60,
         defaultLocation: "GYM",
+        timezone: "Pacific/Auckland",
       },
       now,
     );
 
     expect(draft.status).toBe("DRAFT");
-    expect(draft.endDate).toEqual(new Date("2026-11-03T00:00:00Z"));
+    expect(draft.endDate).toEqual(new Date("2026-11-04T00:00:00Z"));
     expect(draft.firstWeekDates.map((date) => date.toISOString().slice(0, 10))).toEqual([
-      "2026-10-07",
-      "2026-10-10",
-      "2026-10-13",
+      "2026-10-08",
+      "2026-10-11",
+      "2026-10-14",
     ]);
+
+    const active = await service.activateDraft(
+      userId,
+      draft.id,
+      "Pacific/Auckland",
+      now,
+    );
+
+    expect(active.status).toBe("ACTIVE");
+    expect(active.timezone).toBe("Pacific/Auckland");
+    expect(active.startDate).toEqual(new Date("2026-10-08T00:00:00Z"));
+    expect(active.endDate).toEqual(new Date("2026-11-04T00:00:00Z"));
   });
 
   it("closes, auto-cancels, and restores a workout before the next cycle exists", async () => {
@@ -68,6 +81,7 @@ describe.skipIf(!hasDatabase)("cycle persistence", () => {
         userId: lifecycleUserId,
         startDate: new Date("2026-09-09T00:00:00Z"),
         endDate: new Date("2026-10-06T00:00:00Z"),
+        timezone: "UTC",
         status: "ACTIVE",
         workouts: {
           create: [
@@ -94,8 +108,35 @@ describe.skipIf(!hasDatabase)("cycle persistence", () => {
       include: { workouts: true },
     });
 
+    const finalDayReview = await service.getReviewStatus(
+      lifecycleUserId,
+      cycle.id,
+      new Date("2026-10-06T12:00:00Z"),
+    );
+    expect(finalDayReview).toMatchObject({
+      reviewRequired: true,
+      reason: "FINAL_DAY_ACTION",
+    });
+
+    const overdueReview = await service.getReviewStatus(
+      lifecycleUserId,
+      cycle.id,
+      now,
+    );
+    expect(overdueReview).toMatchObject({
+      reviewRequired: true,
+      reason: "PAST_END_DATE",
+    });
+
+    const stillActive = await db.trainingCycle.findUnique({
+      where: { id: cycle.id },
+      select: { status: true },
+    });
+    expect(stillActive?.status).toBe("ACTIVE");
+
     const closed = await service.close(lifecycleUserId, cycle.id, now);
     expect(closed.cycleStatus).toBe("CLOSED");
+    expect(closed.nextCycleEligibility).toBe("ELIGIBLE");
     expect(closed.cancelledWorkoutIds).toHaveLength(1);
 
     const plannedWorkout = cycle.workouts.find(

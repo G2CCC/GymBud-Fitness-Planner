@@ -39,7 +39,6 @@ enum CycleStatus {
   DRAFT
   ACTIVE
   CLOSED
-  PAUSED
 }
 
 enum WeightUnit {
@@ -76,6 +75,7 @@ model TrainingCycle {
   user           User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
   startDate      DateTime
   endDate        DateTime
+  timezone       String?
   status         CycleStatus          @default(DRAFT)
   closedAt       DateTime?
   createdAt      DateTime             @default(now())

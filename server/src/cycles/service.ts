@@ -7,9 +7,12 @@ import {
   addUtcDays,
   closeCycle as closeCycleDomain,
   distributeFirstWeek,
+  getCycleReviewStatus,
   restoreAutoCancelledWorkout,
+  startOfLocalDate,
   startOfUtcDay,
   type CycleCloseWorkout,
+  type CycleReviewStatus,
   type Location,
 } from "@fitness/shared";
 
@@ -17,6 +20,7 @@ export type CycleDraftProfile = {
   weeklyTrainingDays: number;
   sessionDurationMinutes: number;
   defaultLocation: Location;
+  timezone: string;
 };
 
 export type CycleDraft = {
@@ -24,6 +28,16 @@ export type CycleDraft = {
   status: "DRAFT";
   startDate: Date;
   endDate: Date;
+  timezone: string;
+  firstWeekDates: Date[];
+};
+
+export type ActiveCycle = {
+  id: string;
+  status: "ACTIVE";
+  startDate: Date;
+  endDate: Date;
+  timezone: string;
   firstWeekDates: Date[];
 };
 
@@ -50,7 +64,7 @@ export class CycleService {
     profile: CycleDraftProfile,
     now = new Date(),
   ): Promise<CycleDraft> {
-    const startDate = startOfUtcDay(now);
+    const startDate = startOfLocalDate(now, profile.timezone);
     const endDate = addUtcDays(startDate, 27);
     const firstWeekDates = distributeFirstWeek(
       startDate,
@@ -78,6 +92,7 @@ export class CycleService {
         userId,
         startDate,
         endDate,
+        timezone: profile.timezone,
         status: "DRAFT",
       },
       select: {
@@ -85,14 +100,143 @@ export class CycleService {
         status: true,
         startDate: true,
         endDate: true,
+        timezone: true,
       },
     });
 
     return {
       ...cycle,
       status: "DRAFT",
+      timezone: cycle.timezone ?? profile.timezone,
       firstWeekDates,
     };
+  }
+
+  async activateDraft(
+    userId: string,
+    cycleId: string,
+    timezone: string,
+    now = new Date(),
+  ): Promise<ActiveCycle> {
+    const startDate = startOfLocalDate(now, timezone);
+    const endDate = addUtcDays(startDate, 27);
+
+    return this.prisma.$transaction(async (tx) => {
+      const cycle = await tx.trainingCycle.findFirst({
+        where: { id: cycleId, userId },
+        select: { id: true, status: true },
+      });
+
+      if (!cycle) {
+        throw new CycleServiceError(
+          "Training cycle not found",
+          "NOT_FOUND",
+          404,
+        );
+      }
+
+      if (cycle.status !== "DRAFT") {
+        throw new CycleServiceError(
+          "Only a draft cycle can be activated",
+          "INVALID_STATE",
+          409,
+        );
+      }
+
+      const profile = await tx.userProfile.findUnique({
+        where: { userId },
+        select: { weeklyTrainingDays: true },
+      });
+
+      if (!profile) {
+        throw new CycleServiceError(
+          "The user profile is required before activating a cycle",
+          "INVALID_STATE",
+          409,
+        );
+      }
+
+      const firstWeekDates = distributeFirstWeek(
+        startDate,
+        profile.weeklyTrainingDays,
+      );
+
+      const activeCycle = await tx.trainingCycle.update({
+        where: { id: cycleId },
+        data: {
+          status: "ACTIVE",
+          startDate,
+          endDate,
+          timezone,
+        },
+        select: {
+          id: true,
+          status: true,
+          startDate: true,
+          endDate: true,
+          timezone: true,
+        },
+      });
+
+      if (!activeCycle.timezone) {
+        throw new CycleServiceError(
+          "An active cycle must have a timezone snapshot",
+          "INVALID_STATE",
+          409,
+        );
+      }
+
+      return {
+        ...activeCycle,
+        status: "ACTIVE" as const,
+        timezone: activeCycle.timezone,
+        firstWeekDates,
+      };
+    });
+  }
+
+  async getReviewStatus(
+    userId: string,
+    cycleId: string,
+    now = new Date(),
+  ): Promise<CycleReviewStatus> {
+    const cycle = await this.prisma.trainingCycle.findFirst({
+      where: { id: cycleId, userId },
+      select: {
+        status: true,
+        endDate: true,
+        timezone: true,
+        workouts: {
+          select: {
+            scheduledDate: true,
+            status: true,
+          },
+        },
+      },
+    });
+
+    if (!cycle) {
+      throw new CycleServiceError(
+        "Training cycle not found",
+        "NOT_FOUND",
+        404,
+      );
+    }
+
+    const timezone = requireCycleTimezone(cycle.status, cycle.timezone);
+    const cycleEndDate = startOfUtcDay(cycle.endDate);
+    const finalDayWorkoutsResolved = areFinalDayWorkoutsResolved(
+      cycle.workouts,
+      cycleEndDate,
+    );
+
+    return getCycleReviewStatus({
+      cycleStatus: cycle.status,
+      cycleEndDate,
+      now,
+      timezone,
+      finalDayWorkoutsResolved,
+    });
   }
 
   async close(
@@ -108,6 +252,7 @@ export class CycleService {
             select: {
               id: true,
               status: true,
+              scheduledDate: true,
               completedAt: true,
               cancellationReason: true,
             },
@@ -126,6 +271,28 @@ export class CycleService {
       if (cycle.status !== "ACTIVE") {
         throw new CycleServiceError(
           "Only an active cycle can be closed",
+          "INVALID_STATE",
+          409,
+        );
+      }
+
+      const timezone = requireCycleTimezone(cycle.status, cycle.timezone);
+      const cycleEndDate = startOfUtcDay(cycle.endDate);
+      const finalDayWorkoutsResolved = areFinalDayWorkoutsResolved(
+        cycle.workouts,
+        cycleEndDate,
+      );
+      const reviewStatus = getCycleReviewStatus({
+        cycleStatus: cycle.status,
+        cycleEndDate,
+        now,
+        timezone,
+        finalDayWorkoutsResolved,
+      });
+
+      if (!reviewStatus.reviewRequired) {
+        throw new CycleServiceError(
+          "The cycle review is not due yet",
           "INVALID_STATE",
           409,
         );
@@ -184,7 +351,9 @@ export class CycleService {
             status: "PENDING",
           },
           nextCycleDraft: {
-            status: result.nextCycleMayBeGenerated ? "PENDING" : "NOT_AVAILABLE",
+            status: result.nextCycleMayBeGenerated
+              ? "PENDING"
+              : "RESET_REQUIRED",
           },
         },
       });
@@ -323,3 +492,44 @@ function toDomainWorkout(workout: {
 }
 
 type PrismaCycleWorkoutStatus = "PLANNED" | "COMPLETED" | "CANCELLED";
+
+function areFinalDayWorkoutsResolved(
+  workouts: ReadonlyArray<{
+    scheduledDate: Date;
+    status: PrismaCycleWorkoutStatus;
+  }>,
+  cycleEndDate: Date,
+): boolean {
+  const finalDayWorkouts = workouts.filter(
+    (workout) =>
+      startOfUtcDay(workout.scheduledDate).getTime() ===
+      cycleEndDate.getTime(),
+  );
+
+  return (
+    finalDayWorkouts.length > 0 &&
+    finalDayWorkouts.every((workout) => workout.status !== "PLANNED")
+  );
+}
+
+function requireCycleTimezone(
+  cycleStatus: "DRAFT" | "ACTIVE" | "CLOSED",
+  timezone: string | null,
+): string {
+  if (timezone) {
+    return timezone;
+  }
+
+  if (cycleStatus === "ACTIVE") {
+    throw new CycleServiceError(
+      "The active cycle has no timezone snapshot",
+      "INVALID_STATE",
+      409,
+    );
+  }
+
+  // Legacy drafts/closed cycles created before timezone snapshots are only
+  // read for a non-actionable prompt. UTC is a deterministic compatibility
+  // fallback; all newly activated cycles always persist their timezone.
+  return "UTC";
+}

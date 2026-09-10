@@ -13,7 +13,7 @@ export type WorkoutSource = (typeof workoutSources)[number];
 export const cancellationReasons = ["USER", "AUTO_CYCLE_CLOSE"] as const;
 export type CancellationReason = (typeof cancellationReasons)[number];
 
-export const cycleStatuses = ["DRAFT", "ACTIVE", "CLOSED", "PAUSED"] as const;
+export const cycleStatuses = ["DRAFT", "ACTIVE", "CLOSED"] as const;
 export type CycleStatus = (typeof cycleStatuses)[number];
 
 export const weightUnits = ["KG", "LB"] as const;
