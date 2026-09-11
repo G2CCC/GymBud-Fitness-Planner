@@ -409,7 +409,7 @@ git commit -m "feat: add workout state transitions and logging"
 - `PlanService.generateDraft(userId, cycleId): Promise<PlanDraft>`
 - `PlanService.confirmDraft(userId, cycleId, edits): Promise<TrainingCycle>`
 
-- [ ] **Step 1: Write failing AI-service tests using the fake client**
+- [x] **Step 1: Write failing AI-service tests using the fake client**
 
 ```ts
 it("passes only legal exercises for the workout location", async () => {
@@ -421,32 +421,32 @@ it("passes only legal exercises for the workout location", async () => {
 
 Also test that malformed model JSON, another user's exercise ID, and an empty exercise list for a strength workout are rejected without writing calendar rows.
 
-- [ ] **Step 2: Run the tests and verify they fail**
+- [x] **Step 2: Run the tests and verify they fail**
 
 Run: `npm test -- server/tests/ai/plan-service.test.ts`
 
 Expected: FAIL because the AI adapter and plan service do not exist.
 
-- [ ] **Step 3: Define structured request and response schemas**
+- [x] **Step 3: Define structured request and response schemas**
 
 The response must include activity type, date, duration, location, and activity-specific details. Strength responses include exercises, planned sets, repetitions, and rest; they do not include RPE. The schema must reject unknown exercise IDs and invalid locations after parsing.
 
-- [ ] **Step 4: Implement the provider adapter**
+- [x] **Step 4: Implement the provider adapter**
 
 Keep the model name and prompt version in the request metadata. Use `fake-client.ts` for deterministic tests; production uses the configured AI API client through the same interface.
 
-- [ ] **Step 5: Implement draft persistence and confirmation**
+- [x] **Step 5: Implement draft persistence and confirmation**
 
 Save an AI-generated draft as draft data only. On confirmation, create the scheduled workouts in one transaction. A failed confirmation must leave the calendar unchanged.
 
-- [ ] **Step 6: Run tests and commit**
+- [x] **Step 6: Run tests and commit**
 
 Run: `npm test -- server/tests/ai/plan-service.test.ts`.
 
 Expected: PASS.
 
 ```bash
-git add server/src/ai server/src/routes/ai/plans server/tests/ai
+git add server/src/ai server/src/routes/ai/plans server/tests/ai docs/development/ai-plans.md .env.example server/src/config/env.ts server/src/routes/index.ts
 git commit -m "feat: add validated AI plan drafts"
 ```
 
