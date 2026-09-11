@@ -8,3 +8,5 @@ export * from "./domain/exercises/location";
 export * from "./domain/exercises/validation";
 export * from "./domain/scheduling/distribute-week";
 export * from "./domain/time/timezone";
+export * from "./domain/workouts/state-machine";
+export * from "./domain/workouts/validation";

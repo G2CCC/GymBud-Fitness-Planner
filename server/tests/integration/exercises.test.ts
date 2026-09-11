@@ -28,6 +28,9 @@ describe.skipIf(!hasDatabase)("exercise persistence", () => {
   }, integrationTestTimeout);
 
   afterAll(async () => {
+    await db.exercise.deleteMany({
+      where: { ownerId: { in: [userId, otherUserId] } },
+    });
     await Promise.all(
       [userId, otherUserId].map((id) =>
         db.user.delete({ where: { id } }),

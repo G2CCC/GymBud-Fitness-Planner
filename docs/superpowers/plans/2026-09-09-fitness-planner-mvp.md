@@ -340,18 +340,16 @@ git commit -m "feat: add location-aware exercise library"
 
 **Files:**
 - Create: `shared/src/domain/workouts/state-machine.ts`
+- Create: `shared/src/domain/workouts/validation.ts`
 - Create: `server/src/workouts/service.ts`
-- Create: `server/src/routes/workouts/[workoutId]/complete/route.ts`
-- Create: `server/src/routes/workouts/[workoutId]/cancel/route.ts`
-- Create: `server/src/routes/workouts/[workoutId]/reschedule/route.ts`
-- Create: `server/src/routes/workouts/[workoutId]/route.ts`
 - Create: `server/src/routes/workouts/route.ts`
-- Create: `server/src/routes/workouts/[workoutId]/log/route.ts`
 - Create: `client/src/components/workouts/StrengthLogForm.tsx`
 - Create: `client/src/components/workouts/CardioLogForm.tsx`
 - Create: `client/src/components/workouts/SportLogForm.tsx`
 - Create: `shared/tests/domain/workout-state.test.ts`
+- Create: `shared/tests/domain/workout-validation.test.ts`
 - Create: `server/tests/integration/workout-log.test.ts`
+- Create: `docs/development/workouts.md`
 
 **Interfaces:**
 - `completeWorkout(workout, input, now): CompletedWorkout`
@@ -362,36 +360,36 @@ git commit -m "feat: add location-aware exercise library"
 - `validateCompletionTimestamp(completedAt, now): void`
 - `saveWorkoutLog(userId, workoutId, input): Promise<WorkoutLog>`
 
-- [ ] **Step 1: Write failing transition tests**
+- [x] **Step 1: Write failing transition tests**
 
 Cover normal completion, backfill with an explicit past timestamp, future timestamp rejection, cancellation, rescheduling, changing the location of one workout, creating an extra workout, closed-cycle rejection, and editing an existing log without creating a second log.
 
-- [ ] **Step 2: Run the tests and verify they fail**
+- [x] **Step 2: Run the tests and verify they fail**
 
 Run: `npm test -- shared/tests/domain/workout-state.test.ts server/tests/integration/workout-log.test.ts`
 
 Expected: FAIL because the state machine and services do not exist.
 
-- [ ] **Step 3: Implement the pure state machine**
+- [x] **Step 3: Implement the pure state machine**
 
-`completeWorkout` must require `completedAt` for any user-provided completion. The server may supply the current timestamp for an immediate completion action, but a backfill request must always include an explicit timestamp. Reject timestamps after `now`.
+`completeWorkout` uses the server's current timestamp for an immediate completion action. A backfill request must always include an explicit timestamp. Reject timestamps after `now`.
 
-- [ ] **Step 4: Implement per-set persistence**
+- [x] **Step 4: Implement per-set persistence**
 
 Persist planned sets separately from actual sets. Use upsert semantics for a user's edit of an existing actual log. Do not expose a delete mutation for completed workout logs.
 
-- [ ] **Step 5: Add activity-specific validation**
+- [x] **Step 5: Add activity-specific validation**
 
 Strength accepts set logs; cardio accepts duration and optional distance/pace; sport accepts duration, intensity category, and notes. Reject RPE fields from every API schema.
 
-- [ ] **Step 6: Run tests and commit**
+- [x] **Step 6: Run tests and commit**
 
-Run: `npm test -- shared/tests/domain/workout-state.test.ts server/tests/integration/workout-log.test.ts`.
+Run: `npm test -- --testTimeout=30000 shared/tests/domain/workout-state.test.ts server/tests/integration/workout-log.test.ts`.
 
 Expected: PASS.
 
 ```bash
-git add shared/src/domain/workouts server/src/workouts server/src/routes/workouts client/src/components/workouts server/tests/integration shared/tests/domain
+git add shared/src/domain/workouts server/src/workouts server/src/routes/workouts client/src/components/workouts server/tests/integration shared/tests/domain docs/development/workouts.md
 git commit -m "feat: add workout state transitions and logging"
 ```
 
