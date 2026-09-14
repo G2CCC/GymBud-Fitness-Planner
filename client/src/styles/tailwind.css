@@ -1,0 +1,16 @@
+@import "tailwindcss";
+
+@theme {
+  --color-gymbud-background: var(--color-background);
+  --color-gymbud-surface: var(--color-surface);
+  --color-gymbud-surface-muted: var(--color-surface-muted);
+  --color-gymbud-border: var(--color-border);
+  --color-gymbud-ink: var(--color-ink);
+  --color-gymbud-muted: var(--color-muted);
+  --color-gymbud-accent: var(--color-accent);
+  --color-gymbud-accent-strong: var(--color-accent-strong);
+  --color-gymbud-accent-soft: var(--color-accent-soft);
+  --color-gymbud-success: var(--color-success);
+  --color-gymbud-warning: var(--color-warning);
+  --color-gymbud-danger: var(--color-danger);
+}

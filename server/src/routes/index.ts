@@ -6,6 +6,7 @@ import { exerciseReplacementRouter } from "./ai/workouts/replace/route";
 import { weightDecisionRouter } from "./ai/weight-recommendations/route";
 import { cycleRouter } from "./cycles/route";
 import { exerciseRouter } from "./exercises/route";
+import { profileRouter } from "./profile/route";
 import { workoutRouter } from "./workouts/route";
 
 export const apiRouter = Router();
@@ -16,4 +17,5 @@ apiRouter.use("/ai/workouts", exerciseReplacementRouter);
 apiRouter.use("/ai/weight-recommendations", weightDecisionRouter);
 apiRouter.use("/cycles", cycleRouter);
 apiRouter.use("/exercises", exerciseRouter);
+apiRouter.use("/profile", profileRouter);
 apiRouter.use("/workouts", workoutRouter);
