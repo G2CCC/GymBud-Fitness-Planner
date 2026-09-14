@@ -64,9 +64,9 @@ close the cycle automatically.
 
 If the user does not open the app on the final day, the next login after
 `endDate` makes the review prompt eligible. The prompt resolves overdue
-workouts, accepts the optional user summary, closes the old cycle, and—when at
-least one workout was completed—creates the next cycle as a user-confirmable
-`DRAFT`.
+workouts, accepts the optional user summary, and closes the old cycle. When at
+least one workout was completed, the client can then request a separate
+user-confirmable next-cycle `DRAFT`.
 
 If the user never logs in, no background job cancels workouts, closes the
 cycle, or generates a new plan. The cycle stays `ACTIVE` until the user
@@ -83,17 +83,50 @@ cycle so it can be resolved again. Once a newer cycle exists, the old cycle is
 read-only and restoration is rejected. The restored workout remains owned by
 the old cycle.
 
+## Review and next-cycle draft
+
+Submitting the review performs these operations in order:
+
+1. the server checks that the review is due and builds a projected objective
+   summary from the saved plan and workout logs;
+2. the AI returns a processed summary and conclusions;
+3. only after a valid AI result, unresolved `PLANNED` workouts are
+   auto-cancelled and the old cycle is closed;
+4. the final post-close objective facts and AI result are persisted together.
+
+If AI generation fails, the active cycle and its workouts remain unchanged so
+the user can retry. If workout facts change while AI is generating, the request
+is rejected and must be retried against the newer records.
+
+The user's review note is optional. It is included in the single AI request
+when supplied, but the raw note is not written to the database. Only the AI's
+processed summary, conclusions, and objective facts are persisted.
+
+The objective summary includes original and extra workout counts, completion
+rate, user and automatic cancellations, the number of reschedules, planned vs.
+actual strength sets, and cardio/sport duration data. `rescheduleCount` is
+incremented whenever a planned workout is moved or an auto-cancelled workout is
+restored.
+
+When at least one workout was completed, the client may request a next-cycle AI
+draft. The draft is stored as a `DRAFT` cycle with no calendar workout rows.
+The user must review and confirm it through the existing plan confirmation
+flow before it becomes `ACTIVE`. A cycle with zero completed workouts is closed
+with `RESET_REQUIRED` and cannot generate a next-cycle draft until the user
+re-confirms their planning inputs. Draft generation uses a durable
+`PENDING → GENERATING → READY` snapshot marker so a retry can recover a process
+that stopped after creating the empty draft but before saving the AI result.
+
 ## Database migration after pulling this change
 
-This change removes the `PAUSED` enum value, adds the nullable
-`TrainingCycle.timezone` field, and updates the lifecycle snapshot values. Run
-the migration from the project directory that already contains your successful
-initial migration:
+This change adds `ScheduledWorkout.rescheduleCount`. Run the new migration from
+the project directory that already contains your successful initial and
+lifecycle migrations:
 
 ```powershell
 npm run db:generate
-npm run db:migrate -- --name add_cycle_timezone_and_lifecycle
-npm test -- server/tests/integration/cycles.test.ts
+npm run db:migrate -- --name add_workout_reschedule_count
+npm test -- --testTimeout=30000 server/tests/integration/cycle-review.test.ts
 ```
 
 For existing active cycles created before timezone snapshots were introduced,
@@ -109,6 +142,8 @@ POST /api/cycles
 POST /api/cycles/:cycleId/activate
 GET  /api/cycles/:cycleId/review-status
 POST /api/cycles/:cycleId/close
+POST /api/cycles/:cycleId/review
+POST /api/cycles/:cycleId/next-draft
 POST /api/cycles/:cycleId/workouts/:workoutId/restore
 ```
 

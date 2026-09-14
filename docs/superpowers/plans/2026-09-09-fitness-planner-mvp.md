@@ -491,7 +491,7 @@ The context builder must label planned original logs as primary evidence and ext
 
 Accept and modified decisions write the chosen recommendation to the next workout. Rejection leaves an existing scheduled weight unchanged and otherwise leaves it blank. No mutation may update a historical `SetLog`.
 
-- [ ] **Step 6: Run tests and commit**
+- [x] **Step 6: Run tests and commit**
 
 Run: `npm test -- server/tests/ai/exercise-service.test.ts server/tests/ai/weight-service.test.ts`.
 
@@ -515,29 +515,30 @@ git commit -m "feat: add exercise replacement and weight recommendations"
 - Create: `server/tests/integration/cycle-review.test.ts`
 
 **Interfaces:**
-- `buildObjectiveCycleSummary(cycleId): Promise<ObjectiveCycleSummary>`
+- `buildObjectiveCycleSummary(input): ObjectiveCycleSummary` in shared domain;
+  the server review service loads and normalizes database rows before calling it
 - `generateCycleReview(userId, cycleId, optionalSummary): Promise<CycleReviewResult>`
 - `generateNextCycleDraft(userId, cycleId, reviewId): Promise<NextCycleDraft>`
 
-- [ ] **Step 1: Write failing objective-summary tests**
+- [x] **Step 1: Write failing objective-summary tests**
 
 Test planned completion rate, extra-workout counts, cancellations, reschedules, planned-versus-actual strength data, cardio duration/distance, and zero-completed-cycle detection.
 
-- [ ] **Step 2: Write failing review integration tests**
+- [x] **Step 2: Write failing review integration tests**
 
 Cover an empty optional summary, a supplied summary, raw-summary absence from persisted rows, processed-summary persistence, and direct AI-result persistence.
 
-- [ ] **Step 3: Run the tests and verify they fail**
+- [x] **Step 3: Run the tests and verify they fail**
 
 Run: `npm test -- shared/tests/domain/objective-summary.test.ts server/tests/integration/cycle-review.test.ts`
 
 Expected: FAIL because the review services do not exist.
 
-- [ ] **Step 4: Implement review generation**
+- [x] **Step 4: Implement review generation**
 
 Build the objective summary from database rows. Add the optional user text to the AI request only when supplied. Do not write the raw text to `CycleReviewSnapshot`, logs, or an AI history table. Save only the processed summary, conclusions, and generated next-cycle draft.
 
-- [ ] **Step 5: Enforce cycle closure ordering**
+- [x] **Step 5: Enforce cycle closure ordering**
 
 The service must resolve unresolved workouts and save the old-cycle snapshot before creating a next-cycle draft. If the cycle has zero completed workouts, save a `CLOSED` objective snapshot with `RESET_REQUIRED` eligibility and do not generate a calendar draft.
 

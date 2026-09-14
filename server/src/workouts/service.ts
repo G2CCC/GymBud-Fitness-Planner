@@ -30,6 +30,7 @@ const workoutSelect = {
   status: true,
   source: true,
   cancellationReason: true,
+  rescheduleCount: true,
   completedAt: true,
   plannedDetails: true,
   createdAt: true,
@@ -228,7 +229,10 @@ export class WorkoutService {
           cycleId: context.workout.cycleId,
           status: "PLANNED",
         },
-        data: { scheduledDate: transition.scheduledDate },
+        data: {
+          scheduledDate: transition.scheduledDate,
+          rescheduleCount: { increment: 1 },
+        },
       });
 
       assertSingleUpdate(updated.count, "Workout changed while rescheduling");

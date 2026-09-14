@@ -1,4 +1,5 @@
 import type { AiRequest } from "../client";
+import type { ObjectiveCycleSummary } from "@fitness/shared/domain/reviews/objective-summary";
 
 export const PLAN_PROMPT_VERSION = "plan.v1";
 
@@ -19,10 +20,54 @@ export type PlanPromptInput = {
     movementPattern: string | null;
     availableLocations: string[];
   }>;
+  reviewContext?: {
+    processedSummary: string | null;
+    conclusions: unknown;
+    objectiveSummary: ObjectiveCycleSummary;
+  };
   model: string;
 };
 
 export function buildPlanRequest(input: PlanPromptInput): AiRequest {
+  const context: Record<string, unknown> = {
+    cycle: {
+      id: input.cycleId,
+      startDate: input.startDate.toISOString(),
+      endDate: input.endDate.toISOString(),
+    },
+    profile: {
+      primaryGoal: input.primaryGoal,
+      secondaryOutcome: input.secondaryOutcome,
+      weeklyTrainingDays: input.weeklyTrainingDays,
+      sessionDurationMinutes: input.sessionDurationMinutes,
+      location: input.location,
+    },
+    legalExercisePool: input.exercises,
+    outputShape: {
+      workouts: [
+        {
+          scheduledDate: "ISO date",
+          activityType: "STRENGTH | CARDIO | SPORT",
+          location: input.location,
+          durationMinutes: input.sessionDurationMinutes,
+          plannedDetails: "activity-specific object when needed",
+          exercises: [
+            {
+              exerciseId: "legal exercise ID",
+              sortOrder: 1,
+              restSeconds: 90,
+              sets: [{ setNumber: 1, targetReps: 10 }],
+            },
+          ],
+        },
+      ],
+    },
+  };
+
+  if (input.reviewContext) {
+    context.previousCycleReview = input.reviewContext;
+  }
+
   return {
     model: input.model,
     promptVersion: PLAN_PROMPT_VERSION,
@@ -34,40 +79,7 @@ export function buildPlanRequest(input: PlanPromptInput): AiRequest {
       "Do not return RPE, subjective feedback, or unknown fields.",
       "Keep every scheduled date within the inclusive cycle dates.",
     ].join(" "),
-    userPrompt: JSON.stringify({
-      cycle: {
-        id: input.cycleId,
-        startDate: input.startDate.toISOString(),
-        endDate: input.endDate.toISOString(),
-      },
-      profile: {
-        primaryGoal: input.primaryGoal,
-        secondaryOutcome: input.secondaryOutcome,
-        weeklyTrainingDays: input.weeklyTrainingDays,
-        sessionDurationMinutes: input.sessionDurationMinutes,
-        location: input.location,
-      },
-      legalExercisePool: input.exercises,
-      outputShape: {
-        workouts: [
-          {
-            scheduledDate: "ISO date",
-            activityType: "STRENGTH | CARDIO | SPORT",
-            location: input.location,
-            durationMinutes: input.sessionDurationMinutes,
-            plannedDetails: "activity-specific object when needed",
-            exercises: [
-              {
-                exerciseId: "legal exercise ID",
-                sortOrder: 1,
-                restSeconds: 90,
-                sets: [{ setNumber: 1, targetReps: 10 }],
-              },
-            ],
-          },
-        ],
-      },
-    }),
+    userPrompt: JSON.stringify(context),
     metadata: {
       feature: "four-week-plan",
       cycleId: input.cycleId,

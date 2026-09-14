@@ -17,6 +17,7 @@ import {
   type PlanResponse,
 } from "./schemas";
 import { buildPlanRequest } from "./prompts/plan";
+import type { ObjectiveCycleSummary } from "@fitness/shared/domain/reviews/objective-summary";
 
 const cycleContextSelect = {
   id: true,
@@ -83,7 +84,17 @@ export class PlanService {
     private readonly model = env.aiModel,
   ) {}
 
-  async generateDraft(userId: string, cycleId: string): Promise<PlanDraft> {
+  async generateDraft(
+    userId: string,
+    cycleId: string,
+    options: {
+      reviewContext?: {
+        processedSummary: string | null;
+        conclusions: unknown;
+        objectiveSummary: ObjectiveCycleSummary;
+      };
+    } = {},
+  ): Promise<PlanDraft> {
     const cycle = await this.getCycleContext(this.prisma, userId, cycleId);
     assertDraftCycle(cycle);
 
@@ -104,6 +115,7 @@ export class PlanService {
       sessionDurationMinutes: profile.sessionDurationMinutes,
       location: profile.defaultLocation,
       exercises: exercises.map(toPromptExercise),
+      reviewContext: options.reviewContext,
       model: this.model,
     });
 

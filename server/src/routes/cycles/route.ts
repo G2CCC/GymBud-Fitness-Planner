@@ -7,6 +7,8 @@ import { CycleService, CycleServiceError } from "../../cycles/service";
 import { getCurrentUserId } from "../../current-user";
 import { db } from "../../db";
 import { z } from "zod";
+import { cycleReviewRouter } from "./[cycleId]/review/route";
+import { nextCycleDraftRouter } from "./[cycleId]/next-draft/route";
 
 const restoreWorkoutInputSchema = z.object({
   scheduledDate: z.coerce.date(),
@@ -120,6 +122,9 @@ cycleRouter.post(
     }
   },
 );
+
+cycleRouter.use("/:cycleId/review", cycleReviewRouter);
+cycleRouter.use("/:cycleId/next-draft", nextCycleDraftRouter);
 
 function sendRouteError(response: Response, error: unknown) {
   if (error instanceof CycleServiceError) {

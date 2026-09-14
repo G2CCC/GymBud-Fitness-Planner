@@ -54,6 +54,17 @@ export type WeightRecommendationResponse = z.infer<
 >;
 export type WeightDecision = z.infer<typeof weightDecisionSchema>;
 
+export const cycleReviewResponseSchema = z.object({
+  processedSummary: z.string().trim().min(1).max(5000),
+  conclusions: z.object({
+    status: z.enum(["CONTINUE", "ADJUST_PLAN", "RESET_REQUIRED"]),
+    keyFindings: z.array(z.string().trim().min(1).max(500)).max(10),
+    recommendations: z.array(z.string().trim().min(1).max(500)).max(10),
+  }).strict(),
+}).strict();
+
+export type CycleReviewResponse = z.infer<typeof cycleReviewResponseSchema>;
+
 const planExerciseSchema = z.object({
   exerciseId: z.string().trim().min(1),
   sortOrder: z.number().int().min(1),

@@ -207,6 +207,7 @@ describe.skipIf(!hasDatabase)("workout persistence", () => {
     expect(rescheduled.scheduledDate).toEqual(
       new Date("2026-11-08T00:00:00Z"),
     );
+    expect(rescheduled.rescheduleCount).toBe(1);
 
     const moved = await service.updateWorkoutLocation(
       userId,

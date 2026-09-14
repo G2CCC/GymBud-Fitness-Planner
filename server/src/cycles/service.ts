@@ -45,6 +45,8 @@ export type ClosedCycleResult = ReturnType<typeof closeCycleDomain> & {
   closedAt: Date;
 };
 
+type CycleDatabase = PrismaClient | Prisma.TransactionClient;
+
 export class CycleServiceError extends Error {
   constructor(
     message: string,
@@ -63,6 +65,7 @@ export class CycleService {
     userId: string,
     profile: CycleDraftProfile,
     now = new Date(),
+    database: CycleDatabase = this.prisma,
   ): Promise<CycleDraft> {
     const startDate = startOfLocalDate(now, profile.timezone);
     const endDate = addUtcDays(startDate, 27);
@@ -71,7 +74,7 @@ export class CycleService {
       profile.weeklyTrainingDays,
     );
 
-    const existingOpenCycle = await this.prisma.trainingCycle.findFirst({
+    const existingOpenCycle = await database.trainingCycle.findFirst({
       where: {
         userId,
         status: { in: ["DRAFT", "ACTIVE"] },
@@ -87,7 +90,7 @@ export class CycleService {
       );
     }
 
-    const cycle = await this.prisma.trainingCycle.create({
+    const cycle = await database.trainingCycle.create({
       data: {
         userId,
         startDate,
@@ -448,6 +451,7 @@ export class CycleService {
           status: restored.status,
           cancellationReason: null,
           scheduledDate: restored.scheduledDate,
+          rescheduleCount: { increment: 1 },
         },
       });
 
