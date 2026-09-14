@@ -1,0 +1,55 @@
+.hero-gradient {
+  background:
+    radial-gradient(circle at 15% 20%, rgb(200 232 140 / 0.72), transparent 36%),
+    linear-gradient(135deg, #ffffff 0%, #edf5e8 100%);
+}
+
+.cycle-gradient {
+  background: linear-gradient(135deg, #dff0c1 0%, #f8fbf4 100%);
+}
+
+.selected-empty-gradient {
+  background: linear-gradient(135deg, #f6faef 0%, #e7f0df 100%);
+}
+
+.glass-surface {
+  background: rgb(255 255 255 / 0.94);
+  box-shadow: var(--shadow-card);
+}
+
+@supports ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
+  .glass-surface {
+    background: rgb(255 255 255 / 0.76);
+    -webkit-backdrop-filter: blur(18px);
+    backdrop-filter: blur(18px);
+  }
+}
+
+.focus-ring:focus-visible {
+  outline: 3px solid rgb(119 168 90 / 0.42);
+  outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .motion-interactive {
+    transition:
+      transform var(--motion-fast) ease,
+      opacity var(--motion-fast) ease,
+      box-shadow var(--motion-normal) ease;
+  }
+
+  .motion-interactive:hover {
+    transform: translateY(-1px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}

@@ -1,4 +1,5 @@
 import { Router, type Response } from "express";
+import { Prisma } from "@prisma/client";
 import {
   cycleDraftInputSchema,
   timeZoneSchema,
@@ -21,6 +22,44 @@ const activateCycleInputSchema = z.object({
 const cycleService = new CycleService(db);
 
 export const cycleRouter = Router();
+
+cycleRouter.get("/current", async (request, response) => {
+  try {
+    const userId = await getCurrentUserId();
+    const activeCycle = await db.trainingCycle.findFirst({
+      where: { userId, status: "ACTIVE" },
+      orderBy: { startDate: "desc" },
+      select: currentCycleSelect,
+    });
+    const cycle =
+      activeCycle ??
+      (await db.trainingCycle.findFirst({
+        where: { userId, status: "DRAFT" },
+        orderBy: { startDate: "desc" },
+        select: currentCycleSelect,
+      }));
+
+    if (!cycle) {
+      return response.json({ data: { cycle: null } });
+    }
+
+    const reviewStatus =
+      cycle.status === "ACTIVE"
+        ? await cycleService.getReviewStatus(userId, cycle.id)
+        : null;
+
+    return response.json({
+      data: {
+        cycle: {
+          ...cycle,
+          reviewStatus,
+        },
+      },
+    });
+  } catch (error) {
+    return sendRouteError(response, error);
+  }
+});
 
 cycleRouter.post("/", async (request, response) => {
   const parsed = cycleDraftInputSchema.safeParse(request.body);
@@ -144,3 +183,27 @@ function sendRouteError(response: Response, error: unknown) {
     },
   });
 }
+
+const currentCycleSelect = {
+  id: true,
+  status: true,
+  startDate: true,
+  endDate: true,
+  timezone: true,
+  workouts: {
+    orderBy: [{ scheduledDate: "asc" }, { createdAt: "asc" }],
+    select: {
+      id: true,
+      activityType: true,
+      scheduledDate: true,
+      location: true,
+      durationMinutes: true,
+      status: true,
+      source: true,
+      cancellationReason: true,
+      completedAt: true,
+      rescheduleCount: true,
+      plannedDetails: true,
+    },
+  },
+} satisfies Prisma.TrainingCycleSelect;

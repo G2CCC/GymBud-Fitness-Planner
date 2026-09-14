@@ -33,6 +33,23 @@ const workoutSelect = {
   rescheduleCount: true,
   completedAt: true,
   plannedDetails: true,
+  plannedExercises: {
+    orderBy: { sortOrder: "asc" },
+    select: {
+      exerciseId: true,
+      sortOrder: true,
+      restSeconds: true,
+      plannedSets: {
+        orderBy: { setNumber: "asc" },
+        select: {
+          setNumber: true,
+          targetReps: true,
+          plannedWeight: true,
+          weightUnit: true,
+        },
+      },
+    },
+  },
   createdAt: true,
   updatedAt: true,
 } satisfies Prisma.ScheduledWorkoutSelect;
