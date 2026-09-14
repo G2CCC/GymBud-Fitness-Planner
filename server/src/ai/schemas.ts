@@ -1,9 +1,58 @@
 import { z } from "zod";
 import {
   activityTypes,
+  customExerciseInputSchema,
   locations,
   plannedSetSchema,
+  weightUnits,
 } from "@fitness/shared";
+
+export const exerciseExtractionInputSchema = z.object({
+  name: z.string().trim().min(1).max(120),
+  description: z.string().trim().min(1).max(2000),
+}).strict();
+
+export const exerciseMetadataDraftSchema = customExerciseInputSchema;
+
+const replacementSchema = z.object({
+  exerciseId: z.string().trim().min(1),
+  reason: z.string().trim().min(1).max(500),
+  restSeconds: z.number().int().min(0).max(3600).optional(),
+  sets: z.array(plannedSetSchema).min(1).max(100),
+}).strict();
+
+export const replacementResponseSchema = z.object({
+  replacements: z.array(replacementSchema).max(5),
+}).strict();
+
+export const weightRecommendationSchema = z.object({
+  recommendedWeight: z.number().nonnegative(),
+  weightUnit: z.enum(weightUnits),
+  reason: z.string().trim().min(1).max(1000),
+  confidence: z.enum(["low", "medium", "high"]),
+}).strict();
+
+export const weightDecisionSchema = z.discriminatedUnion("action", [
+  z.object({ action: z.literal("ACCEPT") }).strict(),
+  z.object({
+    action: z.literal("MODIFY"),
+    weight: z.number().nonnegative(),
+    weightUnit: z.enum(weightUnits),
+  }).strict(),
+  z.object({ action: z.literal("REJECT") }).strict(),
+]);
+
+export type ExerciseExtractionInput = z.infer<
+  typeof exerciseExtractionInputSchema
+>;
+export type ExerciseMetadataDraft = z.infer<
+  typeof exerciseMetadataDraftSchema
+>;
+export type ReplacementResponse = z.infer<typeof replacementResponseSchema>;
+export type WeightRecommendationResponse = z.infer<
+  typeof weightRecommendationSchema
+>;
+export type WeightDecision = z.infer<typeof weightDecisionSchema>;
 
 const planExerciseSchema = z.object({
   exerciseId: z.string().trim().min(1),

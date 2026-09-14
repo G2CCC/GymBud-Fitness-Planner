@@ -1,11 +1,19 @@
 import { Router } from "express";
+import { exerciseExtractionRouter } from "./ai/exercises/extract/route";
+import { weightRecommendationRouter } from "./ai/exercises/weight/route";
 import { planRouter } from "./ai/plans/route";
+import { exerciseReplacementRouter } from "./ai/workouts/replace/route";
+import { weightDecisionRouter } from "./ai/weight-recommendations/route";
 import { cycleRouter } from "./cycles/route";
 import { exerciseRouter } from "./exercises/route";
 import { workoutRouter } from "./workouts/route";
 
 export const apiRouter = Router();
 apiRouter.use("/ai/plans", planRouter);
+apiRouter.use("/ai/exercises/extract", exerciseExtractionRouter);
+apiRouter.use("/ai/exercises", weightRecommendationRouter);
+apiRouter.use("/ai/workouts", exerciseReplacementRouter);
+apiRouter.use("/ai/weight-recommendations", weightDecisionRouter);
 apiRouter.use("/cycles", cycleRouter);
 apiRouter.use("/exercises", exerciseRouter);
 apiRouter.use("/workouts", workoutRouter);

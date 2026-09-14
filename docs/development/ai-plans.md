@@ -71,3 +71,6 @@ POST /api/ai/plans/:cycleId/confirm
 The confirm request body is the complete `PlanDraft` returned by the generate
 endpoint, with user edits applied. This keeps the server stateless between
 review steps and lets a future web or iOS client use the same contract.
+
+The related exercise extraction, replacement, and next-weight recommendation
+contracts are documented in `docs/development/ai-exercises.md`.

@@ -469,25 +469,25 @@ git commit -m "feat: add validated AI plan drafts"
 - `recommendNextWeight(userId, exerciseId, nextWorkoutId): Promise<WeightRecommendation>`
 - `applyWeightDecision(userId, recommendationId, decision): Promise<ScheduledWorkout>`
 
-- [ ] **Step 1: Write failing tests for legal custom metadata**
+- [x] **Step 1: Write failing tests for legal custom metadata**
 
 Test that equipment-bearing AI output cannot be confirmed with `HOME`, and that an unconfirmed custom exercise is not included in the AI-eligible pool.
 
-- [ ] **Step 2: Write failing tests for weight context and scope**
+- [x] **Step 2: Write failing tests for weight context and scope**
 
 Test that the context contains at most the latest five same-exercise records, the current-cycle summary, all-time best, goal, and next target. Test that accepting a recommendation changes only the next matching workout.
 
-- [ ] **Step 3: Run the tests and verify they fail**
+- [x] **Step 3: Run the tests and verify they fail**
 
 Run: `npm test -- server/tests/ai/exercise-service.test.ts server/tests/ai/weight-service.test.ts`
 
 Expected: FAIL because the services do not exist.
 
-- [ ] **Step 4: Implement context builders and schemas**
+- [x] **Step 4: Implement context builders and schemas**
 
 The context builder must label planned original logs as primary evidence and extra logs as secondary evidence. No raw cycle-review prompt may be included in weight context.
 
-- [ ] **Step 5: Implement user-decision writes**
+- [x] **Step 5: Implement user-decision writes**
 
 Accept and modified decisions write the chosen recommendation to the next workout. Rejection leaves an existing scheduled weight unchanged and otherwise leaves it blank. No mutation may update a historical `SetLog`.
 
