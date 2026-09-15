@@ -45,6 +45,7 @@ export function WorkoutPage() {
   const { workoutId } = useParams<{ workoutId: string }>();
   const [workout, setWorkout] = useState<ApiWorkout | null>(null);
   const [exercises, setExercises] = useState<ApiExercise[]>([]);
+  const [exerciseNames, setExerciseNames] = useState<Record<string, string>>({});
   const [backfill, setBackfill] = useState(false);
   const [log, setLog] = useState<LogState | null>(null);
   const [loading, setLoading] = useState(true);
@@ -74,7 +75,13 @@ export function WorkoutPage() {
               : { actualDurationMinutes: result.durationMinutes },
         );
         if (result.activityType === "STRENGTH") {
-          setExercises(await listExercises(result.location));
+          const availableExercises = await listExercises(result.location);
+          setExercises(availableExercises);
+          setExerciseNames(
+            Object.fromEntries(
+              availableExercises.map((exercise) => [exercise.id, exercise.name]),
+            ),
+          );
         }
       })
       .catch((loadError) => {
@@ -112,7 +119,7 @@ export function WorkoutPage() {
     return <WorkoutMessage message="Loading workout details…" />;
   }
 
-  if (error || !workout || !log || !workoutId) {
+  if (!workout || !log || !workoutId) {
     return (
       <WorkoutMessage
         message={error ?? "This workout is not available."}
@@ -128,7 +135,13 @@ export function WorkoutPage() {
       const updated = await updateWorkoutLocation(loadedWorkout.id, location);
       setWorkout(updated);
       if (updated.activityType === "STRENGTH") {
-        setExercises(await listExercises(location));
+        const availableExercises = await listExercises(location);
+        setExercises(availableExercises);
+        setExerciseNames(
+          Object.fromEntries(
+            availableExercises.map((exercise) => [exercise.id, exercise.name]),
+          ),
+        );
       }
     } catch (locationError) {
       setError(
@@ -203,10 +216,17 @@ export function WorkoutPage() {
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(20rem,0.9fr)]">
         <section className="grid gap-4">
-          {workout.activityType === "STRENGTH" ? (
+          {workout.status !== "PLANNED" ? (
+            <p className="rounded-[var(--radius-card)] border border-gymbud-border bg-gymbud-surface p-5 text-sm text-gymbud-muted">
+              This workout is {workout.status.toLowerCase()} and is kept as
+              history. New workout logs are only accepted for planned sessions.
+            </p>
+          ) : workout.activityType === "STRENGTH" ? (
             "exercises" in loadedLog && loadedLog.exercises.length > 0 ? (
               <StrengthLogForm
                 value={log as StrengthWorkoutLogInput}
+                plannedExercises={loadedWorkout.plannedExercises ?? []}
+                exerciseNames={exerciseNames}
                 onChange={(value) => setLog(value)}
               />
             ) : (
@@ -231,6 +251,7 @@ export function WorkoutPage() {
           workout={workout}
           location={workout.location}
           legalExerciseOptions={legalExerciseOptions}
+          saving={saving}
           mode={backfill ? "backfill" : "complete"}
           onLocationChange={(location) => void handleLocationChange(location)}
           onSubmit={(payload) => {

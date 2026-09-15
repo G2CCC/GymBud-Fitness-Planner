@@ -27,6 +27,7 @@ export type WorkoutEditorProps = {
   location: Location;
   legalExerciseOptions: EditorExerciseOption[];
   mode?: "complete" | "backfill";
+  saving?: boolean;
   onLocationChange: (location: Location) => void;
   onSubmit: (payload: WorkoutEditorSubmitPayload) => void;
 };
@@ -49,6 +50,7 @@ export function WorkoutEditor({
   location,
   legalExerciseOptions,
   mode = "complete",
+  saving = false,
   onLocationChange,
   onSubmit,
 }: WorkoutEditorProps) {
@@ -158,9 +160,14 @@ export function WorkoutEditor({
 
       <button
         type="submit"
+        disabled={saving}
         className="focus-ring min-h-11 rounded-[var(--radius-control)] bg-gymbud-accent-strong px-4 font-semibold text-white"
       >
-        {mode === "backfill" ? "Save completion" : "Save workout"}
+        {saving
+          ? "Saving…"
+          : mode === "backfill"
+            ? "Save completion"
+            : "Save workout"}
       </button>
     </form>
   );
