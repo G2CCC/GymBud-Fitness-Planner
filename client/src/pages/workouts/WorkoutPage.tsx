@@ -247,19 +247,26 @@ export function WorkoutPage() {
           )}
         </section>
 
-        <WorkoutEditor
-          workout={workout}
-          location={workout.location}
-          legalExerciseOptions={legalExerciseOptions}
-          saving={saving}
-          mode={backfill ? "backfill" : "complete"}
-          onLocationChange={(location) => void handleLocationChange(location)}
-          onSubmit={(payload) => {
-            if (!saving) {
-              void handleSubmit(payload);
-            }
-          }}
-        />
+        {workout.status === "PLANNED" ? (
+          <WorkoutEditor
+            workout={workout}
+            location={workout.location}
+            legalExerciseOptions={legalExerciseOptions}
+            saving={saving}
+            mode={backfill ? "backfill" : "complete"}
+            onLocationChange={(location) => void handleLocationChange(location)}
+            onSubmit={(payload) => {
+              if (!saving) {
+                void handleSubmit(payload);
+              }
+            }}
+          />
+        ) : (
+          <aside className="rounded-[var(--radius-card)] border border-gymbud-border bg-gymbud-surface p-5 text-sm text-gymbud-muted">
+            This workout is read-only because its history has already been
+            saved.
+          </aside>
+        )}
       </div>
     </main>
   );

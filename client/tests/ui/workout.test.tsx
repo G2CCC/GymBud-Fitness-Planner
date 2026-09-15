@@ -174,6 +174,9 @@ describe("workout detail and logging", () => {
     expect(
       await screen.findByText("Workout completed and log saved."),
     ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /save workout/i }),
+    ).not.toBeInTheDocument();
   });
 
   it("prevents duplicate submissions while the server request is pending", async () => {
