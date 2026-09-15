@@ -25,7 +25,8 @@ never receives database credentials.
 - npm 10 or later
 - A Supabase PostgreSQL project for database-backed development
 
-Copy the environment template and fill in the two Supabase connection strings:
+Copy the environment template and fill in the Supabase database and Auth
+settings:
 
 ```bash
 cp .env.example .env
@@ -58,9 +59,31 @@ npm run dev --workspace @fitness/server
 npm run dev --workspace @fitness/client -- --host localhost
 ```
 
-Open `http://localhost:5173`. The current MVP uses a seeded demo-user adapter;
-the server resolves that user from `DEMO_USER_ID` while authentication is not
-yet integrated.
+Open `http://localhost:5173`. Unauthenticated visitors see the public landing
+page. Create an account or sign in with the Supabase email/password provider to
+enter the protected Today dashboard.
+
+For authenticated local development, set these server variables in `.env`:
+
+```text
+AUTH_PROVIDER=supabase
+SUPABASE_URL=https://[PROJECT-REF].supabase.co
+SUPABASE_ANON_KEY=[PUBLIC-ANON-KEY]
+CORS_ORIGINS=http://localhost:5173
+```
+
+Set the matching public values for the Vite client when they are not supplied
+through the shell:
+
+```text
+VITE_API_URL=http://localhost:3000/api
+VITE_SUPABASE_URL=https://[PROJECT-REF].supabase.co
+VITE_SUPABASE_ANON_KEY=[PUBLIC-ANON-KEY]
+```
+
+The client only receives the public/anon key. Database URLs and service-role
+keys stay server-side. New accounts may need to confirm their email before
+they can sign in, depending on the Supabase Auth email-confirmation setting.
 
 By default, AI calls use the configured OpenAI-compatible provider. For local
 UI work and automated tests, the server supports a deterministic provider:
@@ -88,11 +111,14 @@ npm run test:e2e
 ```
 
 The browser install is required once per development machine or CI image.
-Database-backed E2E scenarios are skipped when `DATABASE_URL` is absent. With
-Supabase configured, the Playwright setup uses the isolated user id
-`e2e-demo-user`, resets only that user's cycles, and starts the API with
-`AI_PROVIDER=fake`; no paid AI request is made. Playwright starts both the API
-and Vite client automatically.
+Database-backed E2E scenarios are skipped when `DATABASE_URL` is absent. The
+Playwright process uses `AUTH_PROVIDER=fake`, `E2E_AUTH_ENABLED=true`, and the
+isolated `E2E_USER_ID` only for deterministic tests; it never enables fake Auth
+in production and never makes a paid AI request. Playwright starts both the
+API and Vite client automatically.
+
+The normal Prisma seed creates system exercises only. Test setup explicitly
+calls `seedTestUser()` for its isolated identity.
 
 Additional checks used before a release:
 

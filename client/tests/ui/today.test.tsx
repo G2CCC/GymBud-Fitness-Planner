@@ -1,8 +1,10 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { MemoryRouter, Navigate, Route, Routes } from "react-router-dom";
+import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { App } from "../../src/App";
+import { AuthContext } from "../../src/auth/AuthProvider";
+import type { AuthContextValue } from "../../src/auth/auth-types";
 import type { ApiCycle, ApiWorkout } from "../../src/api/contracts";
 import * as api from "../../src/api/client";
 import {
@@ -370,23 +372,22 @@ describe("today page", () => {
 });
 
 describe("today route and navigation contract", () => {
-  it("keeps onboarding and routes the root index to Today", () => {
-    const childRoutes = router.routes[0]?.children ?? [];
-    const indexRoute = childRoutes.find((route) => route.index === true);
-    const indexElement = indexRoute?.element as
-      | { type?: unknown; props?: { to?: string } }
-      | undefined;
+  it("keeps onboarding and exposes Today inside the protected app routes", () => {
+    const childRoutes =
+      router.routes.find((route) =>
+        route.children?.some((child) => child.path === "today"),
+      )?.children ?? [];
 
     expect(childRoutes.some((route) => route.path === "today")).toBe(true);
     expect(childRoutes.some((route) => route.path === "onboarding")).toBe(true);
-    expect(indexElement?.type).toBe(Navigate);
-    expect(indexElement?.props?.to).toBe("/today");
   });
 
   it("points both desktop and mobile Today navigation to /today", () => {
     render(
       <MemoryRouter initialEntries={["/today"]}>
-        <App />
+        <AuthContext.Provider value={authenticatedAuthContext}>
+          <App />
+        </AuthContext.Provider>
       </MemoryRouter>,
     );
 
@@ -397,3 +398,13 @@ describe("today route and navigation contract", () => {
     );
   });
 });
+
+const authenticatedAuthContext: AuthContextValue = {
+  state: {
+    status: "authenticated",
+    session: {} as NonNullable<AuthContextValue["state"]["session"]>,
+  },
+  signIn: vi.fn(),
+  signUp: vi.fn(),
+  signOut: vi.fn(),
+};

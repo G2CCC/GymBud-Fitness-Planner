@@ -1,5 +1,5 @@
 import { Router, type Response } from "express";
-import { getCurrentUserId } from "../../../current-user";
+import { getAuthenticatedUserId } from "../../../current-user";
 import { createConfiguredAiClient } from "../../../ai/client";
 import {
   WeightService,
@@ -15,7 +15,7 @@ weightDecisionRouter.post(
   "/:recommendationId/decision",
   async (request, response) => {
     try {
-      const userId = await getCurrentUserId();
+      const userId = getAuthenticatedUserId(request);
       const workout = await weightService.applyWeightDecision(
         userId,
         request.params.recommendationId,

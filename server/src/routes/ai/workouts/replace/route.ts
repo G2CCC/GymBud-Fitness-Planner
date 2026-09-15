@@ -1,6 +1,6 @@
 import { Router, type Response } from "express";
 import { z } from "zod";
-import { getCurrentUserId } from "../../../../current-user";
+import { getAuthenticatedUserId } from "../../../../current-user";
 import { createConfiguredAiClient } from "../../../../ai/client";
 import {
   AiExerciseService,
@@ -30,7 +30,7 @@ exerciseReplacementRouter.post(
     }
 
     try {
-      const userId = await getCurrentUserId();
+      const userId = getAuthenticatedUserId(request);
       const replacements = await exerciseService.getCompatibleReplacements(
         userId,
         request.params.workoutId,

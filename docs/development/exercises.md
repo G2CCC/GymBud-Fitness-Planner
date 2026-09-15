@@ -46,8 +46,9 @@ The seed contains bodyweight examples (`Push-up`, `Bodyweight Squat`, and
 
 ## API
 
-The current-user adapter is still the MVP demo user adapter. Authentication will
-replace that adapter later without changing the service ownership checks.
+The API now resolves the authenticated Supabase identity before calling this
+service. The service contract remains user-id scoped, so ownership checks do
+not depend on client-supplied identity values.
 
 ```text
 GET  /api/exercises?location=GYM|HOME

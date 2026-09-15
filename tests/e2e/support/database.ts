@@ -1,14 +1,25 @@
-import type { PlaywrightWorkerArgs } from "@playwright/test";
+import type { Page, PlaywrightWorkerArgs } from "@playwright/test";
 
 export const hasDatabase = Boolean(process.env.DATABASE_URL);
-export const e2eUserId = process.env.DEMO_USER_ID ?? "e2e-demo-user";
+export const e2eUserId = process.env.E2E_USER_ID ?? "e2e-demo-user";
 
 export async function createApiContext(
   playwright: PlaywrightWorkerArgs["playwright"],
 ) {
   return playwright.request.newContext({
     baseURL: "http://localhost:3000/api",
+    extraHTTPHeaders: {
+      Authorization: `Bearer test-token:${e2eUserId}`,
+    },
   });
+}
+
+export async function signInE2eUser(page: Page): Promise<void> {
+  await page.goto("/login");
+  await page.getByLabel("Email").fill(`${e2eUserId}@example.test`);
+  await page.getByLabel("Password").fill("e2e-password");
+  await page.getByRole("button", { name: "Sign in" }).click();
+  await page.waitForURL(/\/today$/);
 }
 
 export async function resetE2eData(): Promise<void> {

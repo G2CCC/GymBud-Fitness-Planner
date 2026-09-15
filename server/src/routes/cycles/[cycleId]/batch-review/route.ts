@@ -7,7 +7,7 @@ import {
 } from "../../../../reviews/service";
 import { CycleService } from "../../../../cycles/service";
 import { PlanService } from "../../../../ai/plan-service";
-import { getCurrentUserId } from "../../../../current-user";
+import { getAuthenticatedUserId } from "../../../../current-user";
 import { db } from "../../../../db";
 
 const inputSchema = z.object({
@@ -26,7 +26,7 @@ export const batchReviewRouter = Router({ mergeParams: true });
 
 batchReviewRouter.get<{ cycleId: string }>("/", async (request, response) => {
   try {
-    const userId = await getCurrentUserId();
+    const userId = getAuthenticatedUserId(request);
     const result = await reviewService.getBatchReviewStatus(
       userId,
       request.params.cycleId,
@@ -46,7 +46,7 @@ batchReviewRouter.post<{ cycleId: string }>("/", async (request, response) => {
   }
 
   try {
-    const userId = await getCurrentUserId();
+    const userId = getAuthenticatedUserId(request);
     const result = await reviewService.generateBatchReview(
       userId,
       request.params.cycleId,
@@ -73,4 +73,3 @@ function sendRouteError(response: Response, error: unknown) {
     },
   });
 }
-

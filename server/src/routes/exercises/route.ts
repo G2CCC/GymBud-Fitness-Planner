@@ -8,7 +8,7 @@ import {
   ExerciseService,
   ExerciseServiceError,
 } from "../../exercises/service";
-import { getCurrentUserId } from "../../current-user";
+import { getAuthenticatedUserId } from "../../current-user";
 import { db } from "../../db";
 
 const locationQuerySchema = z.object({
@@ -32,7 +32,7 @@ exerciseRouter.get("/", async (request, response) => {
   }
 
   try {
-    const userId = await getCurrentUserId();
+    const userId = getAuthenticatedUserId(request);
     const exercises = await exerciseService.listAvailableExercises(
       userId,
       parsed.data.location,
@@ -56,7 +56,7 @@ exerciseRouter.post("/", async (request, response) => {
   }
 
   try {
-    const userId = await getCurrentUserId();
+    const userId = getAuthenticatedUserId(request);
     const exercise = await exerciseService.createConfirmedCustomExercise(
       userId,
       parsed.data,
@@ -69,7 +69,7 @@ exerciseRouter.post("/", async (request, response) => {
 
 exerciseRouter.get("/:exerciseId", async (request, response) => {
   try {
-    const userId = await getCurrentUserId();
+    const userId = getAuthenticatedUserId(request);
     const exercise = await exerciseService.getExercise(
       userId,
       request.params.exerciseId,

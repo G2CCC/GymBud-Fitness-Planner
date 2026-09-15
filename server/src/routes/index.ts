@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { createAuthMiddleware } from "../auth/middleware";
 import { exerciseExtractionRouter } from "./ai/exercises/extract/route";
 import { weightRecommendationRouter } from "./ai/exercises/weight/route";
 import { planRouter } from "./ai/plans/route";
@@ -10,6 +11,7 @@ import { profileRouter } from "./profile/route";
 import { workoutRouter } from "./workouts/route";
 
 export const apiRouter = Router();
+apiRouter.use(createAuthMiddleware());
 apiRouter.use("/ai/plans", planRouter);
 apiRouter.use("/ai/exercises/extract", exerciseExtractionRouter);
 apiRouter.use("/ai/exercises", weightRecommendationRouter);

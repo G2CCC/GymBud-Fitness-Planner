@@ -3,6 +3,7 @@ import {
   createApiContext,
   hasDatabase,
   resetE2eData,
+  signInE2eUser,
 } from "./support/database";
 
 test.describe("first cycle E2E flow", () => {
@@ -59,6 +60,7 @@ test.describe("first cycle E2E flow", () => {
     });
     expect(confirmedResponse.ok()).toBeTruthy();
 
+    await signInE2eUser(page);
     await page.goto("/calendar");
     const workoutCard = page.getByRole("button", {
       name: /strength workout on/i,

@@ -1,13 +1,13 @@
 import { Router, type Response } from "express";
 import { profileInputSchema } from "@fitness/shared/domain/validation";
-import { getCurrentUserId } from "../../current-user";
+import { getAuthenticatedUserId } from "../../current-user";
 import { db } from "../../db";
 
 export const profileRouter = Router();
 
-profileRouter.get("/", async (_request, response) => {
+profileRouter.get("/", async (request, response) => {
   try {
-    const userId = await getCurrentUserId();
+    const userId = getAuthenticatedUserId(request);
     const profile = await db.userProfile.findUnique({
       where: { userId },
       select: {
@@ -42,7 +42,7 @@ profileRouter.put("/", async (request, response) => {
   }
 
   try {
-    const userId = await getCurrentUserId();
+    const userId = getAuthenticatedUserId(request);
     const profile = await db.userProfile.upsert({
       where: { userId },
       update: parsed.data,

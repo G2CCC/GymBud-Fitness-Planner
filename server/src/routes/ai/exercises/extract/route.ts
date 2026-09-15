@@ -1,5 +1,5 @@
 import { Router, type Response } from "express";
-import { getCurrentUserId } from "../../../../current-user";
+import { getAuthenticatedUserId } from "../../../../current-user";
 import { createConfiguredAiClient } from "../../../../ai/client";
 import {
   AiExerciseService,
@@ -13,7 +13,7 @@ export const exerciseExtractionRouter = Router();
 
 exerciseExtractionRouter.post("/", async (request, response) => {
   try {
-    await getCurrentUserId();
+    getAuthenticatedUserId(request);
     const draft = await exerciseService.extractExerciseMetadata(request.body);
     return response.json({ data: draft });
   } catch (error) {

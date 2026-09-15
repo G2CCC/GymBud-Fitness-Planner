@@ -1,8 +1,8 @@
 import "dotenv/config";
 import { defineConfig } from "@playwright/test";
 
-const e2eUserId = process.env.DEMO_USER_ID ?? "e2e-demo-user";
-process.env.DEMO_USER_ID = e2eUserId;
+const e2eUserId = process.env.E2E_USER_ID ?? "e2e-demo-user";
+process.env.E2E_USER_ID = e2eUserId;
 
 export default defineConfig({
   testDir: "./tests/e2e",
@@ -24,7 +24,9 @@ export default defineConfig({
       env: {
         ...process.env,
         AI_PROVIDER: "fake",
-        DEMO_USER_ID: e2eUserId,
+        AUTH_PROVIDER: "fake",
+        E2E_AUTH_ENABLED: "true",
+        E2E_USER_ID: e2eUserId,
         NODE_ENV: "development",
         PORT: "3000",
       },
@@ -36,6 +38,8 @@ export default defineConfig({
       reuseExistingServer: false,
       env: {
         ...process.env,
+        VITE_AUTH_PROVIDER: "fake",
+        VITE_TEST_USER_ID: e2eUserId,
         VITE_API_URL: "http://localhost:3000/api",
       },
     },

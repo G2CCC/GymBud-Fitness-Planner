@@ -1,7 +1,21 @@
-import { NavLink, Outlet } from "react-router-dom";
+import { NavLink, Outlet, useNavigate } from "react-router-dom";
+import { useState } from "react";
 import { productName } from "@fitness/shared/brand";
+import { useAuth } from "./auth/AuthProvider";
 
 export function App() {
+  const { signOut } = useAuth();
+  const navigate = useNavigate();
+  const [signingOut, setSigningOut] = useState(false);
+  async function handleSignOut() {
+    setSigningOut(true);
+    try {
+      await signOut();
+      navigate("/", { replace: true });
+    } finally {
+      setSigningOut(false);
+    }
+  }
   const navigation = [
     { label: "Today", to: "/today" },
     { label: "Calendar", to: "/calendar" },
@@ -26,9 +40,19 @@ export function App() {
               <NavItem key={item.to} {...item} />
             ))}
           </nav>
-          <p className="mt-auto text-xs leading-5 text-gymbud-muted">
-            Plan deliberately. Train consistently. Review honestly.
-          </p>
+          <div className="mt-auto grid gap-4">
+            <p className="text-xs leading-5 text-gymbud-muted">
+              Plan deliberately. Train consistently. Review honestly.
+            </p>
+            <button
+              type="button"
+              className="focus-ring min-h-11 rounded-[var(--radius-control)] px-3 py-3 text-left text-sm font-semibold text-gymbud-muted hover:bg-gymbud-surface-muted hover:text-gymbud-ink disabled:cursor-not-allowed disabled:opacity-60"
+              disabled={signingOut}
+              onClick={() => void handleSignOut()}
+            >
+              {signingOut ? "Signing out…" : "Sign out"}
+            </button>
+          </div>
         </div>
       </aside>
 
@@ -36,7 +60,14 @@ export function App() {
         <header className="sticky top-0 z-10 border-b border-gymbud-border bg-gymbud-background/90 px-4 py-4 backdrop-blur sm:px-8 lg:hidden">
           <div className="flex items-center justify-between">
             <p className="font-semibold">{productName}</p>
-            <span className="text-xs text-gymbud-muted">Athletic Calm</span>
+            <button
+              type="button"
+              className="focus-ring rounded-[var(--radius-control)] px-3 py-2 text-xs font-semibold text-gymbud-muted hover:bg-gymbud-surface-muted hover:text-gymbud-ink disabled:opacity-60"
+              disabled={signingOut}
+              onClick={() => void handleSignOut()}
+            >
+              {signingOut ? "Signing out…" : "Sign out"}
+            </button>
           </div>
         </header>
         <Outlet />

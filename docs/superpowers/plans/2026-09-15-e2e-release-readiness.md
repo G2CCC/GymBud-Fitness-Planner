@@ -4,7 +4,7 @@
 
 **Goal:** Verify the current GymBud MVP through real HTTP/browser flows and document the web-to-iOS boundary without reintroducing removed workout-source concepts.
 
-**Architecture:** Playwright will run against the existing Express API and Vite client. A deterministic fake AI provider will be enabled only when `AI_PROVIDER=fake`, so E2E tests never call a paid external model. The E2E user and database fixtures remain isolated from the seeded demo user through `DEMO_USER_ID`.
+**Architecture:** Playwright will run against the Express API and Vite client. Deterministic fake Auth and AI providers will be enabled only in the explicit E2E web-server processes, so E2E tests never call Supabase Auth or a paid external model. The E2E user and database fixtures remain isolated through `E2E_USER_ID` and a bearer token.
 
 **Tech Stack:** Playwright Test, React/Vite, Express, Prisma/PostgreSQL/Supabase, TypeScript, Vitest.
 
@@ -18,6 +18,7 @@
 - Backfill completion must include an actual past date and time.
 - Closed cycles and their workouts are read-only after closure.
 - E2E tests must use a deterministic fake AI response and must not require an external AI key.
+- E2E tests must use a deterministic fake Auth token and must not require a Supabase Auth request.
 - Database-backed E2E tests are skipped when `DATABASE_URL` is absent; configuration, typecheck, and test collection still must pass.
 - No `.env`, generated Prisma client, or temporary tooling directory may be committed.
 
@@ -56,7 +57,7 @@
 - Modify: `package-lock.json`
 
 **Interfaces:**
-- Playwright starts the API with `AI_PROVIDER=fake`, `DEMO_USER_ID=e2e-demo-user`, and the Vite client.
+- Playwright starts the API with `AI_PROVIDER=fake`, `AUTH_PROVIDER=fake`, `E2E_AUTH_ENABLED=true`, and `E2E_USER_ID=e2e-demo-user`, plus the Vite client's matching fake-auth variables.
 - Each test creates only its own cycle/workouts and cleans them up through the E2E database helper.
 
 - [x] Write the first-cycle flow: profile → cycle draft → fake AI plan → explicit confirmation → browser calendar → actual strength completion → `COMPLETED`.

@@ -1,7 +1,6 @@
-import { env } from "./config/env";
+import type { Request } from "express";
 import { db } from "./db";
-
-const demoUserEmail = "demo@example.com";
+import { getRequestAuth } from "./auth/types";
 
 const demoProfile = {
   primaryGoal: "FAT_LOSS",
@@ -15,13 +14,16 @@ const demoProfile = {
   weightKg: 82,
 };
 
-export async function seedDemoUser(): Promise<{ userId: string }> {
+export async function seedTestUser(userId: string): Promise<{ userId: string }> {
+  const providerUserId = `test:${userId}`;
+  const email = `${userId}@example.test`;
   const user = await db.user.upsert({
-    where: { id: env.demoUserId },
-    update: { email: demoUserEmail },
+    where: { id: userId },
+    update: { email, authUserId: providerUserId },
     create: {
-      id: env.demoUserId,
-      email: demoUserEmail,
+      id: userId,
+      email,
+      authUserId: providerUserId,
     },
   });
 
@@ -37,15 +39,6 @@ export async function seedDemoUser(): Promise<{ userId: string }> {
   return { userId: user.id };
 }
 
-export async function getCurrentUserId(): Promise<string> {
-  const user = await db.user.findUnique({
-    where: { id: env.demoUserId },
-    select: { id: true },
-  });
-
-  if (!user) {
-    throw new Error("Demo user is not seeded. Run the database seed first.");
-  }
-
-  return user.id;
+export function getAuthenticatedUserId(request: Request): string {
+  return getRequestAuth(request).userId;
 }

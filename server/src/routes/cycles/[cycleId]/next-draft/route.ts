@@ -7,7 +7,7 @@ import {
 } from "../../../../reviews/service";
 import { CycleService } from "../../../../cycles/service";
 import { PlanService } from "../../../../ai/plan-service";
-import { getCurrentUserId } from "../../../../current-user";
+import { getAuthenticatedUserId } from "../../../../current-user";
 import { db } from "../../../../db";
 
 const inputSchema = z.object({
@@ -33,7 +33,7 @@ nextCycleDraftRouter.post<{ cycleId: string }>("/", async (request, response) =>
   }
 
   try {
-    const userId = await getCurrentUserId();
+    const userId = getAuthenticatedUserId(request);
     const result = await reviewService.generateBatchNextCycleDraft(
       userId,
       request.params.cycleId,

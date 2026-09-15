@@ -10,7 +10,7 @@ import {
   WorkoutService,
   WorkoutServiceError,
 } from "../../workouts/service";
-import { getCurrentUserId } from "../../current-user";
+import { getAuthenticatedUserId } from "../../current-user";
 import { db } from "../../db";
 
 const completeWorkoutInputSchema = z.object({
@@ -30,7 +30,7 @@ workoutRouter.post("/", async (request, response) => {
   }
 
   try {
-    const userId = await getCurrentUserId();
+    const userId = getAuthenticatedUserId(request);
     const workout = await workoutService.createWorkout(userId, parsed.data);
     return response.status(201).json({ data: workout });
   } catch (error) {
@@ -40,7 +40,7 @@ workoutRouter.post("/", async (request, response) => {
 
 workoutRouter.get("/:workoutId", async (request, response) => {
   try {
-    const userId = await getCurrentUserId();
+    const userId = getAuthenticatedUserId(request);
     const workout = await workoutService.getWorkout(
       userId,
       request.params.workoutId,
@@ -59,7 +59,7 @@ workoutRouter.post("/:workoutId/complete", async (request, response) => {
   }
 
   try {
-    const userId = await getCurrentUserId();
+    const userId = getAuthenticatedUserId(request);
     const workout = await workoutService.completeWorkout(
       userId,
       request.params.workoutId,
@@ -79,7 +79,7 @@ workoutRouter.post("/:workoutId/backfill", async (request, response) => {
   }
 
   try {
-    const userId = await getCurrentUserId();
+    const userId = getAuthenticatedUserId(request);
     const workout = await workoutService.backfillWorkout(
       userId,
       request.params.workoutId,
@@ -93,7 +93,7 @@ workoutRouter.post("/:workoutId/backfill", async (request, response) => {
 
 workoutRouter.post("/:workoutId/cancel", async (request, response) => {
   try {
-    const userId = await getCurrentUserId();
+    const userId = getAuthenticatedUserId(request);
     const workout = await workoutService.cancelWorkout(
       userId,
       request.params.workoutId,
@@ -112,7 +112,7 @@ workoutRouter.post("/:workoutId/reschedule", async (request, response) => {
   }
 
   try {
-    const userId = await getCurrentUserId();
+    const userId = getAuthenticatedUserId(request);
     const workout = await workoutService.rescheduleWorkout(
       userId,
       request.params.workoutId,
@@ -132,7 +132,7 @@ workoutRouter.patch("/:workoutId/location", async (request, response) => {
   }
 
   try {
-    const userId = await getCurrentUserId();
+    const userId = getAuthenticatedUserId(request);
     const workout = await workoutService.updateWorkoutLocation(
       userId,
       request.params.workoutId,
@@ -146,7 +146,7 @@ workoutRouter.patch("/:workoutId/location", async (request, response) => {
 
 workoutRouter.put("/:workoutId/log", async (request, response) => {
   try {
-    const userId = await getCurrentUserId();
+    const userId = getAuthenticatedUserId(request);
     const log = await workoutService.saveWorkoutLog(
       userId,
       request.params.workoutId,

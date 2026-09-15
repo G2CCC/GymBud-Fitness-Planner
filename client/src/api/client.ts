@@ -28,6 +28,7 @@ import {
   rescheduleWorkoutInputSchema,
   updateWorkoutLocationInputSchema,
 } from "./validation";
+import { getAccessToken } from "../auth/client";
 
 const apiBaseUrl = (
   import.meta.env.VITE_API_URL ?? "http://localhost:3000/api"
@@ -48,12 +49,16 @@ async function request<T>(
   path: string,
   init: RequestInit = {},
 ): Promise<T> {
+  const accessToken = await getAccessToken();
+  const headers = new Headers(init.headers);
+  headers.set("Content-Type", "application/json");
+  if (accessToken) {
+    headers.set("Authorization", "Bearer " + accessToken);
+  }
+
   const response = await fetch(apiBaseUrl + path, {
     ...init,
-    headers: {
-      "Content-Type": "application/json",
-      ...(init.headers ?? {}),
-    },
+    headers,
   });
 
   const body = (await response.json().catch(() => ({}))) as {

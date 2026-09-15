@@ -5,7 +5,7 @@ import {
   timeZoneSchema,
 } from "@fitness/shared/domain/validation";
 import { CycleService, CycleServiceError } from "../../cycles/service";
-import { getCurrentUserId } from "../../current-user";
+import { getAuthenticatedUserId } from "../../current-user";
 import { db } from "../../db";
 import { z } from "zod";
 import { cycleReviewRouter } from "./[cycleId]/review/route";
@@ -33,7 +33,7 @@ export const cycleRouter = Router();
 
 cycleRouter.get("/current", async (request, response) => {
   try {
-    const userId = await getCurrentUserId();
+    const userId = getAuthenticatedUserId(request);
     const activeCycle = await db.trainingCycle.findFirst({
       where: { userId, status: "ACTIVE" },
       orderBy: { startDate: "desc" },
@@ -111,7 +111,7 @@ cycleRouter.post("/", async (request, response) => {
   }
 
   try {
-    const userId = await getCurrentUserId();
+    const userId = getAuthenticatedUserId(request);
     const draft = await cycleService.createDraft(userId, parsed.data);
     return response.status(201).json({ data: draft });
   } catch (error) {
@@ -132,7 +132,7 @@ cycleRouter.post("/:cycleId/activate", async (request, response) => {
   }
 
   try {
-    const userId = await getCurrentUserId();
+    const userId = getAuthenticatedUserId(request);
     const active = await cycleService.activateDraft(
       userId,
       request.params.cycleId,
@@ -146,7 +146,7 @@ cycleRouter.post("/:cycleId/activate", async (request, response) => {
 
 cycleRouter.get("/:cycleId/review-status", async (request, response) => {
   try {
-    const userId = await getCurrentUserId();
+    const userId = getAuthenticatedUserId(request);
     const reviewStatus = await cycleService.getReviewStatus(
       userId,
       request.params.cycleId,
@@ -159,7 +159,7 @@ cycleRouter.get("/:cycleId/review-status", async (request, response) => {
 
 cycleRouter.post("/:cycleId/close", async (request, response) => {
   try {
-    const userId = await getCurrentUserId();
+    const userId = getAuthenticatedUserId(request);
     const closed = await cycleService.close(
       userId,
       request.params.cycleId,
@@ -185,7 +185,7 @@ cycleRouter.post(
     }
 
     try {
-      const userId = await getCurrentUserId();
+      const userId = getAuthenticatedUserId(request);
       const restored = await cycleService.restoreAutoCancelledWorkout(
         userId,
         request.params.cycleId,

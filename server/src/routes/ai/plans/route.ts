@@ -1,5 +1,5 @@
 import { Router, type Response } from "express";
-import { getCurrentUserId } from "../../../current-user";
+import { getAuthenticatedUserId } from "../../../current-user";
 import { createConfiguredAiClient } from "../../../ai/client";
 import {
   PlanService,
@@ -13,7 +13,7 @@ export const planRouter = Router();
 
 planRouter.post("/:cycleId/generate", async (request, response) => {
   try {
-    const userId = await getCurrentUserId();
+    const userId = getAuthenticatedUserId(request);
     const draft = await planService.generateDraft(
       userId,
       request.params.cycleId,
@@ -26,7 +26,7 @@ planRouter.post("/:cycleId/generate", async (request, response) => {
 
 planRouter.post("/:cycleId/confirm", async (request, response) => {
   try {
-    const userId = await getCurrentUserId();
+    const userId = getAuthenticatedUserId(request);
     const cycle = await planService.confirmDraft(
       userId,
       request.params.cycleId,
