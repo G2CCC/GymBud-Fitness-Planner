@@ -1,6 +1,6 @@
-import { render, screen } from "@testing-library/react";
+import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { NextCycleDraftEditor } from "../../src/components/review/NextCycleDraftEditor";
 import { ReviewPage } from "../../src/pages/review/ReviewPage";
@@ -14,6 +14,11 @@ vi.mock("../../src/api/client", () => ({
   generateNextCycleDraft: vi.fn(),
   getBatchReviewStatus: vi.fn(),
 }));
+
+afterEach(() => {
+  cleanup();
+  vi.clearAllMocks();
+});
 
 const reviewResult: ApiCycleReviewResult = {
   reviewId: "review-4",
@@ -102,5 +107,32 @@ describe("cycle review page", () => {
     expect(
       screen.getByRole("button", { name: /review these four cycles/i }),
     ).toBeInTheDocument();
+  });
+
+  it("keeps the user summary optional when it is left blank", async () => {
+    const user = userEvent.setup();
+    vi.mocked(api.getBatchReviewStatus).mockResolvedValue({
+      eligible: false,
+      reviewId: null,
+      startCycleNumber: null,
+      endCycleNumber: null,
+      status: "NOT_ELIGIBLE",
+    });
+    vi.mocked(api.generateCycleReview).mockResolvedValue(reviewResult);
+
+    render(
+      <MemoryRouter initialEntries={["/review/cycle-4"]}>
+        <Routes>
+          <Route path="/review/:cycleId" element={<ReviewPage />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    await user.click(
+      screen.getByRole("button", { name: /generate cycle review/i }),
+    );
+
+    await screen.findByText("Recorded volume was consistent.");
+    expect(api.generateCycleReview).toHaveBeenCalledWith("cycle-4", "");
   });
 });

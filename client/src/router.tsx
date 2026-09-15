@@ -4,6 +4,8 @@ import { OnboardingPage } from "./pages/onboarding/OnboardingPage";
 import { CalendarPage } from "./pages/calendar/CalendarPage";
 import { WorkoutPage } from "./pages/workouts/WorkoutPage";
 import { ReviewPage } from "./pages/review/ReviewPage";
+import { ProgressPage } from "./pages/progress/ProgressPage";
+import { ProfilePage } from "./pages/profile/ProfilePage";
 
 export const router = createBrowserRouter([
   {
@@ -15,6 +17,8 @@ export const router = createBrowserRouter([
       { path: "calendar", element: <CalendarPage /> },
       { path: "workouts/:workoutId", element: <WorkoutPage /> },
       { path: "review/:cycleId", element: <ReviewPage /> },
+      { path: "progress", element: <ProgressPage /> },
+      { path: "profile", element: <ProfilePage /> },
     ],
   },
 ]);

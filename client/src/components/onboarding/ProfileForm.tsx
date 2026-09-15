@@ -13,6 +13,10 @@ export type ProfileFormProps = {
   onSubmit: (value: ProfileInput) => void | Promise<void>;
   submitting?: boolean;
   error?: string | null;
+  title?: string;
+  heading?: string;
+  description?: string;
+  submitLabel?: string;
 };
 
 const defaultValue: ProfileInput = {
@@ -28,6 +32,10 @@ export function ProfileForm({
   onSubmit,
   submitting = false,
   error: externalError = null,
+  title = "Your training setup",
+  heading = "Give GymBud the rhythm of your week.",
+  description = "Training frequency and available time are required. Gender, age, height, and body weight are optional context for AI planning. Equipment is inferred from the location, so gym plans have no equipment restriction and home plans default to bodyweight movements.",
+  submitLabel = "Save and open calendar",
 }: ProfileFormProps) {
   const [value, setValue] = useState<ProfileInput>(initialValue);
   const [error, setError] = useState<string | null>(null);
@@ -63,14 +71,9 @@ export function ProfileForm({
           Your training setup
         </p>
         <h1 className="mt-2 text-2xl font-semibold tracking-tight text-gymbud-ink">
-          Give GymBud the rhythm of your week.
+          {heading}
         </h1>
-        <p className="mt-2 text-sm leading-6 text-gymbud-muted">
-          Training frequency and available time are required. Gender, age,
-          height, and body weight are optional context for AI planning. Equipment
-          is inferred from the location, so gym plans have no equipment
-          restriction and home plans default to bodyweight movements.
-        </p>
+        <p className="mt-2 text-sm leading-6 text-gymbud-muted">{description}</p>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
@@ -237,7 +240,7 @@ export function ProfileForm({
         type="submit"
         disabled={submitting}
       >
-        {submitting ? "Saving setup…" : "Save and open calendar"}
+        {submitting ? "Saving…" : submitLabel}
       </button>
     </form>
   );

@@ -71,6 +71,20 @@ cycleRouter.get("/current", async (request, response) => {
       data: {
         cycle: {
           ...cycleData,
+          workouts: cycleData.workouts.map(({ workoutLog, ...workout }) => ({
+            ...workout,
+            actualDetails: toActualDetails(workoutLog?.actualDetails),
+            actualExercises: workoutLog?.exerciseLogs.map((exercise) => ({
+              exerciseId: exercise.exerciseId,
+              sortOrder: exercise.sortOrder,
+              sets: exercise.setLogs.map((set) => ({
+                setNumber: set.setNumber,
+                actualReps: set.actualReps,
+                actualWeight: set.actualWeight,
+                weightUnit: set.weightUnit,
+              })),
+            })),
+          })),
           reviewStatus,
           reviewAvailable:
             cycle.status === "CLOSED" &&
@@ -231,6 +245,35 @@ const currentCycleSelect = {
       completedAt: true,
       rescheduleCount: true,
       plannedDetails: true,
+      workoutLog: {
+        select: {
+          actualDetails: true,
+          exerciseLogs: {
+            orderBy: { sortOrder: "asc" },
+            select: {
+              exerciseId: true,
+              sortOrder: true,
+              setLogs: {
+                orderBy: { setNumber: "asc" },
+                select: {
+                  setNumber: true,
+                  actualReps: true,
+                  actualWeight: true,
+                  weightUnit: true,
+                },
+              },
+            },
+          },
+        },
+      },
     },
   },
 } satisfies Prisma.TrainingCycleSelect;
+
+function toActualDetails(value: Prisma.JsonValue | null | undefined) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return null;
+  }
+
+  return value;
+}

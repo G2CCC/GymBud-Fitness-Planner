@@ -47,6 +47,20 @@ export type ApiWorkout = {
   rescheduleCount: number;
   plannedDetails?: unknown;
   plannedExercises?: ApiPlannedExercise[];
+  actualDetails?: {
+    actualDurationMinutes?: number | null;
+    distanceKm?: number | null;
+  } | null;
+  actualExercises?: Array<{
+    exerciseId: string;
+    sortOrder: number;
+    sets: Array<{
+      setNumber: number;
+      actualReps: number;
+      actualWeight: number | null;
+      weightUnit: WeightUnit | null;
+    }>;
+  }>;
 };
 
 export type ApiCycle = {
