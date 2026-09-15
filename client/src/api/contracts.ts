@@ -62,6 +62,24 @@ export type ApiCycle = {
   workouts: ApiWorkout[];
 };
 
+export type ApiCycleDraft = {
+  id: string;
+  status: "DRAFT";
+  startDate: string;
+  endDate: string;
+  timezone: string | null;
+};
+
+export type ApiActiveCycle = {
+  id: string;
+  status: "ACTIVE";
+  cycleNumber: number;
+  startDate: string;
+  endDate: string;
+  timezone: string;
+  firstWeekDates: string[];
+};
+
 export type ApiExercise = {
   id: string;
   name: string;

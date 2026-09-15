@@ -8,9 +8,11 @@ import {
 } from "@fitness/shared";
 import type {
   ApiCycle,
+  ApiActiveCycle,
   ApiCycleBatchReviewResult,
   ApiCycleReviewResult,
   ApiBatchReviewStatus,
+  ApiCycleDraft,
   ApiExercise,
   ApiNextCycleDraft,
   ApiPlanDraft,
@@ -93,11 +95,35 @@ export async function getCurrentCycle(): Promise<ApiCycle | null> {
 export async function createCycleDraft(
   profile: ProfileInput,
   timezone: string,
-): Promise<unknown> {
-  return request("/cycles", {
+): Promise<ApiCycleDraft> {
+  return request<ApiCycleDraft>("/cycles", {
     method: "POST",
     body: JSON.stringify({ ...profile, timezone }),
   });
+}
+
+export async function activateCycle(
+  cycleId: string,
+  timezone: string,
+): Promise<ApiActiveCycle> {
+  return request<ApiActiveCycle>(
+    "/cycles/" + cycleId + "/activate",
+    jsonBody({ timezone }),
+  );
+}
+
+export async function generateInitialCyclePlan(
+  cycleId: string,
+): Promise<ApiPlanDraft> {
+  return request<ApiPlanDraft>("/ai/plans/" + cycleId + "/generate", jsonBody({}));
+}
+
+export async function confirmInitialCyclePlan(
+  cycleId: string,
+  draft: ApiPlanDraft,
+): Promise<unknown> {
+  const parsed = clientPlanDraftSchema.parse(draft);
+  return request("/ai/plans/" + cycleId + "/confirm", jsonBody(serializePlanDraft(parsed)));
 }
 
 export async function getWorkout(workoutId: string): Promise<ApiWorkout> {
@@ -235,11 +261,20 @@ export async function confirmNextCyclePlan(
   draft: ApiPlanDraft,
 ): Promise<unknown> {
   const parsed = clientPlanDraftSchema.parse(draft);
-  return request("/ai/plans/" + cycleId + "/confirm", jsonBody({
-    ...parsed,
-    workouts: parsed.workouts.map((workout) => ({
+  return request(
+    "/ai/plans/" + cycleId + "/confirm",
+    jsonBody(serializePlanDraft(parsed)),
+  );
+}
+
+function serializePlanDraft(
+  draft: ReturnType<typeof clientPlanDraftSchema.parse>,
+) {
+  return {
+    ...draft,
+    workouts: draft.workouts.map((workout) => ({
       ...workout,
       scheduledDate: workout.scheduledDate.toISOString(),
     })),
-  }));
+  };
 }
