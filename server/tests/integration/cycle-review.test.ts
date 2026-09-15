@@ -1,6 +1,6 @@
 import "dotenv/config";
 import { randomUUID } from "node:crypto";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { db } from "../../src/db";
 import { FakeAiClient } from "../../src/ai/fake-client";
 import { PlanService } from "../../src/ai/plan-service";
@@ -13,10 +13,10 @@ const integrationTestTimeout = 30_000;
 const userId = `cycle-review-test-${randomUUID()}`;
 
 const reviewResponse = {
-  processedSummary: "The cycle was completed consistently enough to continue.",
+  processedSummary: "The recorded training volume was consistent enough to continue.",
   conclusions: {
     status: "CONTINUE",
-    keyFindings: ["One strength session was completed."],
+    keyFindings: ["The user recorded actual training volume."],
     recommendations: ["Keep the next plan manageable."],
   },
 } as const;
@@ -40,7 +40,7 @@ const nextPlanResponse = {
   ],
 } as const;
 
-describe.skipIf(!hasDatabase)("cycle review persistence", () => {
+describe.skipIf(!hasDatabase)("cycle volume review persistence", () => {
   beforeAll(async () => {
     await seedSystemExercises();
     await db.user.create({
@@ -60,18 +60,20 @@ describe.skipIf(!hasDatabase)("cycle review persistence", () => {
     });
   }, integrationTestTimeout);
 
+  beforeEach(async () => {
+    await db.cycleBatchReview.deleteMany({ where: { userId } });
+    await db.trainingCycle.deleteMany({ where: { userId } });
+  });
+
   afterAll(async () => {
     await db.user.delete({ where: { id: userId } });
     await db.$disconnect();
   }, integrationTestTimeout);
 
-  it("persists the processed review while omitting an empty raw summary", async () => {
-    const cycle = await createCycle({ completed: true });
-    const ai = new FakeAiClient((request) =>
-      request.metadata?.feature === "cycle-review"
-        ? reviewResponse
-        : nextPlanResponse,
-    );
+  it("persists one current-cycle volume review and never creates a next plan", async () => {
+    const cycle = await createCycle({ cycleNumber: 1, status: "ACTIVE" });
+    const rawSummary = "private note that must not be stored";
+    const ai = new FakeAiClient(reviewResponse);
     const service = new CycleReviewService(
       db,
       ai,
@@ -83,52 +85,86 @@ describe.skipIf(!hasDatabase)("cycle review persistence", () => {
     const result = await service.generateCycleReview(
       userId,
       cycle.id,
-      "",
-      new Date("2026-11-29T12:00:00Z"),
+      rawSummary,
+      new Date("2026-10-01T12:00:00Z"),
     );
 
-    expect(result.processedSummary).toBe(reviewResponse.processedSummary);
-    expect(result.nextCycleEligibility).toBe("ELIGIBLE");
-    expect(ai.requests[0]?.userPrompt).not.toContain("optionalUserSummary");
+    expect(result.trainingVolume.completedWorkoutCount).toBe(1);
+    expect(result.batchReview.eligible).toBe(false);
+    expect(result.nextCycleDraftStatus).toBe("NOT_AVAILABLE");
+    expect(ai.requests[0]?.userPrompt).toContain("trainingVolume");
+    expect(ai.requests[0]?.userPrompt).toContain(rawSummary);
 
     const snapshot = await db.cycleReviewSnapshot.findUniqueOrThrow({
       where: { cycleId: cycle.id },
     });
     expect(snapshot.processedSummary).toBe(reviewResponse.processedSummary);
-    expect(JSON.stringify(snapshot)).not.toContain("optional raw summary");
-    expect(snapshot.conclusions).toEqual(reviewResponse.conclusions);
+    expect(JSON.stringify(snapshot)).not.toContain(rawSummary);
+    expect(snapshot.nextCycleDraft).toEqual({ status: "NOT_AVAILABLE" });
+    expect(
+      await db.trainingCycle.findUnique({
+        where: { id: cycle.id },
+        select: { status: true },
+      }),
+    ).toEqual({ status: "CLOSED" });
+    expect(
+      await db.trainingCycle.count({ where: { userId, status: "DRAFT" } }),
+    ).toBe(0);
   }, integrationTestTimeout);
 
-  it("passes a supplied summary to AI without persisting the raw text", async () => {
-    const cycle = await createCycle({ completed: true });
-    const rawSummary = "optional raw summary that must not be stored";
+  it("returns the stored single-cycle review without calling AI a second time", async () => {
+    const cycle = await createCycle({ cycleNumber: 1, status: "ACTIVE" });
     const ai = new FakeAiClient(reviewResponse);
-    const service = new CycleReviewService(
-      db,
-      ai,
-      new CycleService(db),
-      new PlanService(db, ai, "test-model"),
-      "test-model",
-    );
+    const service = new CycleReviewService(db, ai, new CycleService(db));
 
     await service.generateCycleReview(
       userId,
       cycle.id,
-      rawSummary,
-      new Date("2026-11-29T12:00:00Z"),
+      undefined,
+      new Date("2026-10-01T12:00:00Z"),
+    );
+    const repeated = await service.generateCycleReview(
+      userId,
+      cycle.id,
+      "this note must not trigger a second review",
+      new Date("2026-10-02T12:00:00Z"),
     );
 
-    expect(ai.requests[0]?.userPrompt).toContain(rawSummary);
-    const snapshot = await db.cycleReviewSnapshot.findUniqueOrThrow({
-      where: { cycleId: cycle.id },
-    });
-    expect(JSON.stringify(snapshot)).not.toContain(rawSummary);
+    expect(ai.requests).toHaveLength(1);
+    expect(repeated.trainingVolume.completedWorkoutCount).toBe(1);
   }, integrationTestTimeout);
 
-  it("persists a direct AI result and leaves the next cycle as an unconfirmed draft", async () => {
-    const cycle = await createCycle({ completed: true });
+  it("includes a shallow previous-cycle comparison only when the previous review exists", async () => {
+    const previous = await createCycle({ cycleNumber: 1, status: "ACTIVE" });
+    const ai = new FakeAiClient(reviewResponse);
+    const service = new CycleReviewService(db, ai, new CycleService(db));
+
+    await service.generateCycleReview(
+      userId,
+      previous.id,
+      undefined,
+      new Date("2026-10-01T12:00:00Z"),
+    );
+    const current = await createCycle({ cycleNumber: 2, status: "ACTIVE" });
+    const result = await service.generateCycleReview(
+      userId,
+      current.id,
+      undefined,
+      new Date("2026-11-01T12:00:00Z"),
+    );
+
+    expect(result.previousCycle?.cycleNumber).toBe(1);
+    expect(ai.requests[1]?.userPrompt).toContain("previousCycle");
+  }, integrationTestTimeout);
+
+  it("reviews exactly cycles 1–4 and only then allows a next-cycle draft", async () => {
+    const cycles = await Promise.all(
+      [1, 2, 3, 4].map((cycleNumber) =>
+        createCycle({ cycleNumber, status: "CLOSED" }),
+      ),
+    );
     const ai = new FakeAiClient((request) =>
-      request.metadata?.feature === "cycle-review"
+      request.metadata?.feature === "four-cycle-review"
         ? reviewResponse
         : nextPlanResponse,
     );
@@ -140,71 +176,57 @@ describe.skipIf(!hasDatabase)("cycle review persistence", () => {
       "test-model",
     );
 
-    const review = await service.generateCycleReview(
+    const status = await service.getBatchReviewStatus(userId, cycles[3]!.id);
+    expect(status).toMatchObject({
+      eligible: true,
+      startCycleNumber: 1,
+      endCycleNumber: 4,
+    });
+
+    const batch = await service.generateBatchReview(
       userId,
-      cycle.id,
+      cycles[3]!.id,
       undefined,
-      new Date("2026-11-29T12:00:00Z"),
-    );
-    const draft = await service.generateNextCycleDraft(
-      userId,
-      cycle.id,
-      review.reviewId,
       new Date("2026-12-01T12:00:00Z"),
     );
-    const repeatedDraft = await service.generateNextCycleDraft(
+
+    expect(batch.startCycleNumber).toBe(1);
+    expect(batch.endCycleNumber).toBe(4);
+    expect(batch.batchVolume.cycles).toHaveLength(4);
+    expect(batch.batchVolume.cycles.map((cycle) => cycle.cycleNumber)).toEqual([
+      1, 2, 3, 4,
+    ]);
+    expect(ai.requests[0]?.userPrompt).not.toContain("cycle-5");
+
+    await expect(
+      service.generateBatchNextCycleDraft(
+        userId,
+        cycles[2]!.id,
+        batch.reviewId,
+        new Date("2026-12-01T12:00:00Z"),
+      ),
+    ).rejects.toThrow(/completed four-cycle batch/);
+
+    const draft = await service.generateBatchNextCycleDraft(
       userId,
-      cycle.id,
-      review.reviewId,
-      new Date("2026-12-02T12:00:00Z"),
+      cycles[3]!.id,
+      batch.reviewId,
+      new Date("2026-12-01T12:00:00Z"),
     );
 
     expect(draft.cycle.status).toBe("DRAFT");
-    expect(draft.plan.workouts).toHaveLength(1);
-    expect(repeatedDraft.cycle.id).toBe(draft.cycle.id);
-    expect(ai.requests[1]?.userPrompt).toContain("previousCycleReview");
-    await expect(
-      db.scheduledWorkout.count({ where: { cycleId: draft.cycle.id } }),
-    ).resolves.toBe(0);
-    await expect(
-      db.trainingCycle.findUnique({
-        where: { id: draft.cycle.id },
-        select: { status: true },
-      }),
-    ).resolves.toEqual({ status: "DRAFT" });
-
-    await new PlanService(db, ai, "test-model").confirmDraft(
-      userId,
-      draft.cycle.id,
-      draft.plan,
-    );
-    await expect(
-      service.generateNextCycleDraft(userId, cycle.id, review.reviewId),
-    ).rejects.toThrow(/already been confirmed/i);
+    expect(
+      await db.scheduledWorkout.count({ where: { cycleId: draft.cycle.id } }),
+    ).toBe(0);
+    expect(ai.requests[1]?.userPrompt).toContain("trainingVolume");
   }, integrationTestTimeout);
 
-  it("rejects a review result when workout facts change during AI generation", async () => {
-    const cycle = await createCycle({ completed: true });
-    const ai = new FakeAiClient(async () => {
-      const workout = await db.scheduledWorkout.findFirst({
-        where: { cycleId: cycle.id },
-        select: { id: true },
-      });
-      if (!workout) {
-        throw new Error("Test fixture did not create a workout");
-      }
-      await db.scheduledWorkout.update({
-        where: { id: workout.id },
-        data: { durationMinutes: 61 },
-      });
-      return reviewResponse;
-    });
+  it("does not close an active cycle when AI review fails", async () => {
+    const cycle = await createCycle({ cycleNumber: 1, status: "ACTIVE" });
     const service = new CycleReviewService(
       db,
-      ai,
+      new FakeAiClient({ invalid: true }),
       new CycleService(db),
-      new PlanService(db, ai, "test-model"),
-      "test-model",
     );
 
     await expect(
@@ -212,131 +234,72 @@ describe.skipIf(!hasDatabase)("cycle review persistence", () => {
         userId,
         cycle.id,
         undefined,
-        new Date("2026-11-29T12:00:00Z"),
-      ),
-    ).rejects.toThrow(/changed while the review was generating/i);
-    await expect(
-      db.trainingCycle.findUnique({
-        where: { id: cycle.id },
-        select: { status: true },
-      }),
-    ).resolves.toEqual({ status: "ACTIVE" });
-  }, integrationTestTimeout);
-
-  it("does not close or auto-cancel an active cycle when AI review fails", async () => {
-    const cycle = await createCycle({ completed: true });
-    const ai = new FakeAiClient({ invalid: true });
-    const service = new CycleReviewService(
-      db,
-      ai,
-      new CycleService(db),
-      new PlanService(db, ai, "test-model"),
-      "test-model",
-    );
-
-    await expect(
-      service.generateCycleReview(
-        userId,
-        cycle.id,
-        undefined,
-        new Date("2026-11-29T12:00:00Z"),
+        new Date("2026-10-01T12:00:00Z"),
       ),
     ).rejects.toThrow();
-
     await expect(
       db.trainingCycle.findUnique({
         where: { id: cycle.id },
         select: { status: true },
       }),
     ).resolves.toEqual({ status: "ACTIVE" });
-    await expect(
-      db.scheduledWorkout.findFirst({
-        where: { cycleId: cycle.id },
-        select: { status: true },
-      }),
-    ).resolves.toEqual({ status: "COMPLETED" });
   }, integrationTestTimeout);
 
-  it("closes an empty cycle with reset required and does not create a draft", async () => {
-    const cycle = await createCycle({ completed: false });
-    const ai = new FakeAiClient(reviewResponse);
-    const service = new CycleReviewService(
-      db,
-      ai,
-      new CycleService(db),
-      new PlanService(db, ai, "test-model"),
-      "test-model",
-    );
+  async function createCycle(input: {
+    cycleNumber: number;
+    status: "ACTIVE" | "CLOSED";
+  }) {
+    const startDate = new Date("2026-09-01T00:00:00Z");
+    startDate.setUTCDate(startDate.getUTCDate() + (input.cycleNumber - 1) * 28);
+    const endDate = new Date(startDate);
+    endDate.setUTCDate(endDate.getUTCDate() + 27);
 
-    const review = await service.generateCycleReview(
-      userId,
-      cycle.id,
-      undefined,
-      new Date("2026-11-29T12:00:00Z"),
-    );
-
-    expect(review.nextCycleEligibility).toBe("RESET_REQUIRED");
-    await expect(
-      service.generateNextCycleDraft(userId, cycle.id, review.reviewId),
-    ).rejects.toThrow(/reset/i);
-    await expect(
-      db.trainingCycle.count({
-        where: { userId, startDate: { gt: cycle.startDate } },
-      }),
-    ).resolves.toBe(0);
-  }, integrationTestTimeout);
-
-  async function createCycle({ completed }: { completed: boolean }) {
     return db.trainingCycle.create({
       data: {
         userId,
-        startDate: new Date("2026-11-01T00:00:00Z"),
-        endDate: new Date("2026-11-28T00:00:00Z"),
+        cycleNumber: input.cycleNumber,
+        startDate,
+        endDate,
         timezone: "UTC",
-        status: "ACTIVE",
+        status: input.status,
+        closedAt: input.status === "CLOSED" ? endDate : null,
         workouts: {
-          create: [
-            {
-              userId,
-              activityType: "STRENGTH",
-              scheduledDate: new Date("2026-11-10T00:00:00Z"),
-              location: "GYM",
-              durationMinutes: 60,
-              status: completed ? "COMPLETED" : "PLANNED",
-              completedAt: completed
-                ? new Date("2026-11-10T10:00:00Z")
-                : null,
-              plannedExercises: {
-                create: {
-                  exerciseId: "system-push-up",
-                  sortOrder: 1,
-                  plannedSets: {
-                    create: { setNumber: 1, targetReps: 10 },
+          create: {
+            userId,
+            activityType: "STRENGTH",
+            scheduledDate: new Date(startDate.getTime() + 86_400_000),
+            location: "GYM",
+            durationMinutes: 60,
+            status: "COMPLETED",
+            completedAt: new Date(startDate.getTime() + 2 * 86_400_000),
+            plannedExercises: {
+              create: {
+                exerciseId: "system-push-up",
+                sortOrder: 1,
+                plannedSets: {
+                  create: { setNumber: 1, targetReps: 10 },
+                },
+              },
+            },
+            workoutLog: {
+              create: {
+                exerciseLogs: {
+                  create: {
+                    exerciseId: "system-push-up",
+                    sortOrder: 1,
+                    setLogs: {
+                      create: {
+                        setNumber: 1,
+                        actualReps: 10,
+                        actualWeight: 60,
+                        weightUnit: "KG",
+                      },
+                    },
                   },
                 },
               },
-              ...(completed
-                ? {
-                    workoutLog: {
-                      create: {
-                        exerciseLogs: {
-                          create: {
-                            exerciseId: "system-push-up",
-                            sortOrder: 1,
-                            setLogs: {
-                              create: {
-                                setNumber: 1,
-                                actualReps: 10,
-                              },
-                            },
-                          },
-                        },
-                      },
-                    },
-                  }
-                : {}),
             },
-          ],
+          },
         },
       },
     });

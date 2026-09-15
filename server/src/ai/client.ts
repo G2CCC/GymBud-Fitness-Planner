@@ -1,33 +1,18 @@
 import { env } from "../config/env";
+import { createDeterministicFakeAiClient } from "./fake-client";
+import {
+  AiClientError,
+  type AiClient,
+  type AiRequest,
+} from "./types";
 import type { ZodSchema } from "zod";
 
-export type AiRequest = {
-  model: string;
-  promptVersion: string;
-  systemPrompt: string;
-  userPrompt: string;
-  metadata?: Record<string, string>;
-};
-
-export interface AiClient {
-  generateJson<T>(request: AiRequest, schema: ZodSchema<T>): Promise<T>;
-}
-
-export type AiClientErrorCode =
-  | "NOT_CONFIGURED"
-  | "PROVIDER_ERROR"
-  | "INVALID_JSON"
-  | "INVALID_RESPONSE";
-
-export class AiClientError extends Error {
-  constructor(
-    message: string,
-    readonly code: AiClientErrorCode,
-  ) {
-    super(message);
-    this.name = "AiClientError";
-  }
-}
+export { AiClientError } from "./types";
+export type {
+  AiClient,
+  AiClientErrorCode,
+  AiRequest,
+} from "./types";
 
 type OpenAiCompatibleClientOptions = {
   apiKey: string;
@@ -129,6 +114,10 @@ export class OpenAiCompatibleClient implements AiClient {
 }
 
 export function createConfiguredAiClient(): AiClient {
+  if (env.aiProvider === "fake") {
+    return createDeterministicFakeAiClient();
+  }
+
   return new OpenAiCompatibleClient({
     apiKey: env.aiApiKey,
     baseUrl: env.aiBaseUrl,

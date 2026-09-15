@@ -43,6 +43,14 @@ enum CycleStatus {
   CLOSED
 }
 
+enum CycleBatchReviewStatus {
+  ELIGIBLE
+  GENERATING
+  READY
+  CONFIRMED
+  RESET_REQUIRED
+}
+
 enum WeightUnit {
   KG
   LB
@@ -54,6 +62,7 @@ model User {
   createdAt         DateTime           @default(now())
   profile           UserProfile?
   cycles            TrainingCycle[]
+  batchReviews      CycleBatchReview[]
   scheduledWorkouts ScheduledWorkout[]
   exercises         Exercise[]
   recommendations   AIRecommendation[]
@@ -82,6 +91,7 @@ model TrainingCycle {
   startDate      DateTime
   endDate        DateTime
   timezone       String?
+  cycleNumber    Int?
   status         CycleStatus          @default(DRAFT)
   closedAt       DateTime?
   createdAt      DateTime             @default(now())
@@ -91,6 +101,7 @@ model TrainingCycle {
 
   @@index([userId, status])
   @@index([userId, startDate])
+  @@unique([userId, cycleNumber])
 }
 
 model ScheduledWorkout {
@@ -221,12 +232,34 @@ model AIRecommendation {
 }
 
 model CycleReviewSnapshot {
-  id               String        @id @default(cuid())
-  cycleId          String        @unique
-  cycle            TrainingCycle @relation(fields: [cycleId], references: [id], onDelete: Cascade)
-  processedSummary String?
-  objectiveSummary Json
-  conclusions      Json
-  nextCycleDraft   Json
-  createdAt        DateTime      @default(now())
+  id                    String        @id @default(cuid())
+  cycleId               String        @unique
+  cycle                 TrainingCycle @relation(fields: [cycleId], references: [id], onDelete: Cascade)
+  processedSummary      String?
+  objectiveSummary      Json
+  previousCycleSummary  Json?
+  conclusions           Json
+  nextCycleDraft        Json
+  reviewedAt            DateTime?
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+}
+
+model CycleBatchReview {
+  id                String                @id @default(cuid())
+  userId            String
+  user              User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  startCycleNumber  Int
+  endCycleNumber    Int
+  status            CycleBatchReviewStatus @default(ELIGIBLE)
+  processedSummary  String?
+  objectiveSummary  Json
+  conclusions       Json?
+  nextCycleDraft    Json?
+  reviewedAt        DateTime?
+  createdAt         DateTime              @default(now())
+  updatedAt         DateTime              @updatedAt
+
+  @@unique([userId, startCycleNumber, endCycleNumber])
+  @@index([userId, status])
 }

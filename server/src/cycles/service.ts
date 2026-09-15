@@ -35,6 +35,7 @@ export type CycleDraft = {
 export type ActiveCycle = {
   id: string;
   status: "ACTIVE";
+  cycleNumber: number;
   startDate: Date;
   endDate: Date;
   timezone: string;
@@ -127,7 +128,7 @@ export class CycleService {
     return this.prisma.$transaction(async (tx) => {
       const cycle = await tx.trainingCycle.findFirst({
         where: { id: cycleId, userId },
-        select: { id: true, status: true },
+        select: { id: true, status: true, cycleNumber: true },
       });
 
       if (!cycle) {
@@ -164,10 +165,18 @@ export class CycleService {
         profile.weeklyTrainingDays,
       );
 
+      const highestCycle = await tx.trainingCycle.aggregate({
+        where: { userId, cycleNumber: { not: null } },
+        _max: { cycleNumber: true },
+      });
+      const cycleNumber =
+        cycle.cycleNumber ?? (highestCycle._max.cycleNumber ?? 0) + 1;
+
       const activeCycle = await tx.trainingCycle.update({
         where: { id: cycleId },
         data: {
           status: "ACTIVE",
+          cycleNumber,
           startDate,
           endDate,
           timezone,
@@ -175,15 +184,16 @@ export class CycleService {
         select: {
           id: true,
           status: true,
+          cycleNumber: true,
           startDate: true,
           endDate: true,
           timezone: true,
         },
       });
 
-      if (!activeCycle.timezone) {
+      if (!activeCycle.timezone || activeCycle.cycleNumber === null) {
         throw new CycleServiceError(
-          "An active cycle must have a timezone snapshot",
+          "An active cycle must have timezone and cycle number snapshots",
           "INVALID_STATE",
           409,
         );
@@ -192,6 +202,7 @@ export class CycleService {
       return {
         ...activeCycle,
         status: "ACTIVE" as const,
+        cycleNumber: activeCycle.cycleNumber,
         timezone: activeCycle.timezone,
         firstWeekDates,
       };
@@ -354,9 +365,7 @@ export class CycleService {
             status: "PENDING",
           },
           nextCycleDraft: {
-            status: result.nextCycleMayBeGenerated
-              ? "PENDING"
-              : "RESET_REQUIRED",
+            status: "NOT_AVAILABLE",
           },
         },
       });

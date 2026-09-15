@@ -8,7 +8,9 @@ import {
 } from "@fitness/shared";
 import type {
   ApiCycle,
+  ApiCycleBatchReviewResult,
   ApiCycleReviewResult,
+  ApiBatchReviewStatus,
   ApiExercise,
   ApiNextCycleDraft,
   ApiPlanDraft,
@@ -196,6 +198,24 @@ export async function generateCycleReview(
 ): Promise<ApiCycleReviewResult> {
   return request<ApiCycleReviewResult>(
     "/cycles/" + cycleId + "/review",
+    jsonBody(summary?.trim() ? { summary: summary.trim() } : {}),
+  );
+}
+
+export async function getBatchReviewStatus(
+  cycleId: string,
+): Promise<ApiBatchReviewStatus> {
+  return request<ApiBatchReviewStatus>(
+    "/cycles/" + cycleId + "/batch-review",
+  );
+}
+
+export async function generateBatchReview(
+  cycleId: string,
+  summary?: string,
+): Promise<ApiCycleBatchReviewResult> {
+  return request<ApiCycleBatchReviewResult>(
+    "/cycles/" + cycleId + "/batch-review",
     jsonBody(summary?.trim() ? { summary: summary.trim() } : {}),
   );
 }

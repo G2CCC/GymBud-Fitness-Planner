@@ -10,6 +10,9 @@ import { db } from "../../db";
 import { z } from "zod";
 import { cycleReviewRouter } from "./[cycleId]/review/route";
 import { nextCycleDraftRouter } from "./[cycleId]/next-draft/route";
+import { batchReviewRouter } from "./[cycleId]/batch-review/route";
+import { createConfiguredAiClient } from "../../ai/client";
+import { CycleReviewService } from "../../reviews/service";
 
 const restoreWorkoutInputSchema = z.object({
   scheduledDate: z.coerce.date(),
@@ -20,6 +23,11 @@ const activateCycleInputSchema = z.object({
 }).strict();
 
 const cycleService = new CycleService(db);
+const cycleReviewService = new CycleReviewService(
+  db,
+  createConfiguredAiClient(),
+  cycleService,
+);
 
 export const cycleRouter = Router();
 
@@ -37,22 +45,37 @@ cycleRouter.get("/current", async (request, response) => {
         where: { userId, status: "DRAFT" },
         orderBy: { startDate: "desc" },
         select: currentCycleSelect,
+      })) ??
+      (await db.trainingCycle.findFirst({
+        where: { userId, status: "CLOSED" },
+        orderBy: { endDate: "desc" },
+        select: currentCycleSelect,
       }));
 
     if (!cycle) {
       return response.json({ data: { cycle: null } });
     }
 
+    const { reviewSnapshot, ...cycleData } = cycle;
+
     const reviewStatus =
       cycle.status === "ACTIVE"
         ? await cycleService.getReviewStatus(userId, cycle.id)
+        : null;
+    const batchReviewStatus =
+      cycle.status === "CLOSED"
+        ? await cycleReviewService.getBatchReviewStatus(userId, cycle.id)
         : null;
 
     return response.json({
       data: {
         cycle: {
-          ...cycle,
+          ...cycleData,
           reviewStatus,
+          reviewAvailable:
+            cycle.status === "CLOSED" &&
+            reviewSnapshot?.processedSummary == null,
+          batchReviewStatus,
         },
       },
     });
@@ -163,6 +186,7 @@ cycleRouter.post(
 );
 
 cycleRouter.use("/:cycleId/review", cycleReviewRouter);
+cycleRouter.use("/:cycleId/batch-review", batchReviewRouter);
 cycleRouter.use("/:cycleId/next-draft", nextCycleDraftRouter);
 
 function sendRouteError(response: Response, error: unknown) {
@@ -187,9 +211,13 @@ function sendRouteError(response: Response, error: unknown) {
 const currentCycleSelect = {
   id: true,
   status: true,
+  cycleNumber: true,
   startDate: true,
   endDate: true,
   timezone: true,
+  reviewSnapshot: {
+    select: { processedSummary: true },
+  },
   workouts: {
     orderBy: [{ scheduledDate: "asc" }, { createdAt: "asc" }],
     select: {

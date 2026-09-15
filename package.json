@@ -11,6 +11,8 @@
   "scripts": {
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:e2e": "playwright test",
+    "typecheck:e2e": "tsc --noEmit -p tsconfig.e2e.json",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "db:generate": "prisma generate --schema prisma/schema.prisma",
     "db:migrate": "prisma migrate dev --schema prisma/schema.prisma",
@@ -18,10 +20,11 @@
     "db:studio": "prisma studio --schema prisma/schema.prisma"
   },
   "devDependencies": {
+    "@playwright/test": "^1.63.0",
     "@types/node": "^22.10.0",
+    "dotenv": "^16.4.7",
     "typescript": "^5.7.0",
-    "vitest": "^3.2.4",
-    "dotenv": "^16.4.7"
+    "vitest": "^3.2.4"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

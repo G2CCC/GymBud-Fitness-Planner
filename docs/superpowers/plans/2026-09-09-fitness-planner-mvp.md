@@ -21,8 +21,9 @@
 - AI output is never trusted without Zod validation and database ownership/location checks.
 - AI cannot modify historical records or insert an unreviewed plan into the calendar.
 - Raw cycle-review user text is never persisted; only the AI-processed summary and conclusions are stored.
-- Closed cycles are read-only after the next cycle is generated.
-- Original planned completion and extra-workout completion are reported separately.
+- Closed cycles are read-only after closure.
+- Review reports are based on actual training volume; planned workout source
+  labels are not part of the review contract.
 - The first implementation uses a seeded current-user adapter; every query still filters by `ownerId` so a real authentication provider can replace it later without changing domain services.
 - `client` never imports Prisma or server-only modules.
 - `shared` contains no `window`, DOM, React DOM, Express, Prisma, or Node-only imports.
@@ -613,7 +614,7 @@ git commit -m "feat: add calendar workout and review interfaces"
 - Create: `playwright.config.ts`
 - Create: `tests/e2e/first-cycle.spec.ts`
 - Create: `tests/e2e/backfill-and-close.spec.ts`
-- Create: `tests/e2e/location-replacement.spec.ts`
+- Create: `tests/e2e/location-validation.spec.ts`
 - Create: `docs/mobile-readiness.md`
 - Create: `README.md`
 - Modify: `package.json`
@@ -624,29 +625,38 @@ The test must create a profile, generate a draft through the fake AI client, con
 
 - [ ] **Step 2: Write the closure and backfill end-to-end test**
 
-The test must leave one workout unresolved, open review, verify the reminder, submit no backfill, close the cycle, and verify the unresolved workout is `CANCELLED` in the old cycle and the old cycle cannot be edited.
+The test must require a backfill timestamp, accept a past completion timestamp,
+review the cycle, verify the unresolved workout is `CANCELLED` in the old cycle,
+and verify the closed cycle rejects later mutations.
 
-- [ ] **Step 3: Write the location-replacement end-to-end test**
+- [ ] **Step 3: Write the location-validation end-to-end test**
 
-The test must change a gym workout to home, verify equipment exercises are marked incompatible, replace one with a bodyweight exercise, and verify other workouts and the exercise library are unchanged.
+The test must change a gym workout to home, verify equipment exercises are not
+available at home, reject an equipment log at home, and accept a bodyweight
+log without modifying the exercise library.
 
 - [ ] **Step 4: Run all verification commands**
 
 Run:
 
 ```bash
-npm run lint
-npm test -- --run
+npm test -- --testTimeout=30000
 npm run test:e2e
-npx prisma validate
-npx tsc --noEmit
+npx prisma validate --schema prisma/schema.prisma
+npm run typecheck
+npm run build --workspace @fitness/client
 ```
 
 Expected: all commands exit successfully.
 
 - [ ] **Step 5: Document the future iOS boundary**
 
-In `docs/mobile-readiness.md`, document that a future `mobile/` Expo app will import `@fitness/shared`, use the same JSON API and `shared/src/api/client.ts`, and implement its own React Native screens. State that `client/src/router.tsx` and DOM components are web-only, while any future platform-specific utility must use `.native.ts` or `.ios.ts` beside a platform-neutral implementation.
+In `docs/mobile-readiness.md`, document that a future `mobile/` Expo app will
+reuse `@fitness/shared`, the same JSON API, and the platform-neutral portion of
+the current API boundary while implementing its own React Native screens.
+State that `client/src/router.tsx` and DOM components are web-only, while any
+future platform-specific utility must use `.native.ts` or `.ios.ts` beside a
+platform-neutral implementation.
 
 - [ ] **Step 6: Document local setup and commit**
 

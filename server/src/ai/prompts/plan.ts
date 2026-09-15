@@ -1,5 +1,8 @@
 import type { AiRequest } from "../client";
-import type { ObjectiveCycleSummary } from "@fitness/shared/domain/reviews/objective-summary";
+import type {
+  CycleTrainingVolume,
+  CycleTrainingVolumeAggregate,
+} from "@fitness/shared/domain/reviews/cycle-volume";
 import type { Gender, Location } from "@fitness/shared";
 
 export const PLAN_PROMPT_VERSION = "plan.v2";
@@ -28,7 +31,7 @@ export type PlanPromptInput = {
   reviewContext?: {
     processedSummary: string | null;
     conclusions: unknown;
-    objectiveSummary: ObjectiveCycleSummary;
+    trainingVolume: CycleTrainingVolume | CycleTrainingVolumeAggregate;
   };
   model: string;
 };

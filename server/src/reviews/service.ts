@@ -1,14 +1,18 @@
-import { Prisma, PrismaClient } from "@prisma/client";
 import {
-  buildObjectiveCycleSummary,
-  type ObjectiveActualExerciseInput,
-  type ObjectiveActualSet,
-  type ObjectiveCycleSummary,
-  type ObjectiveCycleSummaryInput,
-  type ObjectivePlannedExerciseInput,
-  type ObjectivePlannedSet,
-  type ObjectiveWorkoutInput,
-} from "@fitness/shared/domain/reviews/objective-summary";
+  Prisma,
+  PrismaClient,
+  type CycleBatchReviewStatus as PrismaCycleBatchReviewStatus,
+} from "@prisma/client";
+import {
+  aggregateCycleTrainingVolumes,
+  buildCycleTrainingVolume,
+  compareCycleTrainingVolume,
+  getCycleBatchRange,
+  isCycleBatchBoundary,
+  type CycleBatchTrainingVolume,
+  type CycleTrainingVolume,
+  type CycleTrainingVolumeComparison,
+} from "@fitness/shared";
 import type { Location, WeightUnit } from "@fitness/shared";
 import { env } from "../config/env";
 import { CycleService, CycleServiceError } from "../cycles/service";
@@ -20,12 +24,17 @@ import {
   type CycleReviewResponse,
   type PlanDraft,
 } from "../ai/schemas";
-import { buildCycleReviewRequest } from "../ai/prompts/review";
+import {
+  buildCycleBatchReviewRequest,
+  buildCycleReviewRequest,
+  type PreviousCycleReviewContext,
+} from "../ai/prompts/review";
 
 const cycleReviewSelect = {
   id: true,
   userId: true,
   status: true,
+  cycleNumber: true,
   startDate: true,
   endDate: true,
   timezone: true,
@@ -35,8 +44,10 @@ const cycleReviewSelect = {
       id: true,
       processedSummary: true,
       objectiveSummary: true,
+      previousCycleSummary: true,
       conclusions: true,
       nextCycleDraft: true,
+      reviewedAt: true,
     },
   },
   workouts: {
@@ -46,27 +57,8 @@ const cycleReviewSelect = {
       activityType: true,
       scheduledDate: true,
       status: true,
-      cancellationReason: true,
-      durationMinutes: true,
-      rescheduleCount: true,
       completedAt: true,
       updatedAt: true,
-      plannedDetails: true,
-      plannedExercises: {
-        orderBy: { sortOrder: "asc" },
-        select: {
-          exerciseId: true,
-          plannedSets: {
-            orderBy: { setNumber: "asc" },
-            select: {
-              setNumber: true,
-              targetReps: true,
-              plannedWeight: true,
-              weightUnit: true,
-            },
-          },
-        },
-      },
       workoutLog: {
         select: {
           actualDetails: true,
@@ -74,11 +66,9 @@ const cycleReviewSelect = {
           exerciseLogs: {
             orderBy: { sortOrder: "asc" },
             select: {
-              exerciseId: true,
               setLogs: {
                 orderBy: { setNumber: "asc" },
                 select: {
-                  setNumber: true,
                   actualReps: true,
                   actualWeight: true,
                   weightUnit: true,
@@ -92,19 +82,78 @@ const cycleReviewSelect = {
   },
 } satisfies Prisma.TrainingCycleSelect;
 
+const batchReviewSelect = {
+  id: true,
+  userId: true,
+  startCycleNumber: true,
+  endCycleNumber: true,
+  status: true,
+  processedSummary: true,
+  objectiveSummary: true,
+  conclusions: true,
+  nextCycleDraft: true,
+  reviewedAt: true,
+} satisfies Prisma.CycleBatchReviewSelect;
+
 type CycleReviewRecord = Prisma.TrainingCycleGetPayload<{
   select: typeof cycleReviewSelect;
 }>;
 
+type BatchReviewRecord = Prisma.CycleBatchReviewGetPayload<{
+  select: typeof batchReviewSelect;
+}>;
+
+type BatchContext = {
+  batchVolume: CycleBatchTrainingVolume;
+  version: string;
+};
+
 export type CycleReviewResult = {
   reviewId: string;
   cycleId: string;
+  cycleNumber: number;
   cycleStatus: "CLOSED";
-  objectiveSummary: ObjectiveCycleSummary;
+  trainingVolume: CycleTrainingVolume;
+  /** Kept as an API compatibility alias while clients migrate. */
+  objectiveSummary: CycleTrainingVolume;
+  previousCycle: PreviousCycleReviewContext | null;
   processedSummary: string;
   conclusions: CycleReviewResponse["conclusions"];
-  nextCycleEligibility: "ELIGIBLE" | "RESET_REQUIRED";
-  nextCycleDraftStatus: "PENDING" | "RESET_REQUIRED" | "READY";
+  nextCycleEligibility: "BATCH_REVIEW_REQUIRED" | "RESET_REQUIRED";
+  nextCycleDraftStatus: "NOT_AVAILABLE";
+  batchReview: {
+    eligible: boolean;
+    reviewId: string | null;
+    status:
+      | "NOT_ELIGIBLE"
+      | "ELIGIBLE"
+      | "GENERATING"
+      | "READY"
+      | "RESET_REQUIRED";
+  };
+};
+
+export type CycleBatchReviewStatusResult = {
+  eligible: boolean;
+  reviewId: string | null;
+  startCycleNumber: number | null;
+  endCycleNumber: number | null;
+  status:
+    | "NOT_ELIGIBLE"
+    | "ELIGIBLE"
+    | "GENERATING"
+    | "READY"
+    | "RESET_REQUIRED";
+};
+
+export type CycleBatchReviewResult = {
+  reviewId: string;
+  startCycleNumber: number;
+  endCycleNumber: number;
+  batchVolume: CycleBatchTrainingVolume;
+  processedSummary: string;
+  conclusions: CycleReviewResponse["conclusions"];
+  nextCycleDraftStatus: "PENDING" | "READY" | "RESET_REQUIRED";
 };
 
 export type NextCycleDraft = {
@@ -139,12 +188,12 @@ export class CycleReviewService {
     private readonly model = env.aiModel,
   ) {}
 
-  async buildObjectiveCycleSummary(
+  async buildTrainingVolume(
     userId: string,
     cycleId: string,
-  ): Promise<ObjectiveCycleSummary> {
+  ): Promise<CycleTrainingVolume> {
     const cycle = await this.getCycle(userId, cycleId);
-    return buildObjectiveCycleSummary(toObjectiveInput(cycle));
+    return buildCycleTrainingVolume(toTrainingVolumeInput(cycle));
   }
 
   async generateCycleReview(
@@ -153,6 +202,7 @@ export class CycleReviewService {
     optionalSummary?: string,
     now = new Date(),
   ): Promise<CycleReviewResult> {
+    await this.ensureCycleNumber(userId, cycleId);
     let cycle = await this.getCycle(userId, cycleId);
 
     if (cycle.status === "DRAFT") {
@@ -163,62 +213,43 @@ export class CycleReviewService {
       );
     }
 
-    if (cycle.status === "CLOSED" && !cycle.reviewSnapshot) {
-      throw new CycleReviewServiceError(
-        "The closed cycle has no review snapshot",
-        "INVALID_STATE",
-        409,
-      );
-    }
-
     if (cycle.reviewSnapshot?.processedSummary) {
+      const batch = await this.ensureBatchReview(userId, cycle);
       return toCycleReviewResult(
         cycle,
-        buildObjectiveCycleSummary(toObjectiveInput(cycle)),
+        buildCycleTrainingVolume(toTrainingVolumeInput(cycle)),
+        await this.getPreviousCycleContext(userId, cycle),
+        batch,
       );
     }
 
-    let objectiveSummary: ObjectiveCycleSummary;
+    const cycleNumber = requireCycleNumber(cycle);
     let reviewVersion: string | null = null;
     if (cycle.status === "ACTIVE") {
-      try {
-        const reviewStatus = await this.cycleService.getReviewStatus(
-          userId,
-          cycleId,
-          now,
-        );
-        if (!reviewStatus.reviewRequired) {
-          throw new CycleReviewServiceError(
-            "The cycle review is not due yet",
-            "INVALID_STATE",
-            409,
-          );
-        }
-      } catch (error) {
-        if (error instanceof CycleReviewServiceError) {
-          throw error;
-        }
-        if (error instanceof CycleServiceError) {
-          throw mapCycleError(error);
-        }
-        throw error;
-      }
-
-      reviewVersion = getReviewVersion(cycle);
-
-      // This is a projected summary. The close transaction below will apply
-      // these same automatic cancellations after the AI result succeeds.
-      objectiveSummary = buildObjectiveCycleSummary(
-        toObjectiveInput(cycle, true),
+      const reviewStatus = await this.cycleService.getReviewStatus(
+        userId,
+        cycleId,
+        now,
       );
-    } else {
-      objectiveSummary = buildObjectiveCycleSummary(toObjectiveInput(cycle));
+      if (!reviewStatus.reviewRequired) {
+        throw new CycleReviewServiceError(
+          "The cycle review is not due yet",
+          "INVALID_STATE",
+          409,
+        );
+      }
+      reviewVersion = getReviewVersion(cycle);
     }
 
+    const trainingVolume = buildCycleTrainingVolume(
+      toTrainingVolumeInput(cycle),
+    );
+    const previousCycle = await this.getPreviousCycleContext(userId, cycle);
     const request = buildCycleReviewRequest({
       model: this.model,
-      cycleId,
-      objectiveSummary,
+      cycleNumber,
+      trainingVolume,
+      previousCycle: previousCycle ?? undefined,
       optionalUserSummary: normalizeOptionalSummary(optionalSummary),
     });
 
@@ -276,22 +307,23 @@ export class CycleReviewService {
     }
 
     if (cycle.reviewSnapshot.processedSummary) {
+      const batch = await this.ensureBatchReview(userId, cycle);
       return toCycleReviewResult(
         cycle,
-        buildObjectiveCycleSummary(toObjectiveInput(cycle)),
+        buildCycleTrainingVolume(toTrainingVolumeInput(cycle)),
+        await this.getPreviousCycleContext(userId, cycle),
+        batch,
       );
     }
 
-    // Persist the final post-close facts, rather than the projected input.
-    objectiveSummary = buildObjectiveCycleSummary(toObjectiveInput(cycle));
-    const conclusions = objectiveSummary.zeroCompletedCycle
-      ? { ...response.conclusions, status: "RESET_REQUIRED" as const }
-      : response.conclusions;
-    const nextCycleDraft: {
-      status: "PENDING" | "RESET_REQUIRED";
-    } = {
-      status: objectiveSummary.zeroCompletedCycle ? "RESET_REQUIRED" : "PENDING",
-    };
+    const finalTrainingVolume = buildCycleTrainingVolume(
+      toTrainingVolumeInput(cycle),
+    );
+    const finalPreviousCycle = await this.getPreviousCycleContext(userId, cycle);
+    const conclusions =
+      finalTrainingVolume.completedWorkoutCount === 0
+        ? { ...response.conclusions, status: "RESET_REQUIRED" as const }
+        : response.conclusions;
 
     const updated = await this.prisma.cycleReviewSnapshot.updateMany({
       where: {
@@ -301,18 +333,25 @@ export class CycleReviewService {
       },
       data: {
         processedSummary: response.processedSummary,
-        objectiveSummary: toJsonValue(objectiveSummary),
+        objectiveSummary: toJsonValue(finalTrainingVolume),
+        previousCycleSummary: finalPreviousCycle
+          ? toJsonValue(finalPreviousCycle)
+          : Prisma.JsonNull,
         conclusions: toJsonValue(conclusions),
-        nextCycleDraft: toJsonValue(nextCycleDraft),
+        nextCycleDraft: toJsonValue({ status: "NOT_AVAILABLE" }),
+        reviewedAt: now,
       },
     });
 
     if (updated.count !== 1) {
       const latest = await this.getCycle(userId, cycleId);
       if (latest.reviewSnapshot?.processedSummary) {
+        const batch = await this.ensureBatchReview(userId, latest);
         return toCycleReviewResult(
           latest,
-          buildObjectiveCycleSummary(toObjectiveInput(latest)),
+          buildCycleTrainingVolume(toTrainingVolumeInput(latest)),
+          await this.getPreviousCycleContext(userId, latest),
+          batch,
         );
       }
       throw new CycleReviewServiceError(
@@ -322,45 +361,217 @@ export class CycleReviewService {
       );
     }
 
+    cycle = await this.getCycle(userId, cycleId);
+    const batch = await this.ensureBatchReview(userId, cycle);
+    return toCycleReviewResult(
+      cycle,
+      finalTrainingVolume,
+      finalPreviousCycle,
+      batch,
+    );
+  }
+
+  async getBatchReviewStatus(
+    userId: string,
+    cycleId: string,
+  ): Promise<CycleBatchReviewStatusResult> {
+    await this.ensureCycleNumber(userId, cycleId);
+    const cycle = await this.getCycle(userId, cycleId);
+    const cycleNumber = cycle.cycleNumber;
+
+    if (cycle.status !== "CLOSED" || cycleNumber === null || !isCycleBatchBoundary(cycleNumber)) {
+      return {
+        eligible: false,
+        reviewId: null,
+        startCycleNumber: null,
+        endCycleNumber: null,
+        status: "NOT_ELIGIBLE",
+      };
+    }
+
+    const batch = await this.ensureBatchReview(userId, cycle);
+    if (!batch) {
+      return {
+        eligible: false,
+        reviewId: null,
+        ...getCycleBatchRange(cycleNumber),
+        status: "NOT_ELIGIBLE",
+      };
+    }
+
     return {
-      reviewId: cycle.reviewSnapshot.id,
-      cycleId,
-      cycleStatus: "CLOSED",
-      objectiveSummary,
-      processedSummary: response.processedSummary,
-      conclusions,
-      nextCycleEligibility: objectiveSummary.nextCycleEligibility,
-      nextCycleDraftStatus: nextCycleDraft.status,
+      eligible: batch.status === "ELIGIBLE" || batch.status === "READY",
+      reviewId: batch.id,
+      startCycleNumber: batch.startCycleNumber,
+      endCycleNumber: batch.endCycleNumber,
+      status: toBatchStatus(batch.status),
     };
   }
 
-  async generateNextCycleDraft(
+  async generateBatchReview(
     userId: string,
     cycleId: string,
-    reviewId: string,
+    optionalSummary?: string,
     now = new Date(),
-  ): Promise<NextCycleDraft> {
+  ): Promise<CycleBatchReviewResult> {
+    await this.ensureCycleNumber(userId, cycleId);
     const cycle = await this.getCycle(userId, cycleId);
+    const cycleNumber = requireCycleNumber(cycle);
 
-    if (cycle.status !== "CLOSED" || !cycle.reviewSnapshot) {
+    if (cycle.status !== "CLOSED" || !isCycleBatchBoundary(cycleNumber)) {
       throw new CycleReviewServiceError(
-        "A completed cycle review is required before generating the next draft",
+        "A four-cycle review is only available after a completed batch",
         "INVALID_STATE",
         409,
       );
     }
 
-    if (cycle.reviewSnapshot.id !== reviewId) {
+    const batch = await this.ensureBatchReview(userId, cycle);
+    if (!batch) {
       throw new CycleReviewServiceError(
-        "The review does not belong to this cycle",
+        "The four cycles in this batch must all be closed before review",
+        "INVALID_STATE",
+        409,
+      );
+    }
+
+    if (batch.processedSummary) {
+      const context = await this.requireBatchContext(userId, cycleNumber);
+      return toBatchReviewResult(batch, context.batchVolume);
+    }
+
+    const claimed = await this.prisma.cycleBatchReview.updateMany({
+      where: { id: batch.id, status: "ELIGIBLE" },
+      data: { status: "GENERATING" },
+    });
+
+    if (claimed.count !== 1) {
+      const latest = await this.getBatchReview(batch.id);
+      if (latest?.processedSummary) {
+        const context = await this.requireBatchContext(userId, cycleNumber);
+        return toBatchReviewResult(latest, context.batchVolume);
+      }
+      throw new CycleReviewServiceError(
+        "The four-cycle review is already being generated",
         "CONFLICT",
         409,
       );
     }
 
-    const objectiveSummary = buildObjectiveCycleSummary(toObjectiveInput(cycle));
-    const storedDraft = readStoredNextCycleDraft(cycle.reviewSnapshot.nextCycleDraft);
+    try {
+      const context = await this.requireBatchContext(userId, cycleNumber);
+      const request = buildCycleBatchReviewRequest({
+        model: this.model,
+        startCycleNumber: context.batchVolume.startCycleNumber,
+        endCycleNumber: context.batchVolume.endCycleNumber,
+        cycleVolumes: context.batchVolume.cycles,
+        optionalUserSummary: normalizeOptionalSummary(optionalSummary),
+      });
+      const response = await this.aiClient.generateJson(
+        request,
+        cycleReviewResponseSchema,
+      );
+      const latestContext = await this.requireBatchContext(userId, cycleNumber);
 
+      if (latestContext.version !== context.version) {
+        throw new CycleReviewServiceError(
+          "Workout data changed while the four-cycle review was generating; please retry",
+          "CONFLICT",
+          409,
+        );
+      }
+
+      const conclusions =
+        latestContext.batchVolume.aggregate.completedWorkoutCount === 0
+          ? { ...response.conclusions, status: "RESET_REQUIRED" as const }
+          : response.conclusions;
+      const status =
+        conclusions.status === "RESET_REQUIRED" ? "RESET_REQUIRED" : "READY";
+      const updated = await this.prisma.cycleBatchReview.updateMany({
+        where: { id: batch.id, status: "GENERATING" },
+        data: {
+          status,
+          processedSummary: response.processedSummary,
+          objectiveSummary: toJsonValue(latestContext.batchVolume),
+          conclusions: toJsonValue(conclusions),
+          reviewedAt: now,
+        },
+      });
+
+      if (updated.count !== 1) {
+        throw new CycleReviewServiceError(
+          "The four-cycle review changed while it was being saved",
+          "CONFLICT",
+          409,
+        );
+      }
+
+      const saved = await this.getBatchReview(batch.id);
+      if (!saved) {
+        throw new CycleReviewServiceError(
+          "The four-cycle review could not be reloaded",
+          "CONFLICT",
+          409,
+        );
+      }
+      return toBatchReviewResult(saved, latestContext.batchVolume);
+    } catch (error) {
+      await this.prisma.cycleBatchReview.updateMany({
+        where: { id: batch.id, status: "GENERATING" },
+        data: { status: "ELIGIBLE" },
+      });
+      if (error instanceof CycleReviewServiceError) {
+        throw error;
+      }
+      throw mapAiError(error);
+    }
+  }
+
+  async generateBatchNextCycleDraft(
+    userId: string,
+    cycleId: string,
+    reviewId: string,
+    now = new Date(),
+  ): Promise<NextCycleDraft> {
+    await this.ensureCycleNumber(userId, cycleId);
+    const cycle = await this.getCycle(userId, cycleId);
+    const cycleNumber = requireCycleNumber(cycle);
+    if (cycle.status !== "CLOSED" || !isCycleBatchBoundary(cycleNumber)) {
+      throw new CycleReviewServiceError(
+        "A next-cycle draft is only available after a completed four-cycle batch",
+        "INVALID_STATE",
+        409,
+      );
+    }
+    const range = getCycleBatchRange(cycleNumber);
+    const batch = await this.prisma.cycleBatchReview.findUnique({
+      where: {
+        userId_startCycleNumber_endCycleNumber: {
+          userId,
+          startCycleNumber: range.startCycleNumber,
+          endCycleNumber: range.endCycleNumber,
+        },
+      },
+      select: batchReviewSelect,
+    });
+
+    if (!batch || batch.id !== reviewId || !batch.processedSummary) {
+      throw new CycleReviewServiceError(
+        "A completed four-cycle review is required before generating the next draft",
+        "INVALID_STATE",
+        409,
+      );
+    }
+
+    if (batch.status === "RESET_REQUIRED") {
+      throw new CycleReviewServiceError(
+        "This four-cycle review requires a reset before a next plan can be generated",
+        "INVALID_STATE",
+        409,
+      );
+    }
+
+    const storedDraft = readStoredNextCycleDraft(batch.nextCycleDraft);
     if (storedDraft) {
       const persistedDraft = await this.prisma.trainingCycle.findFirst({
         where: { id: storedDraft.cycle.id, userId },
@@ -415,12 +626,9 @@ export class CycleReviewService {
       };
     }
 
-    if (
-      !cycle.reviewSnapshot.processedSummary ||
-      objectiveSummary.nextCycleEligibility !== "ELIGIBLE"
-    ) {
+    if (batch.status !== "READY") {
       throw new CycleReviewServiceError(
-        "This cycle requires a reset before a next plan can be generated",
+        "The four-cycle review is not ready for plan generation",
         "INVALID_STATE",
         409,
       );
@@ -443,12 +651,12 @@ export class CycleReviewService {
       );
     }
 
+    const context = await this.requireBatchContext(userId, cycleNumber);
     let draftCycle: NextCycleDraft["cycle"];
     try {
-      draftCycle = await this.claimNextCycleDraft(
+      draftCycle = await this.claimBatchDraft(
         userId,
-        cycleId,
-        reviewId,
+        batch.id,
         {
           weeklyTrainingDays: profile.weeklyTrainingDays,
           sessionDurationMinutes: profile.sessionDurationMinutes,
@@ -456,7 +664,6 @@ export class CycleReviewService {
           timezone: cycle.timezone ?? "UTC",
         },
         now,
-        cycle.reviewSnapshot.nextCycleDraft,
       );
     } catch (error) {
       if (error instanceof CycleServiceError) {
@@ -469,13 +676,13 @@ export class CycleReviewService {
     try {
       plan = await this.planService.generateDraft(userId, draftCycle.id, {
         reviewContext: {
-          objectiveSummary,
-          processedSummary: cycle.reviewSnapshot.processedSummary,
-          conclusions: cycle.reviewSnapshot.conclusions,
+          trainingVolume: context.batchVolume.aggregate,
+          processedSummary: batch.processedSummary,
+          conclusions: batch.conclusions,
         },
       });
     } catch (error) {
-      await this.releaseGeneratingDraft(userId, cycleId, reviewId, draftCycle.id);
+      await this.releaseBatchDraft(userId, batch.id, draftCycle.id);
       throw mapAiError(error);
     }
 
@@ -489,10 +696,10 @@ export class CycleReviewService {
       plan: toJsonValue(plan),
     };
 
-    const updated = await this.prisma.cycleReviewSnapshot.updateMany({
+    const updated = await this.prisma.cycleBatchReview.updateMany({
       where: {
-        id: reviewId,
-        cycleId,
+        id: batch.id,
+        status: "READY",
         nextCycleDraft: {
           path: ["status"],
           equals: "GENERATING",
@@ -502,9 +709,9 @@ export class CycleReviewService {
     });
 
     if (updated.count !== 1) {
-      const latest = await this.getCycle(userId, cycleId);
-      const existing = latest.reviewSnapshot
-        ? readStoredNextCycleDraft(latest.reviewSnapshot.nextCycleDraft)
+      const latest = await this.getBatchReview(batch.id);
+      const existing = latest
+        ? readStoredNextCycleDraft(latest.nextCycleDraft)
         : null;
       if (existing) {
         return { reviewId, cycle: existing.cycle, plan: existing.plan };
@@ -519,10 +726,22 @@ export class CycleReviewService {
     return { reviewId, cycle: draftCycle, plan };
   }
 
-  private async claimNextCycleDraft(
+  /**
+   * Compatibility entry point for clients that still call /next-draft.
+   * It now only succeeds for the fixed four-cycle boundary.
+   */
+  async generateNextCycleDraft(
     userId: string,
     cycleId: string,
     reviewId: string,
+    now = new Date(),
+  ): Promise<NextCycleDraft> {
+    return this.generateBatchNextCycleDraft(userId, cycleId, reviewId, now);
+  }
+
+  private async claimBatchDraft(
+    userId: string,
+    batchId: string,
     profile: {
       weeklyTrainingDays: number;
       sessionDurationMinutes: number;
@@ -530,16 +749,15 @@ export class CycleReviewService {
       timezone: string;
     },
     now: Date,
-    storedState: Prisma.JsonValue,
   ): Promise<NextCycleDraft["cycle"]> {
-    const generating = readGeneratingNextCycleDraft(storedState);
-    if (generating) {
+    const existingBatch = await this.getBatchReview(batchId);
+    const generating = existingBatch
+      ? readGeneratingNextCycleDraft(existingBatch.nextCycleDraft)
+      : null;
+
+    if (generating?.cycleId) {
       const existing = await this.prisma.trainingCycle.findFirst({
-        where: {
-          id: generating.cycleId,
-          userId,
-          status: "DRAFT",
-        },
+        where: { id: generating.cycleId, userId, status: "DRAFT" },
         select: {
           id: true,
           status: true,
@@ -550,15 +768,7 @@ export class CycleReviewService {
         },
       });
 
-      if (existing) {
-        if (existing._count.workouts > 0 || !existing.timezone) {
-          throw new CycleReviewServiceError(
-            "The next-cycle draft is not in a recoverable state",
-            "CONFLICT",
-            409,
-          );
-        }
-
+      if (existing && existing._count.workouts === 0 && existing.timezone) {
         return {
           id: existing.id,
           status: "DRAFT",
@@ -567,37 +777,46 @@ export class CycleReviewService {
           timezone: existing.timezone,
         };
       }
+    }
 
-      const reset = await this.prisma.cycleReviewSnapshot.updateMany({
+    if (generating) {
+      await this.prisma.cycleBatchReview.updateMany({
         where: {
-          id: reviewId,
-          cycleId,
+          id: batchId,
           nextCycleDraft: { path: ["status"], equals: "GENERATING" },
         },
-        data: { nextCycleDraft: { status: "PENDING" } },
+        data: { nextCycleDraft: Prisma.JsonNull },
+      });
+    }
+
+    return this.prisma.$transaction(async (tx) => {
+      const claimed = await tx.cycleBatchReview.updateMany({
+        where: {
+          id: batchId,
+          status: "READY",
+          nextCycleDraft: { equals: Prisma.JsonNull },
+        },
+        data: { nextCycleDraft: { status: "GENERATING" } },
       });
 
-      if (reset.count !== 1) {
+      if (claimed.count !== 1) {
         throw new CycleReviewServiceError(
-          "The next-cycle draft changed while it was recovering",
+          "The next-cycle draft is already being generated",
           "CONFLICT",
           409,
         );
       }
-    }
 
-    return this.prisma.$transaction(async (tx) => {
       const draft = await this.cycleService.createDraft(
         userId,
         profile,
         now,
         tx,
       );
-      const claimed = await tx.cycleReviewSnapshot.updateMany({
+      const linked = await tx.cycleBatchReview.updateMany({
         where: {
-          id: reviewId,
-          cycleId,
-          nextCycleDraft: { path: ["status"], equals: "PENDING" },
+          id: batchId,
+          nextCycleDraft: { path: ["status"], equals: "GENERATING" },
         },
         data: {
           nextCycleDraft: toJsonValue({
@@ -607,7 +826,7 @@ export class CycleReviewService {
         },
       });
 
-      if (claimed.count !== 1) {
+      if (linked.count !== 1) {
         throw new CycleReviewServiceError(
           "The next-cycle draft changed while it was being claimed",
           "CONFLICT",
@@ -625,20 +844,18 @@ export class CycleReviewService {
     });
   }
 
-  private async releaseGeneratingDraft(
+  private async releaseBatchDraft(
     userId: string,
-    cycleId: string,
-    reviewId: string,
+    batchId: string,
     draftCycleId: string,
   ): Promise<void> {
     await this.prisma.$transaction(async (tx) => {
-      const released = await tx.cycleReviewSnapshot.updateMany({
+      const released = await tx.cycleBatchReview.updateMany({
         where: {
-          id: reviewId,
-          cycleId,
+          id: batchId,
           nextCycleDraft: { path: ["status"], equals: "GENERATING" },
         },
-        data: { nextCycleDraft: { status: "PENDING" } },
+        data: { nextCycleDraft: Prisma.JsonNull },
       });
 
       if (released.count === 1) {
@@ -646,6 +863,230 @@ export class CycleReviewService {
           where: { id: draftCycleId, userId, status: "DRAFT" },
         });
       }
+    });
+  }
+
+  private async ensureCycleNumber(
+    userId: string,
+    cycleId: string,
+  ): Promise<number> {
+    const cycle = await this.prisma.trainingCycle.findFirst({
+      where: { id: cycleId, userId },
+      select: { status: true, cycleNumber: true },
+    });
+
+    if (!cycle) {
+      throw new CycleReviewServiceError(
+        "Training cycle not found",
+        "NOT_FOUND",
+        404,
+      );
+    }
+
+    if (cycle.status === "DRAFT") {
+      throw new CycleReviewServiceError(
+        "Only an active or closed cycle can be reviewed",
+        "INVALID_STATE",
+        409,
+      );
+    }
+
+    if (cycle.cycleNumber !== null) {
+      return cycle.cycleNumber;
+    }
+
+    const highestCycle = await this.prisma.trainingCycle.aggregate({
+      where: { userId, cycleNumber: { not: null } },
+      _max: { cycleNumber: true },
+    });
+    const cycleNumber = (highestCycle._max.cycleNumber ?? 0) + 1;
+    const updated = await this.prisma.trainingCycle.updateMany({
+      where: { id: cycleId, userId, cycleNumber: null },
+      data: { cycleNumber },
+    });
+
+    if (updated.count !== 1) {
+      const current = await this.prisma.trainingCycle.findFirst({
+        where: { id: cycleId, userId },
+        select: { cycleNumber: true },
+      });
+      if (current?.cycleNumber !== null && current?.cycleNumber !== undefined) {
+        return current.cycleNumber;
+      }
+      throw new CycleReviewServiceError(
+        "The cycle number changed while it was being assigned",
+        "CONFLICT",
+        409,
+      );
+    }
+
+    return cycleNumber;
+  }
+
+  private async ensureBatchReview(
+    userId: string,
+    cycle: CycleReviewRecord,
+  ): Promise<BatchReviewRecord | null> {
+    if (
+      cycle.status !== "CLOSED" ||
+      cycle.cycleNumber === null ||
+      !isCycleBatchBoundary(cycle.cycleNumber)
+    ) {
+      return null;
+    }
+
+    const context = await this.getBatchContext(userId, cycle.cycleNumber);
+    if (!context) {
+      return null;
+    }
+
+    const range = getCycleBatchRange(cycle.cycleNumber);
+    const existing = await this.prisma.cycleBatchReview.findUnique({
+      where: {
+        userId_startCycleNumber_endCycleNumber: {
+          userId,
+          startCycleNumber: range.startCycleNumber,
+          endCycleNumber: range.endCycleNumber,
+        },
+      },
+      select: batchReviewSelect,
+    });
+
+    if (existing) {
+      return existing;
+    }
+
+    try {
+      return await this.prisma.cycleBatchReview.create({
+        data: {
+          userId,
+          startCycleNumber: range.startCycleNumber,
+          endCycleNumber: range.endCycleNumber,
+          status: "ELIGIBLE",
+          objectiveSummary: toJsonValue(context.batchVolume),
+        },
+        select: batchReviewSelect,
+      });
+    } catch (error) {
+      if (isPrismaUniqueConflict(error)) {
+        const concurrent = await this.prisma.cycleBatchReview.findUnique({
+          where: {
+            userId_startCycleNumber_endCycleNumber: {
+              userId,
+              startCycleNumber: range.startCycleNumber,
+              endCycleNumber: range.endCycleNumber,
+            },
+          },
+          select: batchReviewSelect,
+        });
+        if (concurrent) {
+          return concurrent;
+        }
+      }
+      throw error;
+    }
+  }
+
+  private async requireBatchContext(
+    userId: string,
+    endCycleNumber: number,
+  ): Promise<BatchContext> {
+    const context = await this.getBatchContext(userId, endCycleNumber);
+    if (!context) {
+      throw new CycleReviewServiceError(
+        "The four cycles in this batch must all be closed before review",
+        "INVALID_STATE",
+        409,
+      );
+    }
+    return context;
+  }
+
+  private async getBatchContext(
+    userId: string,
+    endCycleNumber: number,
+  ): Promise<BatchContext | null> {
+    const range = getCycleBatchRange(endCycleNumber);
+    const cycles = await this.prisma.trainingCycle.findMany({
+      where: {
+        userId,
+        cycleNumber: {
+          gte: range.startCycleNumber,
+          lte: range.endCycleNumber,
+        },
+      },
+      orderBy: { cycleNumber: "asc" },
+      select: cycleReviewSelect,
+    });
+
+    if (
+      cycles.length !== 4 ||
+      cycles.some(
+        (cycle) =>
+          cycle.status !== "CLOSED" ||
+          cycle.cycleNumber === null ||
+          cycle.cycleNumber < range.startCycleNumber ||
+          cycle.cycleNumber > range.endCycleNumber,
+      )
+    ) {
+      return null;
+    }
+
+    const batchVolume = aggregateCycleTrainingVolumes({
+      startCycleNumber: range.startCycleNumber,
+      endCycleNumber: range.endCycleNumber,
+      cycles: cycles.map((cycle) => ({
+        cycleNumber: requireCycleNumber(cycle),
+        trainingVolume: buildCycleTrainingVolume(toTrainingVolumeInput(cycle)),
+      })),
+    });
+
+    return {
+      batchVolume,
+      version: cycles.map(getReviewVersion).join("|")
+    };
+  }
+
+  private async getPreviousCycleContext(
+    userId: string,
+    cycle: CycleReviewRecord,
+  ): Promise<PreviousCycleReviewContext | null> {
+    if (cycle.cycleNumber === null || cycle.cycleNumber <= 1) {
+      return null;
+    }
+
+    const previous = await this.prisma.trainingCycle.findFirst({
+      where: {
+        userId,
+        cycleNumber: cycle.cycleNumber - 1,
+        status: "CLOSED",
+        reviewSnapshot: { is: { processedSummary: { not: null } } },
+      },
+      select: cycleReviewSelect,
+    });
+
+    if (!previous || previous.cycleNumber === null) {
+      return null;
+    }
+
+    const trainingVolume = buildCycleTrainingVolume(
+      toTrainingVolumeInput(previous),
+    );
+    const currentVolume = buildCycleTrainingVolume(toTrainingVolumeInput(cycle));
+    const comparison: CycleTrainingVolumeComparison =
+      compareCycleTrainingVolume(currentVolume, trainingVolume);
+
+    return {
+      cycleNumber: previous.cycleNumber,
+      trainingVolume,
+      comparison,
+    };
+  }
+
+  private async getBatchReview(id: string): Promise<BatchReviewRecord | null> {
+    return this.prisma.cycleBatchReview.findUnique({
+      where: { id },
+      select: batchReviewSelect,
     });
   }
 
@@ -670,10 +1111,9 @@ export class CycleReviewService {
   }
 }
 
-function toObjectiveInput(
+function toTrainingVolumeInput(
   cycle: CycleReviewRecord,
-  resolveUnresolved = false,
-): ObjectiveCycleSummaryInput {
+): Parameters<typeof buildCycleTrainingVolume>[0] {
   return {
     cycleId: cycle.id,
     startDate: cycle.startDate,
@@ -681,34 +1121,11 @@ function toObjectiveInput(
     workouts: cycle.workouts.map((workout) => ({
       id: workout.id,
       activityType: workout.activityType,
-      status:
-        resolveUnresolved && workout.status === "PLANNED"
-          ? "CANCELLED"
-          : workout.status,
-      cancellationReason:
-        resolveUnresolved && workout.status === "PLANNED"
-          ? "AUTO_CYCLE_CLOSE"
-          : workout.cancellationReason,
-      durationMinutes: workout.durationMinutes,
-      rescheduleCount: workout.rescheduleCount,
-      plannedDetails: toDistanceDetails(workout.plannedDetails),
+      status: workout.status,
       actualDetails: toActualDetails(workout.workoutLog?.actualDetails),
-      plannedExercises: workout.plannedExercises.map<ObjectivePlannedExerciseInput>(
+      actualExercises: (workout.workoutLog?.exerciseLogs ?? []).map(
         (exercise) => ({
-          exerciseId: exercise.exerciseId,
-          sets: exercise.plannedSets.map<ObjectivePlannedSet>((set) => ({
-            setNumber: set.setNumber,
-            targetReps: set.targetReps,
-            plannedWeight: set.plannedWeight,
-            weightUnit: toWeightUnit(set.weightUnit),
-          })),
-        }),
-      ),
-      actualExercises: (workout.workoutLog?.exerciseLogs ?? []).map<ObjectiveActualExerciseInput>(
-        (exercise) => ({
-          exerciseId: exercise.exerciseId,
-          sets: exercise.setLogs.map<ObjectiveActualSet>((set) => ({
-            setNumber: set.setNumber,
+          sets: exercise.setLogs.map((set) => ({
             actualReps: set.actualReps,
             actualWeight: set.actualWeight,
             weightUnit: toWeightUnit(set.weightUnit),
@@ -725,23 +1142,11 @@ function getReviewVersion(cycle: CycleReviewRecord): string {
       id: workout.id,
       scheduledDate: workout.scheduledDate.toISOString(),
       status: workout.status,
-      cancellationReason: workout.cancellationReason,
       completedAt: workout.completedAt?.toISOString() ?? null,
       updatedAt: workout.updatedAt.toISOString(),
       workoutLogUpdatedAt: workout.workoutLog?.updatedAt.toISOString() ?? null,
     })),
   );
-}
-
-function toDistanceDetails(value: Prisma.JsonValue | null):
-  | { distanceKm?: number }
-  | null {
-  if (!value || typeof value !== "object" || Array.isArray(value)) {
-    return null;
-  }
-
-  const distanceKm = value.distanceKm;
-  return typeof distanceKm === "number" ? { distanceKm } : {};
 }
 
 function toActualDetails(value: Prisma.JsonValue | null | undefined):
@@ -770,9 +1175,22 @@ function normalizeOptionalSummary(value?: string): string | undefined {
   return normalized || undefined;
 }
 
+function requireCycleNumber(cycle: Pick<CycleReviewRecord, "cycleNumber">): number {
+  if (cycle.cycleNumber === null) {
+    throw new CycleReviewServiceError(
+      "The cycle number is missing; please run the cycle migration",
+      "INVALID_STATE",
+      409,
+    );
+  }
+  return cycle.cycleNumber;
+}
+
 function toCycleReviewResult(
   cycle: CycleReviewRecord,
-  objectiveSummary: ObjectiveCycleSummary,
+  trainingVolume: CycleTrainingVolume,
+  previousCycle: PreviousCycleReviewContext | null,
+  batch: BatchReviewRecord | null,
 ): CycleReviewResult {
   if (!cycle.reviewSnapshot?.processedSummary) {
     throw new CycleReviewServiceError(
@@ -782,26 +1200,67 @@ function toCycleReviewResult(
     );
   }
 
+  const cycleNumber = requireCycleNumber(cycle);
   const conclusions = cycle.reviewSnapshot.conclusions as CycleReviewResponse["conclusions"];
-  const nextCycleDraft = cycle.reviewSnapshot.nextCycleDraft as {
-    status?: string;
-  };
 
   return {
     reviewId: cycle.reviewSnapshot.id,
     cycleId: cycle.id,
+    cycleNumber,
     cycleStatus: "CLOSED",
-    objectiveSummary,
+    trainingVolume,
+    objectiveSummary: trainingVolume,
+    previousCycle,
     processedSummary: cycle.reviewSnapshot.processedSummary,
     conclusions,
-    nextCycleEligibility: objectiveSummary.nextCycleEligibility,
+    nextCycleEligibility:
+      trainingVolume.completedWorkoutCount > 0
+        ? "BATCH_REVIEW_REQUIRED"
+        : "RESET_REQUIRED",
+    nextCycleDraftStatus: "NOT_AVAILABLE",
+    batchReview: {
+      eligible: batch
+        ? batch.status === "ELIGIBLE" || batch.status === "READY"
+        : false,
+      reviewId: batch?.id ?? null,
+      status: batch ? toBatchStatus(batch.status) : "NOT_ELIGIBLE",
+    },
+  };
+}
+
+function toBatchReviewResult(
+  batch: BatchReviewRecord,
+  batchVolume: CycleBatchTrainingVolume,
+): CycleBatchReviewResult {
+  if (!batch.processedSummary || !batch.conclusions) {
+    throw new CycleReviewServiceError(
+      "The four-cycle review is not complete",
+      "INVALID_STATE",
+      409,
+    );
+  }
+
+  const nextDraft = readStoredNextCycleDraft(batch.nextCycleDraft);
+  return {
+    reviewId: batch.id,
+    startCycleNumber: batch.startCycleNumber,
+    endCycleNumber: batch.endCycleNumber,
+    batchVolume,
+    processedSummary: batch.processedSummary,
+    conclusions: batch.conclusions as CycleReviewResponse["conclusions"],
     nextCycleDraftStatus:
-      nextCycleDraft.status === "READY"
-        ? "READY"
-        : objectiveSummary.nextCycleEligibility === "RESET_REQUIRED"
-          ? "RESET_REQUIRED"
+      batch.status === "RESET_REQUIRED"
+        ? "RESET_REQUIRED"
+        : nextDraft
+          ? "READY"
           : "PENDING",
   };
+}
+
+function toBatchStatus(
+  status: PrismaCycleBatchReviewStatus,
+): CycleBatchReviewStatusResult["status"] {
+  return status === "CONFIRMED" ? "READY" : status;
 }
 
 function readStoredNextCycleDraft(value: Prisma.JsonValue | null | undefined): {
@@ -845,15 +1304,17 @@ function readStoredNextCycleDraft(value: Prisma.JsonValue | null | undefined): {
   };
 }
 
-function readGeneratingNextCycleDraft(value: Prisma.JsonValue): {
-  cycleId: string;
+function readGeneratingNextCycleDraft(value: Prisma.JsonValue | null | undefined): {
+  cycleId?: string;
 } | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
     return null;
   }
 
-  return value.status === "GENERATING" && typeof value.cycleId === "string"
-    ? { cycleId: value.cycleId }
+  return value.status === "GENERATING"
+    ? {
+        ...(typeof value.cycleId === "string" ? { cycleId: value.cycleId } : {}),
+      }
     : null;
 }
 
@@ -861,7 +1322,15 @@ function toJsonValue(value: unknown): Prisma.InputJsonValue {
   return JSON.parse(JSON.stringify(value)) as Prisma.InputJsonValue;
 }
 
+function isPrismaUniqueConflict(error: unknown): boolean {
+  return error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002";
+}
+
 function mapAiError(error: unknown): CycleReviewServiceError {
+  if (error instanceof CycleReviewServiceError) {
+    return error;
+  }
+
   if (error instanceof AiClientError) {
     return new CycleReviewServiceError(
       error.message,

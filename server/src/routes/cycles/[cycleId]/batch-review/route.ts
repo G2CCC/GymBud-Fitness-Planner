@@ -11,7 +11,7 @@ import { getCurrentUserId } from "../../../../current-user";
 import { db } from "../../../../db";
 
 const inputSchema = z.object({
-  reviewId: z.string().trim().min(1),
+  summary: z.string().trim().max(5000).optional(),
 }).strict();
 
 const aiClient = createConfiguredAiClient();
@@ -22,10 +22,23 @@ const reviewService = new CycleReviewService(
   new PlanService(db, aiClient),
 );
 
-export const nextCycleDraftRouter = Router({ mergeParams: true });
+export const batchReviewRouter = Router({ mergeParams: true });
 
-nextCycleDraftRouter.post<{ cycleId: string }>("/", async (request, response) => {
-  const parsed = inputSchema.safeParse(request.body);
+batchReviewRouter.get<{ cycleId: string }>("/", async (request, response) => {
+  try {
+    const userId = await getCurrentUserId();
+    const result = await reviewService.getBatchReviewStatus(
+      userId,
+      request.params.cycleId,
+    );
+    return response.json({ data: result });
+  } catch (error) {
+    return sendRouteError(response, error);
+  }
+});
+
+batchReviewRouter.post<{ cycleId: string }>("/", async (request, response) => {
+  const parsed = inputSchema.safeParse(request.body ?? {});
   if (!parsed.success) {
     return response.status(400).json({
       error: { code: "VALIDATION_ERROR", message: parsed.error.message },
@@ -34,10 +47,10 @@ nextCycleDraftRouter.post<{ cycleId: string }>("/", async (request, response) =>
 
   try {
     const userId = await getCurrentUserId();
-    const result = await reviewService.generateBatchNextCycleDraft(
+    const result = await reviewService.generateBatchReview(
       userId,
       request.params.cycleId,
-      parsed.data.reviewId,
+      parsed.data.summary,
     );
     return response.json({ data: result });
   } catch (error) {
@@ -60,3 +73,4 @@ function sendRouteError(response: Response, error: unknown) {
     },
   });
 }
+

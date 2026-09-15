@@ -70,6 +70,7 @@ describe.skipIf(!hasDatabase)("cycle persistence", () => {
     );
 
     expect(active.status).toBe("ACTIVE");
+    expect(active.cycleNumber).toBe(1);
     expect(active.timezone).toBe("Pacific/Auckland");
     expect(active.startDate).toEqual(new Date("2026-10-08T00:00:00Z"));
     expect(active.endDate).toEqual(new Date("2026-11-04T00:00:00Z"));
@@ -79,6 +80,7 @@ describe.skipIf(!hasDatabase)("cycle persistence", () => {
     const cycle = await db.trainingCycle.create({
       data: {
         userId: lifecycleUserId,
+        cycleNumber: 1,
         startDate: new Date("2026-09-09T00:00:00Z"),
         endDate: new Date("2026-10-06T00:00:00Z"),
         timezone: "UTC",

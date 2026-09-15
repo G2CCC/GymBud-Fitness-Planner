@@ -52,9 +52,13 @@ DRAFT -> ACTIVE -> CLOSED
   `PLANNED` workouts are auto-cancelled in this same cycle.
 
 There is intentionally no `PAUSED` status. If a cycle closes with zero
-completed workouts, it is still `CLOSED`, but its review snapshot records
-`nextCycleEligibility = RESET_REQUIRED`; the product must ask the user to
-reset or confirm their plan inputs before generating another cycle.
+completed workouts, it is still `CLOSED`, but its review conclusion is
+`RESET_REQUIRED`; the product must ask the user to reset or confirm their plan
+inputs before generating another cycle.
+
+Each active cycle receives a stable per-user `cycleNumber`. Draft rows may be
+numberless until activation. This number is used for fixed review batches and
+is never reused for another cycle.
 
 ## Review timing and inactivity
 
@@ -65,8 +69,8 @@ close the cycle automatically.
 If the user does not open the app on the final day, the next login after
 `endDate` makes the review prompt eligible. The prompt resolves overdue
 workouts, accepts the optional user summary, and closes the old cycle. When at
-least one workout was completed, the client can then request a separate
-user-confirmable next-cycle `DRAFT`.
+least one workout was completed, the single-cycle review is saved. It does not
+create a next-cycle plan.
 
 If the user never logs in, no background job cancels workouts, closes the
 cycle, or generates a new plan. The cycle stays `ACTIVE` until the user
@@ -87,12 +91,13 @@ the old cycle.
 
 Submitting the review performs these operations in order:
 
-1. the server checks that the review is due and builds a projected objective
-   summary from the saved plan and workout logs;
+1. the server checks that the review is due and builds an actual training-volume
+   summary from completed workout logs;
 2. the AI returns a processed summary and conclusions;
 3. only after a valid AI result, unresolved `PLANNED` workouts are
    auto-cancelled and the old cycle is closed;
-4. the final post-close objective facts and AI result are persisted together.
+4. the final post-close training volume and AI result are persisted in the
+   review snapshot.
 
 If AI generation fails, the active cycle and its workouts remain unchanged so
 the user can retry. If workout facts change while AI is generating, the request
@@ -102,32 +107,51 @@ The user's review note is optional. It is included in the single AI request
 when supplied, but the raw note is not written to the database. Only the AI's
 processed summary, conclusions, and objective facts are persisted.
 
-The objective summary treats every scheduled workout as one plan. It includes
-total completion rate, user and automatic cancellations, the number of
-reschedules, planned vs. actual strength sets, and cardio/sport duration data. `rescheduleCount` is
-incremented whenever a planned workout is moved or an auto-cancelled workout is
-restored.
+The review input is an actual-volume contract. It records completed workout
+count, actual strength sets/repetitions and weighted volume, actual cardio
+duration/distance, and actual sport duration. Planned details and workout
+source labels are not sent to the review model. Missing actual values remain
+missing rather than being replaced by planned targets.
 
-When at least one workout was completed, the client may request a next-cycle AI
-draft. The draft is stored as a `DRAFT` cycle with no calendar workout rows.
-The user must review and confirm it through the existing plan confirmation
-flow before it becomes `ACTIVE`. A cycle with zero completed workouts is closed
-with `RESET_REQUIRED` and cannot generate a next-cycle draft until the user
-re-confirms their planning inputs. Draft generation uses a durable
-`PENDING → GENERATING → READY` snapshot marker so a retry can recover a process
-that stopped after creating the empty draft but before saving the AI result.
+Each cycle can have one persisted single-cycle review. If the immediately
+previous cycle already has a review, the current prompt may include a shallow
+metric comparison; otherwise it is omitted. The user's optional note is sent
+only for that request and is never stored.
+
+After cycle 4, 8, 12, and later multiples of four, GymBud exposes a separate
+fixed batch review. The batches are exactly `1–4`, `5–8`, `9–12`, and so on;
+they never roll forward or include older cycles. No background job calls AI for
+an inactive user. On login, the client can show the eligible batch and the user
+explicitly starts the grouped review.
+
+Only a completed grouped review can generate the next-cycle AI draft. The draft
+is stored as a `DRAFT` cycle with no calendar workout rows. The user must review
+and confirm it through the existing plan confirmation flow before it becomes
+`ACTIVE`. Batch draft generation uses a durable `READY → GENERATING → READY`
+marker so a retry can recover a process that stopped after creating the empty
+draft but before saving the AI result.
 
 ## Database migration after pulling this change
 
-This change adds `ScheduledWorkout.rescheduleCount`. Run the new migration from
+This change adds cycle numbering, fixed batch review persistence, and previous
+cycle review metadata. Run the new migration from
 the project directory that already contains your successful initial and
 lifecycle migrations:
 
+For a database that already has the committed migrations, use:
+
 ```powershell
 npm run db:generate
-npm run db:migrate -- --name add_workout_reschedule_count
+npx prisma migrate deploy --schema prisma/schema.prisma
 npm test -- --testTimeout=30000 server/tests/integration/cycle-review.test.ts
 ```
+
+When creating a new schema change locally, use `npm run db:migrate -- --name
+<migration_name>` and commit the generated migration directory.
+
+For a release smoke check, also run `npm run test:e2e`. The browser suite uses
+the deterministic AI provider and skips database-backed scenarios when
+`DATABASE_URL` is not available.
 
 For existing active cycles created before timezone snapshots were introduced,
 backfill a timezone before allowing their review to close. Newly activated
@@ -143,6 +167,8 @@ POST /api/cycles/:cycleId/activate
 GET  /api/cycles/:cycleId/review-status
 POST /api/cycles/:cycleId/close
 POST /api/cycles/:cycleId/review
+GET  /api/cycles/:cycleId/batch-review
+POST /api/cycles/:cycleId/batch-review
 POST /api/cycles/:cycleId/next-draft
 POST /api/cycles/:cycleId/workouts/:workoutId/restore
 ```

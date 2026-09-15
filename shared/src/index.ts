@@ -11,3 +11,5 @@ export * from "./domain/time/timezone";
 export * from "./domain/workouts/state-machine";
 export * from "./domain/workouts/validation";
 export * from "./domain/reviews/objective-summary";
+export * from "./domain/reviews/cycle-volume";
+export * from "./domain/cycles/four-cycle-batch";

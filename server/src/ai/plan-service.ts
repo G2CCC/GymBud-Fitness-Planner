@@ -17,12 +17,16 @@ import {
   type PlanResponse,
 } from "./schemas";
 import { buildPlanRequest } from "./prompts/plan";
-import type { ObjectiveCycleSummary } from "@fitness/shared/domain/reviews/objective-summary";
+import type {
+  CycleTrainingVolume,
+  CycleTrainingVolumeAggregate,
+} from "@fitness/shared/domain/reviews/cycle-volume";
 
 const cycleContextSelect = {
   id: true,
   userId: true,
   status: true,
+  cycleNumber: true,
   startDate: true,
   endDate: true,
   timezone: true,
@@ -95,7 +99,7 @@ export class PlanService {
       reviewContext?: {
         processedSummary: string | null;
         conclusions: unknown;
-        objectiveSummary: ObjectiveCycleSummary;
+        trainingVolume: CycleTrainingVolume | CycleTrainingVolumeAggregate;
       };
     } = {},
   ): Promise<PlanDraft> {
@@ -215,9 +219,16 @@ export class PlanService {
         });
       }
 
+      const highestCycle = await tx.trainingCycle.aggregate({
+        where: { userId, cycleNumber: { not: null } },
+        _max: { cycleNumber: true },
+      });
+      const cycleNumber =
+        cycle.cycleNumber ?? (highestCycle._max.cycleNumber ?? 0) + 1;
+
       return tx.trainingCycle.update({
         where: { id: cycleId },
-        data: { status: "ACTIVE" },
+        data: { status: "ACTIVE", cycleNumber },
         include: { workouts: true },
       });
     });

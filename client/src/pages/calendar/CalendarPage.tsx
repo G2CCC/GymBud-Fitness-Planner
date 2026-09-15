@@ -181,12 +181,21 @@ export function CalendarPage() {
             Four weeks, one clear place to adjust the plan.
           </p>
         </div>
-        {cycle.reviewStatus?.reviewRequired ? (
+        {cycle.reviewStatus?.reviewRequired || cycle.reviewAvailable ? (
           <Link
             className="focus-ring rounded-[var(--radius-control)] bg-gymbud-accent-strong px-4 py-3 text-sm font-semibold text-white"
             to={"/review/" + cycle.id}
           >
             Review cycle
+          </Link>
+        ) : null}
+        {cycle.batchReviewStatus?.eligible ? (
+          <Link
+            className="focus-ring rounded-[var(--radius-control)] border border-gymbud-border px-4 py-3 text-sm font-semibold text-gymbud-ink"
+            to={"/review/" + cycle.id}
+          >
+            Review cycles {cycle.batchReviewStatus.startCycleNumber}–
+            {cycle.batchReviewStatus.endCycleNumber}
           </Link>
         ) : null}
       </header>
@@ -201,7 +210,7 @@ export function CalendarPage() {
         <div>
           <p className="text-sm font-semibold text-gymbud-ink">Add a session</p>
           <p className="mt-1 text-sm text-gymbud-muted">
-            Manual additions are marked extra and never move another workout.
+            Add a plan without changing any other workout.
           </p>
         </div>
         <form className="grid gap-3 sm:grid-cols-4" onSubmit={handleAddWorkout}>
