@@ -3,7 +3,7 @@ import { productName } from "@fitness/shared/brand";
 
 export function App() {
   const navigation = [
-    { label: "Today", to: "/onboarding" },
+    { label: "Today", to: "/today" },
     { label: "Calendar", to: "/calendar" },
     { label: "Progress", to: "/progress" },
     { label: "Profile", to: "/profile" },
