@@ -76,4 +76,41 @@ describe("workout log validation", () => {
       }),
     ).toMatchObject({ activityType: "CARDIO", location: "HOME" });
   });
+
+  it("accepts nested strength plan data and rejects it for cardio", () => {
+    expect(
+      createWorkoutInputSchema.parse({
+        activityType: "STRENGTH",
+        scheduledDate: "2026-11-06T00:00:00Z",
+        location: "GYM",
+        durationMinutes: 45,
+        plannedExercises: [
+          {
+            exerciseId: "system-barbell-bench-press",
+            sortOrder: 1,
+            restSeconds: 120,
+            sets: [
+              { setNumber: 1, targetReps: 8, plannedWeight: 60, weightUnit: "KG" },
+            ],
+          },
+        ],
+      }),
+    ).toMatchObject({ plannedExercises: [{ sortOrder: 1 }] });
+
+    expect(() =>
+      createWorkoutInputSchema.parse({
+        activityType: "CARDIO",
+        scheduledDate: "2026-11-06T00:00:00Z",
+        location: "GYM",
+        durationMinutes: 30,
+        plannedExercises: [
+          {
+            exerciseId: "system-push-up",
+            sortOrder: 1,
+            sets: [{ setNumber: 1, targetReps: 10 }],
+          },
+        ],
+      }),
+    ).toThrow();
+  });
 });

@@ -316,6 +316,32 @@ export class WorkoutService {
         );
       }
 
+      const plannedExercises = parsed.data.plannedExercises ?? [];
+      if (plannedExercises.length > 0) {
+        const legalExercises = await tx.exercise.findMany({
+          where: {
+            id: { in: plannedExercises.map((exercise) => exercise.exerciseId) },
+            availableLocations: { has: parsed.data.location },
+            OR: [{ ownerId: null }, { ownerId: userId }],
+          },
+          select: { id: true },
+        });
+        const legalExerciseIds = new Set(
+          legalExercises.map((exercise) => exercise.id),
+        );
+        const illegalExercise = plannedExercises.find(
+          (exercise) => !legalExerciseIds.has(exercise.exerciseId),
+        );
+
+        if (illegalExercise) {
+          throw new WorkoutServiceError(
+            "Exercise is not available to this user at the workout location",
+            "VALIDATION_ERROR",
+            400,
+          );
+        }
+      }
+
       return tx.scheduledWorkout.create({
         data: {
           userId,
@@ -328,6 +354,25 @@ export class WorkoutService {
           ...(parsed.data.plannedDetails
             ? {
                 plannedDetails: parsed.data.plannedDetails as Prisma.InputJsonValue,
+              }
+            : {}),
+          ...(plannedExercises.length > 0
+            ? {
+                plannedExercises: {
+                  create: plannedExercises.map((exercise) => ({
+                    exerciseId: exercise.exerciseId,
+                    sortOrder: exercise.sortOrder,
+                    restSeconds: exercise.restSeconds ?? null,
+                    plannedSets: {
+                      create: exercise.sets.map((set) => ({
+                        setNumber: set.setNumber,
+                        targetReps: set.targetReps,
+                        plannedWeight: set.plannedWeight ?? null,
+                        weightUnit: set.weightUnit ?? null,
+                      })),
+                    },
+                  })),
+                },
               }
             : {}),
         },

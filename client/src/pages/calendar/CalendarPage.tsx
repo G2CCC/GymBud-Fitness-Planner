@@ -5,13 +5,18 @@ import {
   cancelWorkout,
   createWorkout,
   getCurrentCycle,
+  listExercises,
   rescheduleWorkout,
   updateWorkoutLocation,
 } from "../../api/client";
-import type { ApiCycle } from "../../api/contracts";
+import type { ApiCycle, ApiExercise } from "../../api/contracts";
 import { CalendarGrid } from "../../components/calendar/CalendarGrid";
 import { WorkoutCard, type CalendarWorkout } from "../../components/calendar/WorkoutCard";
 import { LocationSelector } from "../../components/workouts/LocationSelector";
+import {
+  StrengthPlanBuilder,
+  type ManualPlannedExercise,
+} from "../../components/workouts/StrengthPlanBuilder";
 
 function systemDateKey(): string {
   const parts = new Intl.DateTimeFormat("en-CA", {
@@ -37,6 +42,10 @@ export function CalendarPage() {
   const [addDate, setAddDate] = useState(systemDateKey());
   const [addLocation, setAddLocation] = useState<Location>("GYM");
   const [addDuration, setAddDuration] = useState(60);
+  const [addExercises, setAddExercises] = useState<ApiExercise[]>([]);
+  const [addPlannedExercises, setAddPlannedExercises] = useState<
+    ManualPlannedExercise[]
+  >([]);
   const [adding, setAdding] = useState(false);
 
   const selectedWorkout = useMemo(
@@ -64,8 +73,46 @@ export function CalendarPage() {
     void loadCycle();
   }, []);
 
+  useEffect(() => {
+    if (addActivity !== "STRENGTH") {
+      setAddExercises([]);
+      setAddPlannedExercises([]);
+      return;
+    }
+
+    let active = true;
+    void listExercises(addLocation)
+      .then((exercises) => {
+        if (active) {
+          setAddExercises(exercises);
+        }
+      })
+      .catch((loadError) => {
+        if (active) {
+          setActionMessage(
+            loadError instanceof Error
+              ? loadError.message
+              : "The exercise list could not be loaded.",
+          );
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [addActivity, addLocation]);
+
   async function handleAddWorkout(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (
+      addActivity === "STRENGTH" &&
+      (addPlannedExercises.length === 0 ||
+        addPlannedExercises.some((exercise) => !exercise.exerciseId))
+    ) {
+      setActionMessage("Add a valid exercise plan before creating a strength workout.");
+      return;
+    }
+
     setAdding(true);
     setActionMessage(null);
     try {
@@ -74,8 +121,12 @@ export function CalendarPage() {
         scheduledDate: new Date(addDate + "T12:00:00").toISOString(),
         location: addLocation,
         durationMinutes: addDuration,
+        ...(addActivity === "STRENGTH"
+          ? { plannedExercises: addPlannedExercises }
+          : {}),
       });
       await loadCycle();
+      setAddPlannedExercises([]);
       setActionMessage("Workout added without changing other sessions.");
     } catch (addError) {
       setActionMessage(
@@ -219,7 +270,13 @@ export function CalendarPage() {
             <select
               className="min-h-11 rounded-[var(--radius-control)] border border-gymbud-border bg-gymbud-surface px-3"
               value={addActivity}
-              onChange={(event) => setAddActivity(event.target.value as ActivityType)}
+              onChange={(event) => {
+                const activity = event.target.value as ActivityType;
+                setAddActivity(activity);
+                if (activity !== "STRENGTH") {
+                  setAddPlannedExercises([]);
+                }
+              }}
             >
               <option value="STRENGTH">Strength</option>
               <option value="CARDIO">Cardio</option>
@@ -251,12 +308,25 @@ export function CalendarPage() {
             <select
               className="min-h-11 rounded-[var(--radius-control)] border border-gymbud-border bg-gymbud-surface px-3"
               value={addLocation}
-              onChange={(event) => setAddLocation(event.target.value as Location)}
+              onChange={(event) => {
+                setAddLocation(event.target.value as Location);
+                setAddPlannedExercises([]);
+              }}
             >
               <option value="GYM">Gym</option>
               <option value="HOME">Home</option>
             </select>
           </label>
+          {addActivity === "STRENGTH" ? (
+            <div className="sm:col-span-4">
+              <StrengthPlanBuilder
+                location={addLocation}
+                exercises={addExercises}
+                value={addPlannedExercises}
+                onChange={setAddPlannedExercises}
+              />
+            </div>
+          ) : null}
           <button
             className="focus-ring min-h-11 rounded-[var(--radius-control)] bg-gymbud-ink px-4 text-sm font-semibold text-white sm:col-span-4"
             disabled={adding}

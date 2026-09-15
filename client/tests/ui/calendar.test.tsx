@@ -1,7 +1,12 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
+import { useState } from "react";
 import { WorkoutCard } from "../../src/components/calendar/WorkoutCard";
+import {
+  StrengthPlanBuilder,
+  type ManualPlannedExercise,
+} from "../../src/components/workouts/StrengthPlanBuilder";
 import { WorkoutEditor } from "../../src/components/workouts/WorkoutEditor";
 import type {
   EditorExerciseOption,
@@ -93,5 +98,44 @@ describe("calendar and workout editor UI", () => {
       screen.getByText("Completion date and time are required."),
     ).toBeInTheDocument();
     expect(onSubmit).not.toHaveBeenCalled();
+  });
+
+  it("builds a manual strength plan with location-legal exercises and sets", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+
+    function Harness() {
+      const [value, setValue] = useState<ManualPlannedExercise[]>([]);
+      return (
+        <StrengthPlanBuilder
+          location="GYM"
+          exercises={exerciseOptions}
+          value={value}
+          onChange={(nextValue) => {
+            setValue(nextValue);
+            onChange(nextValue);
+          }}
+        />
+      );
+    }
+
+    render(<Harness />);
+
+    await user.click(screen.getByRole("button", { name: /add exercise/i }));
+    await user.selectOptions(screen.getByLabelText("Exercise 1"), "bench");
+    await user.click(
+      screen.getByRole("button", { name: /add set to exercise 1/i }),
+    );
+
+    expect(onChange).toHaveBeenLastCalledWith([
+      {
+        exerciseId: "bench",
+        sortOrder: 1,
+        sets: [
+          { setNumber: 1, targetReps: 8 },
+          { setNumber: 2, targetReps: 8 },
+        ],
+      },
+    ]);
   });
 });

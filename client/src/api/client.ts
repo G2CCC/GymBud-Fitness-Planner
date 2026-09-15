@@ -2,6 +2,7 @@ import {
   validateCompletionTimestamp,
   type CardioWorkoutLogInput,
   type Location,
+  type PlannedExerciseInput,
   type ProfileInput,
   type SportWorkoutLogInput,
   type StrengthWorkoutLogInput,
@@ -140,6 +141,7 @@ export async function createWorkout(input: {
   location: Location;
   durationMinutes: number;
   plannedDetails?: Record<string, unknown>;
+  plannedExercises?: PlannedExerciseInput[];
 }): Promise<ApiWorkout> {
   const parsed = createWorkoutInputSchema.parse({
     ...input,
