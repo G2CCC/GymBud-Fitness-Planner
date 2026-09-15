@@ -4,11 +4,11 @@ export type ActivityType = (typeof activityTypes)[number];
 export const locations = ["GYM", "HOME"] as const;
 export type Location = (typeof locations)[number];
 
+export const genders = ["MALE", "FEMALE", "NON_BINARY", "PREFER_NOT_TO_SAY"] as const;
+export type Gender = (typeof genders)[number];
+
 export const workoutStatuses = ["PLANNED", "COMPLETED", "CANCELLED"] as const;
 export type WorkoutStatus = (typeof workoutStatuses)[number];
-
-export const workoutSources = ["ORIGINAL", "EXTRA"] as const;
-export type WorkoutSource = (typeof workoutSources)[number];
 
 export const cancellationReasons = ["USER", "AUTO_CYCLE_CLOSE"] as const;
 export type CancellationReason = (typeof cancellationReasons)[number];

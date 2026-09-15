@@ -52,7 +52,6 @@ describe.skipIf(!hasDatabase)("AI exercise workflows", () => {
         location: "HOME",
         durationMinutes: 45,
         status: "PLANNED",
-        source: "ORIGINAL",
         plannedExercises: {
           create: {
             exerciseId: "system-barbell-bench-press",

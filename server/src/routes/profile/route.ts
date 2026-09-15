@@ -16,6 +16,10 @@ profileRouter.get("/", async (_request, response) => {
         defaultLocation: true,
         primaryGoal: true,
         secondaryOutcome: true,
+        gender: true,
+        age: true,
+        heightCm: true,
+        weightKg: true,
       },
     });
 
@@ -49,6 +53,10 @@ profileRouter.put("/", async (request, response) => {
         defaultLocation: true,
         primaryGoal: true,
         secondaryOutcome: true,
+        gender: true,
+        age: true,
+        heightCm: true,
+        weightKg: true,
       },
     });
 

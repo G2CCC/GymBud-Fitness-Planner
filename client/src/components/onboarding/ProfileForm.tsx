@@ -1,7 +1,9 @@
 import { useState, type FormEvent } from "react";
 import {
+  genders,
   locations,
   profileInputSchema,
+  type Gender,
   type Location,
   type ProfileInput,
 } from "@fitness/shared";
@@ -64,9 +66,10 @@ export function ProfileForm({
           Give GymBud the rhythm of your week.
         </h1>
         <p className="mt-2 text-sm leading-6 text-gymbud-muted">
-          We only need your training frequency and available time. Equipment is
-          inferred from the location, so gym plans have no equipment restriction
-          and home plans default to bodyweight movements.
+          Training frequency and available time are required. Gender, age,
+          height, and body weight are optional context for AI planning. Equipment
+          is inferred from the location, so gym plans have no equipment
+          restriction and home plans default to bodyweight movements.
         </p>
       </div>
 
@@ -94,6 +97,83 @@ export function ProfileForm({
             value={value.sessionDurationMinutes}
             onChange={(event) =>
               update("sessionDurationMinutes", Number(event.target.value))
+            }
+          />
+        </label>
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-2">
+        <label className="grid gap-2 text-sm font-medium text-gymbud-ink">
+          Gender <span className="font-normal text-gymbud-muted">Optional</span>
+          <select
+            className="focus-ring min-h-11 rounded-[var(--radius-control)] border border-gymbud-border bg-gymbud-surface px-3"
+            value={value.gender ?? ""}
+            onChange={(event) =>
+              update(
+                "gender",
+                (event.target.value || null) as Gender | null,
+              )
+            }
+          >
+            <option value="">Prefer not to provide</option>
+            {genders.map((gender) => (
+              <option key={gender} value={gender}>
+                {gender === "NON_BINARY"
+                  ? "Non-binary"
+                  : gender === "PREFER_NOT_TO_SAY"
+                    ? "Prefer not to say"
+                    : gender.charAt(0) + gender.slice(1).toLowerCase()}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="grid gap-2 text-sm font-medium text-gymbud-ink">
+          Age <span className="font-normal text-gymbud-muted">Optional</span>
+          <input
+            className="focus-ring min-h-11 rounded-[var(--radius-control)] border border-gymbud-border bg-gymbud-surface px-3"
+            type="number"
+            min={13}
+            max={100}
+            value={value.age ?? ""}
+            onChange={(event) =>
+              update(
+                "age",
+                event.target.value === "" ? null : Number(event.target.value),
+              )
+            }
+          />
+        </label>
+        <label className="grid gap-2 text-sm font-medium text-gymbud-ink">
+          Height (cm) <span className="font-normal text-gymbud-muted">Optional</span>
+          <input
+            className="focus-ring min-h-11 rounded-[var(--radius-control)] border border-gymbud-border bg-gymbud-surface px-3"
+            type="number"
+            min={50}
+            max={250}
+            step="0.1"
+            value={value.heightCm ?? ""}
+            onChange={(event) =>
+              update(
+                "heightCm",
+                event.target.value === "" ? null : Number(event.target.value),
+              )
+            }
+          />
+        </label>
+        <label className="grid gap-2 text-sm font-medium text-gymbud-ink">
+          Body weight (kg) <span className="font-normal text-gymbud-muted">Optional</span>
+          <input
+            className="focus-ring min-h-11 rounded-[var(--radius-control)] border border-gymbud-border bg-gymbud-surface px-3"
+            type="number"
+            min={20}
+            max={350}
+            step="0.1"
+            value={value.weightKg ?? ""}
+            onChange={(event) =>
+              update(
+                "weightKg",
+                event.target.value === "" ? null : Number(event.target.value),
+              )
             }
           />
         </label>
@@ -139,7 +219,7 @@ export function ProfileForm({
             onChange={(event) =>
               update(
                 "secondaryOutcome",
-                event.target.value.trim() || undefined,
+                event.target.value.trim() || null,
               )
             }
           />

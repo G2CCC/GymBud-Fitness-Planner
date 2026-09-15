@@ -18,7 +18,7 @@ import type {
 import {
   backfillCompletionInputSchema,
   clientPlanDraftSchema,
-  extraWorkoutInputSchema,
+  createWorkoutInputSchema,
   profileInputSchema,
   rescheduleWorkoutInputSchema,
   updateWorkoutLocationInputSchema,
@@ -106,14 +106,14 @@ export async function listExercises(location: Location): Promise<ApiExercise[]> 
   return request<ApiExercise[]>("/exercises?location=" + location);
 }
 
-export async function createExtraWorkout(input: {
+export async function createWorkout(input: {
   activityType: "STRENGTH" | "CARDIO" | "SPORT";
   scheduledDate: string;
   location: Location;
   durationMinutes: number;
   plannedDetails?: Record<string, unknown>;
 }): Promise<ApiWorkout> {
-  const parsed = extraWorkoutInputSchema.parse({
+  const parsed = createWorkoutInputSchema.parse({
     ...input,
     scheduledDate: new Date(input.scheduledDate),
   });

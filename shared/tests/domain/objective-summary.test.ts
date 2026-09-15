@@ -11,7 +11,6 @@ const baseInput: ObjectiveCycleSummaryInput = {
   workouts: [
     {
       id: "original-strength",
-      source: "ORIGINAL",
       activityType: "STRENGTH",
       status: "COMPLETED",
       durationMinutes: 60,
@@ -57,7 +56,6 @@ const baseInput: ObjectiveCycleSummaryInput = {
     },
     {
       id: "original-cardio",
-      source: "ORIGINAL",
       activityType: "CARDIO",
       status: "CANCELLED",
       cancellationReason: "USER",
@@ -68,7 +66,6 @@ const baseInput: ObjectiveCycleSummaryInput = {
     },
     {
       id: "extra-cardio",
-      source: "EXTRA",
       activityType: "CARDIO",
       status: "COMPLETED",
       durationMinutes: 20,
@@ -78,7 +75,6 @@ const baseInput: ObjectiveCycleSummaryInput = {
     },
     {
       id: "auto-cancelled",
-      source: "ORIGINAL",
       activityType: "SPORT",
       status: "CANCELLED",
       cancellationReason: "AUTO_CYCLE_CLOSE",
@@ -89,22 +85,15 @@ const baseInput: ObjectiveCycleSummaryInput = {
 };
 
 describe("objective cycle summary", () => {
-  it("summarizes planned completion, extras, cancellations, and reschedules", () => {
+  it("summarizes all planned workouts without source classifications", () => {
     const result = buildObjectiveCycleSummary(baseInput);
 
-    expect(result.original).toMatchObject({
-      total: 3,
-      completed: 1,
+    expect(result.total).toMatchObject({
+      total: 4,
+      completed: 2,
       cancelled: 2,
       planned: 0,
-      completionRate: 1 / 3,
-    });
-    expect(result.extra).toMatchObject({
-      total: 1,
-      completed: 1,
-      cancelled: 0,
-      planned: 0,
-      completionRate: 1,
+      completionRate: 1 / 2,
     });
     expect(result.cancellations).toEqual({
       total: 2,

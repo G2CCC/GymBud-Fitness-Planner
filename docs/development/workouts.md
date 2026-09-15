@@ -59,8 +59,8 @@ PATCH /api/workouts/:workoutId/location
 PUT   /api/workouts/:workoutId/log
 ```
 
-`POST /api/workouts` creates an `EXTRA` workout in the user's active cycle. It
-does not modify the cycle's original plan. There is no delete endpoint for a
+`POST /api/workouts` creates a new planned workout in the user's active cycle.
+It does not modify other calendar workouts. There is no delete endpoint for a
 completed log; history is preserved for later cycle analysis.
 
 The current user is resolved server-side. A caller cannot complete, move,

@@ -43,7 +43,6 @@ const cycleReviewSelect = {
     orderBy: { scheduledDate: "asc" },
     select: {
       id: true,
-      source: true,
       activityType: true,
       scheduledDate: true,
       status: true,
@@ -681,7 +680,6 @@ function toObjectiveInput(
     endDate: cycle.endDate,
     workouts: cycle.workouts.map((workout) => ({
       id: workout.id,
-      source: workout.source,
       activityType: workout.activityType,
       status:
         resolveUnresolved && workout.status === "PLANNED"

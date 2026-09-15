@@ -102,9 +102,9 @@ The user's review note is optional. It is included in the single AI request
 when supplied, but the raw note is not written to the database. Only the AI's
 processed summary, conclusions, and objective facts are persisted.
 
-The objective summary includes original and extra workout counts, completion
-rate, user and automatic cancellations, the number of reschedules, planned vs.
-actual strength sets, and cardio/sport duration data. `rescheduleCount` is
+The objective summary treats every scheduled workout as one plan. It includes
+total completion rate, user and automatic cancellations, the number of
+reschedules, planned vs. actual strength sets, and cardio/sport duration data. `rescheduleCount` is
 incremented whenever a planned workout is moved or an auto-cancelled workout is
 restored.
 

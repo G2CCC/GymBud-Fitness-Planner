@@ -12,6 +12,12 @@ describe.skipIf(!process.env.DATABASE_URL)("demo user persistence", () => {
     });
 
     expect(user?.profile?.defaultLocation).toBe("GYM");
+    expect(user?.profile).toMatchObject({
+      gender: "MALE",
+      age: 27,
+      heightCm: 178,
+      weightKg: 82,
+    });
     expect(user?.cycles).toHaveLength(0);
   });
 });

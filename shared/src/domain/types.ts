@@ -1,8 +1,8 @@
 import type {
   ActivityType,
+  Gender,
   Location,
   WeightUnit,
-  WorkoutSource,
   WorkoutStatus,
 } from "./enums";
 
@@ -11,7 +11,11 @@ export type ProfileInput = {
   sessionDurationMinutes: number;
   defaultLocation: Location;
   primaryGoal: string;
-  secondaryOutcome?: string;
+  secondaryOutcome?: string | null;
+  gender?: Gender | null;
+  age?: number | null;
+  heightCm?: number | null;
+  weightKg?: number | null;
 };
 
 export type ScheduledWorkoutInput = {
@@ -19,7 +23,6 @@ export type ScheduledWorkoutInput = {
   scheduledDate: Date;
   location: Location;
   durationMinutes: number;
-  source: WorkoutSource;
   status?: WorkoutStatus;
 };
 

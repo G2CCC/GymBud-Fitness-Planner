@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   cardioWorkoutLogInputSchema,
-  extraWorkoutInputSchema,
+  createWorkoutInputSchema,
   sportWorkoutLogInputSchema,
   strengthWorkoutLogInputSchema,
 } from "@fitness/shared/domain/workouts/validation";
@@ -49,7 +49,7 @@ describe("workout log validation", () => {
     ).toThrow();
   });
 
-  it("accepts activity-specific cardio, sport, and extra-workout data", () => {
+  it("accepts activity-specific cardio, sport, and planned workout data", () => {
     expect(
       cardioWorkoutLogInputSchema.parse({
         actualDurationMinutes: 30,
@@ -68,7 +68,7 @@ describe("workout log validation", () => {
     ).toMatchObject({ sportName: "Tennis" });
 
     expect(
-      extraWorkoutInputSchema.parse({
+      createWorkoutInputSchema.parse({
         activityType: "CARDIO",
         scheduledDate: "2026-11-06T00:00:00Z",
         location: "HOME",

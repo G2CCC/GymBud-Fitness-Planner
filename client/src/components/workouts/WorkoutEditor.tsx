@@ -3,7 +3,6 @@ import {
   isExerciseAvailableAtLocation,
   type ActivityType,
   type Location,
-  type WorkoutSource,
   type WorkoutStatus,
 } from "@fitness/shared";
 import { LocationSelector } from "./LocationSelector";
@@ -167,4 +166,4 @@ export function WorkoutEditor({
   );
 }
 
-export type { ActivityType, Location, WorkoutSource, WorkoutStatus };
+export type { ActivityType, Location, WorkoutStatus };

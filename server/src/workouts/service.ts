@@ -4,7 +4,7 @@ import {
   cancelWorkout as cancelWorkoutState,
   cardioWorkoutLogInputSchema,
   completeWorkout as completeWorkoutState,
-  extraWorkoutInputSchema,
+  createWorkoutInputSchema,
   rescheduleWorkout as rescheduleWorkoutState,
   sportWorkoutLogInputSchema,
   strengthWorkoutLogInputSchema,
@@ -28,7 +28,6 @@ const workoutSelect = {
   location: true,
   durationMinutes: true,
   status: true,
-  source: true,
   cancellationReason: true,
   rescheduleCount: true,
   completedAt: true,
@@ -292,11 +291,11 @@ export class WorkoutService {
     });
   }
 
-  async createExtraWorkout(
+  async createWorkout(
     userId: string,
     input: unknown,
   ): Promise<WorkoutRecord> {
-    const parsed = extraWorkoutInputSchema.safeParse(input);
+    const parsed = createWorkoutInputSchema.safeParse(input);
 
     if (!parsed.success) {
       throw validationError(parsed.error);
@@ -311,7 +310,7 @@ export class WorkoutService {
 
       if (!cycle) {
         throw new WorkoutServiceError(
-          "An active cycle is required for an extra workout",
+          "An active cycle is required for a new workout",
           "INVALID_STATE",
           409,
         );
@@ -325,7 +324,6 @@ export class WorkoutService {
           scheduledDate: parsed.data.scheduledDate,
           location: parsed.data.location,
           durationMinutes: parsed.data.durationMinutes,
-          source: "EXTRA",
           status: "PLANNED",
           ...(parsed.data.plannedDetails
             ? {

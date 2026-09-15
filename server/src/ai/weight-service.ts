@@ -32,7 +32,6 @@ const nextWorkoutSelect = {
       workouts: {
         select: {
           id: true,
-          source: true,
           status: true,
           scheduledDate: true,
           completedAt: true,
@@ -82,7 +81,6 @@ const exerciseLogSelect = {
         select: {
           id: true,
           userId: true,
-          source: true,
           status: true,
           scheduledDate: true,
           completedAt: true,
@@ -501,15 +499,10 @@ function buildWeightContext(
   preferredUnit: "KG" | "LB",
 ): WeightContext {
   const recentPerformance = history.slice(0, 5).map((record) => {
-    const source = record.workoutLog.workout.source;
-    const evidence: "PRIMARY" | "SECONDARY" =
-      source === "ORIGINAL" ? "PRIMARY" : "SECONDARY";
     return {
       workoutId: record.workoutLog.workout.id,
       scheduledDate: record.workoutLog.workout.scheduledDate.toISOString(),
       completedAt: record.workoutLog.workout.completedAt?.toISOString() ?? null,
-      source,
-      evidence,
       sets: record.setLogs.map((set) => ({
         setNumber: set.setNumber,
         reps: set.actualReps,
@@ -542,8 +535,6 @@ function buildWeightContext(
   const completed = cycleWorkouts.filter((item) => item.status === "COMPLETED");
   const planned = cycleWorkouts.filter((item) => item.status === "PLANNED");
   const cancelled = cycleWorkouts.filter((item) => item.status === "CANCELLED");
-  const originalCompleted = completed.filter((item) => item.source === "ORIGINAL");
-  const extraCompleted = completed.filter((item) => item.source === "EXTRA");
   const targetReps = Array.from(
     new Set(plannedSets.map((set) => set.targetReps)),
   );
@@ -558,8 +549,6 @@ function buildWeightContext(
       completedWorkoutCount: completed.length,
       cancelledWorkoutCount: cancelled.length,
       plannedWorkoutCount: planned.length,
-      originalCompletedWorkoutCount: originalCompleted.length,
-      extraCompletedWorkoutCount: extraCompleted.length,
     },
     allTimeBest: best
       ? {

@@ -2,7 +2,7 @@ import { z } from "zod";
 import {
   activityTypes,
   backfillCompletionInputSchema,
-  extraWorkoutInputSchema,
+  createWorkoutInputSchema,
   locations,
   profileInputSchema,
   rescheduleWorkoutInputSchema,
@@ -45,7 +45,7 @@ export const clientPlanDraftSchema = z.object({
 
 export {
   backfillCompletionInputSchema,
-  extraWorkoutInputSchema,
+  createWorkoutInputSchema,
   profileInputSchema,
   rescheduleWorkoutInputSchema,
   updateWorkoutLocationInputSchema,

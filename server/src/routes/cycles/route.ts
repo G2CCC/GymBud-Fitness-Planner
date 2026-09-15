@@ -199,7 +199,6 @@ const currentCycleSelect = {
       location: true,
       durationMinutes: true,
       status: true,
-      source: true,
       cancellationReason: true,
       completedAt: true,
       rescheduleCount: true,

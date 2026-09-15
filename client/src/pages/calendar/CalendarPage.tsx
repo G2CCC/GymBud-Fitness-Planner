@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import type { ActivityType, Location } from "@fitness/shared";
 import {
   cancelWorkout,
-  createExtraWorkout,
+  createWorkout,
   getCurrentCycle,
   rescheduleWorkout,
   updateWorkoutLocation,
@@ -69,14 +69,14 @@ export function CalendarPage() {
     setAdding(true);
     setActionMessage(null);
     try {
-      await createExtraWorkout({
+      await createWorkout({
         activityType: addActivity,
         scheduledDate: new Date(addDate + "T12:00:00").toISOString(),
         location: addLocation,
         durationMinutes: addDuration,
       });
       await loadCycle();
-      setActionMessage("Extra workout added without changing other sessions.");
+      setActionMessage("Workout added without changing other sessions.");
     } catch (addError) {
       setActionMessage(
         addError instanceof Error
@@ -253,7 +253,7 @@ export function CalendarPage() {
             disabled={adding}
             type="submit"
           >
-            {adding ? "Adding…" : "Add extra workout"}
+            {adding ? "Adding…" : "Add workout"}
           </button>
         </form>
       </section>

@@ -3,8 +3,8 @@ import type {
   CancellationReason,
   CycleReviewStatus,
   CycleStatus,
+  Gender,
   Location,
-  WorkoutSource,
   WorkoutStatus,
   WeightUnit,
 } from "@fitness/shared";
@@ -15,6 +15,10 @@ export type ApiProfile = {
   defaultLocation: Location;
   primaryGoal: string;
   secondaryOutcome?: string | null;
+  gender?: Gender | null;
+  age?: number | null;
+  heightCm?: number | null;
+  weightKg?: number | null;
 };
 
 export type ApiPlannedSet = {
@@ -38,7 +42,6 @@ export type ApiWorkout = {
   location: Location;
   durationMinutes: number;
   status: WorkoutStatus;
-  source: WorkoutSource;
   cancellationReason: CancellationReason | null;
   completedAt: string | null;
   rescheduleCount: number;

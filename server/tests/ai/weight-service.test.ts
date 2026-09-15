@@ -57,7 +57,6 @@ describe.skipIf(!hasDatabase)("AI weight recommendations", () => {
           location: "GYM",
           durationMinutes: 60,
           status: "COMPLETED",
-          source: index === 5 ? "EXTRA" : "ORIGINAL",
           completedAt: new Date(
             `2026-11-${String(index + 1).padStart(2, "0")}T18:00:00Z`,
           ),
@@ -100,7 +99,6 @@ describe.skipIf(!hasDatabase)("AI weight recommendations", () => {
         location: "GYM",
         durationMinutes: 60,
         status: "PLANNED",
-        source: "ORIGINAL",
         plannedExercises: {
           create: {
             exerciseId,
@@ -127,7 +125,6 @@ describe.skipIf(!hasDatabase)("AI weight recommendations", () => {
         location: "GYM",
         durationMinutes: 60,
         status: "PLANNED",
-        source: "ORIGINAL",
         plannedExercises: {
           create: {
             exerciseId,
@@ -155,7 +152,7 @@ describe.skipIf(!hasDatabase)("AI weight recommendations", () => {
     await db.$disconnect();
   }, integrationTestTimeout);
 
-  it("uses bounded, labeled context and applies an accepted weight only to the next workout", async () => {
+  it("uses bounded workout context and applies an accepted weight only to the next workout", async () => {
     const service = new WeightService(
       db,
       new FakeAiClient({
@@ -179,7 +176,7 @@ describe.skipIf(!hasDatabase)("AI weight recommendations", () => {
     });
 
     const context = recommendation.inputContext as {
-      recentPerformance: Array<{ evidence: string }>;
+      recentPerformance: Array<Record<string, unknown>>;
       currentCycleSummary: unknown;
       allTimeBest: unknown;
       currentGoal: unknown;
@@ -187,8 +184,8 @@ describe.skipIf(!hasDatabase)("AI weight recommendations", () => {
       cycleReviewPrompt?: unknown;
     };
     expect(context.recentPerformance).toHaveLength(5);
-    expect(context.recentPerformance.some((record) => record.evidence === "PRIMARY")).toBe(true);
-    expect(context.recentPerformance.some((record) => record.evidence === "SECONDARY")).toBe(true);
+    expect(context.recentPerformance.every((record) => !("source" in record))).toBe(true);
+    expect(context.recentPerformance.every((record) => !("evidence" in record))).toBe(true);
     expect(context.currentCycleSummary).toBeDefined();
     expect(context.allTimeBest).toBeDefined();
     expect(context.currentGoal).toEqual({

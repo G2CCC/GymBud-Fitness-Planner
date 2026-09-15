@@ -1,9 +1,9 @@
 import { z } from "zod";
 import {
   activityTypes,
+  genders,
   locations,
   weightUnits,
-  workoutSources,
   workoutStatuses,
 } from "./enums";
 import { isValidTimeZone } from "./time/timezone";
@@ -15,7 +15,11 @@ export const profileInputSchema = z.object({
   sessionDurationMinutes: z.number().int().min(10).max(360),
   defaultLocation: z.enum(locations),
   primaryGoal: z.string().trim().min(1),
-  secondaryOutcome: z.string().trim().min(1).optional(),
+  secondaryOutcome: z.string().trim().min(1).nullish(),
+  gender: z.enum(genders).nullish(),
+  age: z.number().int().min(13).max(100).nullish(),
+  heightCm: z.number().min(50).max(250).nullish(),
+  weightKg: z.number().min(20).max(350).nullish(),
 }).strict();
 
 export const timeZoneSchema = z.string().trim().min(1).refine(isValidTimeZone, {
@@ -33,7 +37,6 @@ export const scheduledWorkoutInputSchema = z.object({
   scheduledDate: dateSchema,
   location: z.enum(locations),
   durationMinutes: z.number().int().min(1).max(600),
-  source: z.enum(workoutSources),
   status: z.enum(workoutStatuses).optional(),
 }).strict();
 

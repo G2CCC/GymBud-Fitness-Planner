@@ -171,18 +171,17 @@ describe.skipIf(!hasDatabase)("workout persistence", () => {
     );
   }, integrationTestTimeout);
 
-  it("creates an extra workout in the active cycle", async () => {
-    const extra = await service.createExtraWorkout(userId, {
+  it("creates a workout in the active cycle", async () => {
+    const workout = await service.createWorkout(userId, {
       activityType: "CARDIO",
       scheduledDate: new Date("2026-11-06T00:00:00Z"),
       location: "HOME",
       durationMinutes: 30,
     });
 
-    expect(extra).toMatchObject({
+    expect(workout).toMatchObject({
       cycleId,
       userId,
-      source: "EXTRA",
       status: "PLANNED",
     });
   }, integrationTestTimeout);

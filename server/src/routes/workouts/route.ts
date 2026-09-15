@@ -1,7 +1,7 @@
 import { Router, type Response } from "express";
 import {
   backfillCompletionInputSchema,
-  extraWorkoutInputSchema,
+  createWorkoutInputSchema,
   rescheduleWorkoutInputSchema,
   updateWorkoutLocationInputSchema,
 } from "@fitness/shared/domain/workouts/validation";
@@ -23,7 +23,7 @@ const workoutService = new WorkoutService(db);
 export const workoutRouter = Router();
 
 workoutRouter.post("/", async (request, response) => {
-  const parsed = extraWorkoutInputSchema.safeParse(request.body);
+  const parsed = createWorkoutInputSchema.safeParse(request.body);
 
   if (!parsed.success) {
     return sendValidationError(response, parsed.error);
@@ -31,7 +31,7 @@ workoutRouter.post("/", async (request, response) => {
 
   try {
     const userId = await getCurrentUserId();
-    const workout = await workoutService.createExtraWorkout(userId, parsed.data);
+    const workout = await workoutService.createWorkout(userId, parsed.data);
     return response.status(201).json({ data: workout });
   } catch (error) {
     return sendRouteError(response, error);

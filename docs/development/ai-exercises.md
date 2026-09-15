@@ -71,8 +71,7 @@ The server creates a pending `AIRecommendation` after assembling a structured
 context containing:
 
 - at most the five latest completed records for the same exercise;
-- `PRIMARY` evidence labels for original workouts and `SECONDARY` labels for
-  extra workouts;
+- the latest completed workout records without plan-source labels;
 - a computed current-cycle summary;
 - the all-time best in the selected weight unit;
 - the user's primary goal and secondary outcome;

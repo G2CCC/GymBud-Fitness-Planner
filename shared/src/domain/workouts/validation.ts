@@ -35,7 +35,7 @@ export const sportWorkoutLogInputSchema = z.object({
   notes: z.string().trim().max(2000).optional(),
 }).strict();
 
-export const extraWorkoutInputSchema = z.object({
+export const createWorkoutInputSchema = z.object({
   activityType: z.enum(activityTypes),
   scheduledDate: z.coerce.date(),
   location: z.enum(locations),
@@ -66,7 +66,7 @@ export type WorkoutLogInput =
   | StrengthWorkoutLogInput
   | CardioWorkoutLogInput
   | SportWorkoutLogInput;
-export type ExtraWorkoutInput = z.infer<typeof extraWorkoutInputSchema>;
+export type CreateWorkoutInput = z.infer<typeof createWorkoutInputSchema>;
 export type BackfillCompletionInput = z.infer<
   typeof backfillCompletionInputSchema
 >;

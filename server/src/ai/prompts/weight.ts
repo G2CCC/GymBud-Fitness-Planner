@@ -7,8 +7,6 @@ export type WeightContext = {
     workoutId: string;
     scheduledDate: string;
     completedAt: string | null;
-    source: "ORIGINAL" | "EXTRA";
-    evidence: "PRIMARY" | "SECONDARY";
     sets: Array<{
       setNumber: number;
       reps: number;
@@ -24,8 +22,6 @@ export type WeightContext = {
     completedWorkoutCount: number;
     cancelledWorkoutCount: number;
     plannedWorkoutCount: number;
-    originalCompletedWorkoutCount: number;
-    extraCompletedWorkoutCount: number;
   };
   allTimeBest: {
     weight: number;

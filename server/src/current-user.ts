@@ -9,6 +9,10 @@ const demoProfile = {
   weeklyTrainingDays: 3,
   sessionDurationMinutes: 60,
   defaultLocation: "GYM" as const,
+  gender: "MALE" as const,
+  age: 27,
+  heightCm: 178,
+  weightKg: 82,
 };
 
 export async function seedDemoUser(): Promise<{ userId: string }> {

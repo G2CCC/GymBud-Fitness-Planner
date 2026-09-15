@@ -1,7 +1,8 @@
 import type { AiRequest } from "../client";
 import type { ObjectiveCycleSummary } from "@fitness/shared/domain/reviews/objective-summary";
+import type { Gender, Location } from "@fitness/shared";
 
-export const PLAN_PROMPT_VERSION = "plan.v1";
+export const PLAN_PROMPT_VERSION = "plan.v2";
 
 export type PlanPromptInput = {
   cycleId: string;
@@ -11,7 +12,11 @@ export type PlanPromptInput = {
   secondaryOutcome: string | null;
   weeklyTrainingDays: number;
   sessionDurationMinutes: number;
-  location: "GYM" | "HOME";
+  location: Location;
+  gender: Gender | null;
+  age: number | null;
+  heightCm: number | null;
+  weightKg: number | null;
   exercises: Array<{
     id: string;
     name: string;
@@ -29,6 +34,15 @@ export type PlanPromptInput = {
 };
 
 export function buildPlanRequest(input: PlanPromptInput): AiRequest {
+  const optionalProfileContext = Object.fromEntries(
+    Object.entries({
+      gender: input.gender,
+      age: input.age,
+      heightCm: input.heightCm,
+      weightKg: input.weightKg,
+    }).filter(([, value]) => value !== null && value !== undefined),
+  );
+
   const context: Record<string, unknown> = {
     cycle: {
       id: input.cycleId,
@@ -37,10 +51,13 @@ export function buildPlanRequest(input: PlanPromptInput): AiRequest {
     },
     profile: {
       primaryGoal: input.primaryGoal,
-      secondaryOutcome: input.secondaryOutcome,
+      ...(input.secondaryOutcome
+        ? { secondaryOutcome: input.secondaryOutcome }
+        : {}),
       weeklyTrainingDays: input.weeklyTrainingDays,
       sessionDurationMinutes: input.sessionDurationMinutes,
       location: input.location,
+      ...optionalProfileContext,
     },
     legalExercisePool: input.exercises,
     outputShape: {
@@ -78,6 +95,8 @@ export function buildPlanRequest(input: PlanPromptInput): AiRequest {
       "Strength workouts must contain at least one exercise and one planned set per exercise.",
       "Do not return RPE, subjective feedback, or unknown fields.",
       "Keep every scheduled date within the inclusive cycle dates.",
+      "Body context is optional planning context; never invent missing values.",
+      "Do not infer medical diagnoses, calorie prescriptions, nutrition plans, or unsupported safety claims from body context.",
     ].join(" "),
     userPrompt: JSON.stringify(context),
     metadata: {
