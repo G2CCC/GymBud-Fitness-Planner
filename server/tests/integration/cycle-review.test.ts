@@ -26,7 +26,6 @@ const nextPlanResponse = {
     {
       scheduledDate: "2026-12-01T00:00:00Z",
       activityType: "STRENGTH",
-      location: "GYM",
       durationMinutes: 60,
       exercises: [
         {
@@ -50,10 +49,12 @@ describe.skipIf(!hasDatabase)("cycle volume review persistence", () => {
         profile: {
           create: {
             primaryGoal: "FAT_LOSS",
-            secondaryOutcome: "MUSCLE_PRESERVATION",
+            gender: "MALE",
+            age: 30,
+            heightCm: 180,
+            weightKg: 80,
             weeklyTrainingDays: 3,
             sessionDurationMinutes: 60,
-            defaultLocation: "GYM",
           },
         },
       },
@@ -268,7 +269,6 @@ describe.skipIf(!hasDatabase)("cycle volume review persistence", () => {
             userId,
             activityType: "STRENGTH",
             scheduledDate: new Date(startDate.getTime() + 86_400_000),
-            location: "GYM",
             durationMinutes: 60,
             status: "COMPLETED",
             completedAt: new Date(startDate.getTime() + 2 * 86_400_000),

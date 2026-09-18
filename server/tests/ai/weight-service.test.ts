@@ -25,10 +25,12 @@ describe.skipIf(!hasDatabase)("AI weight recommendations", () => {
         profile: {
           create: {
             primaryGoal: "FAT_LOSS",
-            secondaryOutcome: "MUSCLE_PRESERVATION",
+            gender: "MALE",
+            age: 30,
+            heightCm: 180,
+            weightKg: 80,
             weeklyTrainingDays: 3,
             sessionDurationMinutes: 60,
-            defaultLocation: "GYM",
           },
         },
       },
@@ -54,7 +56,6 @@ describe.skipIf(!hasDatabase)("AI weight recommendations", () => {
           scheduledDate: new Date(
             `2026-11-${String(index + 1).padStart(2, "0")}T00:00:00Z`,
           ),
-          location: "GYM",
           durationMinutes: 60,
           status: "COMPLETED",
           completedAt: new Date(
@@ -96,7 +97,6 @@ describe.skipIf(!hasDatabase)("AI weight recommendations", () => {
         cycleId,
         activityType: "STRENGTH",
         scheduledDate: new Date("2026-11-10T00:00:00Z"),
-        location: "GYM",
         durationMinutes: 60,
         status: "PLANNED",
         plannedExercises: {
@@ -122,7 +122,6 @@ describe.skipIf(!hasDatabase)("AI weight recommendations", () => {
         cycleId,
         activityType: "STRENGTH",
         scheduledDate: new Date("2026-11-17T00:00:00Z"),
-        location: "GYM",
         durationMinutes: 60,
         status: "PLANNED",
         plannedExercises: {
@@ -190,7 +189,6 @@ describe.skipIf(!hasDatabase)("AI weight recommendations", () => {
     expect(context.allTimeBest).toBeDefined();
     expect(context.currentGoal).toEqual({
       primaryGoal: "FAT_LOSS",
-      secondaryOutcome: "MUSCLE_PRESERVATION",
     });
     expect(context.nextWorkoutTarget).toMatchObject({
       exerciseId,

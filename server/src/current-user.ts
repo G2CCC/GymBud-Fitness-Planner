@@ -4,10 +4,8 @@ import { getRequestAuth } from "./auth/types";
 
 const demoProfile = {
   primaryGoal: "FAT_LOSS",
-  secondaryOutcome: "MUSCLE_PRESERVATION",
   weeklyTrainingDays: 3,
   sessionDurationMinutes: 60,
-  defaultLocation: "GYM" as const,
   gender: "MALE" as const,
   age: 27,
   heightCm: 178,

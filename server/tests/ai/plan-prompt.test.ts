@@ -6,27 +6,19 @@ const baseInput = {
   startDate: new Date("2026-10-01T00:00:00Z"),
   endDate: new Date("2026-10-28T00:00:00Z"),
   primaryGoal: "FAT_LOSS",
-  secondaryOutcome: null,
   weeklyTrainingDays: 3,
   sessionDurationMinutes: 60,
-  location: "GYM" as const,
-  gender: null,
-  age: null,
-  heightCm: null,
-  weightKg: null,
+  gender: "MALE" as const,
+  age: 27,
+  heightCm: 178,
+  weightKg: 82,
   exercises: [],
   model: "test-model",
 };
 
 describe("plan prompt", () => {
-  it("includes supplied body context in metric units", () => {
-    const request = buildPlanRequest({
-      ...baseInput,
-      gender: "MALE",
-      age: 27,
-      heightCm: 178,
-      weightKg: 82,
-    });
+  it("includes required body context and omits location-specific context", () => {
+    const request = buildPlanRequest(baseInput);
 
     const context = JSON.parse(request.userPrompt) as {
       profile: Record<string, unknown>;
@@ -38,24 +30,9 @@ describe("plan prompt", () => {
       heightCm: 178,
       weightKg: 82,
     });
-  });
-
-  it("omits missing body context instead of inventing values", () => {
-    const request = buildPlanRequest({
-      ...baseInput,
-      gender: null,
-      age: null,
-      heightCm: null,
-      weightKg: null,
-    });
-
-    const context = JSON.parse(request.userPrompt) as {
-      profile: Record<string, unknown>;
-    };
-
-    expect(context.profile).not.toHaveProperty("gender");
-    expect(context.profile).not.toHaveProperty("age");
-    expect(context.profile).not.toHaveProperty("heightCm");
-    expect(context.profile).not.toHaveProperty("weightKg");
+    expect(context.profile).not.toHaveProperty("secondaryOutcome");
+    expect(context.profile).not.toHaveProperty("location");
+    expect(request.userPrompt).not.toContain("availableLocations");
+    expect(request.systemPrompt).not.toContain("location");
   });
 });

@@ -6,8 +6,8 @@ import type {
 
 export type CycleTrainingSetInput = {
   actualReps: number;
-  actualWeight: number | null;
-  weightUnit: WeightUnit | null;
+  actualWeight: number;
+  weightUnit: WeightUnit;
 };
 
 export type CycleTrainingWorkoutInput = {
@@ -109,9 +109,7 @@ export function buildCycleTrainingVolume(
   const weightedVolume: WeightedVolume = { KG: 0, LB: 0 };
 
   for (const set of strengthSets) {
-    if (set.actualWeight !== null && set.weightUnit !== null) {
-      weightedVolume[set.weightUnit] += set.actualWeight * set.actualReps;
-    }
+    weightedVolume[set.weightUnit] += set.actualWeight * set.actualReps;
   }
 
   return {
@@ -128,7 +126,7 @@ export function buildCycleTrainingVolume(
       ),
       unweightedRepCount: strengthSets.reduce(
         (sum, set) =>
-          sum + (set.actualWeight === null ? set.actualReps : 0),
+          sum + (set.actualWeight === 0 ? set.actualReps : 0),
         0,
       ),
       weightedVolume,

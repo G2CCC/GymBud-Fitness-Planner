@@ -25,12 +25,12 @@ const input: CycleTrainingVolumeInput = {
       ],
     },
     {
-      id: "bodyweight-1",
+        id: "bodyweight-1",
       activityType: "STRENGTH",
       status: "COMPLETED",
       actualExercises: [
         {
-          sets: [{ actualReps: 12, actualWeight: null, weightUnit: null }],
+          sets: [{ actualReps: 12, actualWeight: 0, weightUnit: "KG" }],
         },
       ],
     },

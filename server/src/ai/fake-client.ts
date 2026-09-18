@@ -73,7 +73,6 @@ export function createDeterministicFakeAiClient(): AiClient {
           {
             scheduledDate: cycle.startDate,
             activityType: "STRENGTH",
-            location: profile.location ?? "GYM",
             durationMinutes: profile.sessionDurationMinutes ?? 60,
             exercises: [
               {
@@ -107,7 +106,7 @@ export function createDeterministicFakeAiClient(): AiClient {
           ? [
               {
                 exerciseId: candidate.id,
-                reason: "The candidate is legal for the workout location.",
+                reason: "The candidate is legal for the workout.",
                 sets: [{ setNumber: 1, targetReps: 10 }],
               },
             ]
@@ -131,7 +130,6 @@ export function createDeterministicFakeAiClient(): AiClient {
         equipment: "NONE",
         targetMuscles: ["FULL_BODY"],
         movementPattern: "GENERAL",
-        availableLocations: ["GYM", "HOME"],
       };
     }
 

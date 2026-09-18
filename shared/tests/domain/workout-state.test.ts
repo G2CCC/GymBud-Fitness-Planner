@@ -3,7 +3,6 @@ import {
   cancelWorkout,
   completeWorkout,
   rescheduleWorkout,
-  updateWorkoutLocation,
 } from "@fitness/shared/domain/workouts/state-machine";
 
 const now = new Date("2026-11-04T12:00:00Z");
@@ -14,7 +13,6 @@ const plannedWorkout = {
   cycleStatus: "ACTIVE" as const,
   hasNextCycle: false,
   scheduledDate: new Date("2026-11-03T00:00:00Z"),
-  location: "GYM" as const,
 };
 
 describe("workout state machine", () => {
@@ -25,7 +23,6 @@ describe("workout state machine", () => {
       cycleStatus: "ACTIVE",
       hasNextCycle: false,
       scheduledDate: new Date("2026-11-03T00:00:00Z"),
-      location: "GYM",
       completedAt: now,
     });
   });
@@ -56,17 +53,15 @@ describe("workout state machine", () => {
     });
   });
 
-  it("reschedules and changes the location of a planned workout", () => {
+  it("reschedules a planned workout without location state", () => {
     const rescheduled = rescheduleWorkout(
       plannedWorkout,
       new Date("2026-11-05T00:00:00Z"),
     );
-    const moved = updateWorkoutLocation(rescheduled, "HOME");
 
-    expect(moved).toMatchObject({
+    expect(rescheduled).toMatchObject({
       status: "PLANNED",
       scheduledDate: new Date("2026-11-05T00:00:00Z"),
-      location: "HOME",
     });
   });
 

@@ -1,8 +1,5 @@
 import { z } from "zod";
-import {
-  activityTypes,
-  locations,
-} from "../enums";
+import { activityTypes } from "../enums";
 import { plannedSetSchema, setLogSchema } from "../validation";
 
 const strengthSetLogInputSchema = setLogSchema.extend({
@@ -45,7 +42,6 @@ export const plannedExerciseInputSchema = z.object({
 export const createWorkoutInputSchema = z.object({
   activityType: z.enum(activityTypes),
   scheduledDate: z.coerce.date(),
-  location: z.enum(locations),
   durationMinutes: z.number().int().min(1).max(600),
   plannedDetails: z.record(z.unknown()).optional(),
   plannedExercises: z.array(plannedExerciseInputSchema).min(1).max(100).optional(),
@@ -87,10 +83,6 @@ export const rescheduleWorkoutInputSchema = z.object({
   scheduledDate: z.coerce.date(),
 }).strict();
 
-export const updateWorkoutLocationInputSchema = z.object({
-  location: z.enum(locations),
-}).strict();
-
 export type StrengthWorkoutLogInput = z.infer<
   typeof strengthWorkoutLogInputSchema
 >;
@@ -110,7 +102,4 @@ export type BackfillCompletionInput = z.infer<
 >;
 export type RescheduleWorkoutInput = z.infer<
   typeof rescheduleWorkoutInputSchema
->;
-export type UpdateWorkoutLocationInput = z.infer<
-  typeof updateWorkoutLocationInputSchema
 >;

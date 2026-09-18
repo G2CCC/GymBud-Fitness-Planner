@@ -21,7 +21,6 @@ const nextWorkoutSelect = {
   activityType: true,
   status: true,
   scheduledDate: true,
-  location: true,
   cycle: {
     select: {
       id: true,
@@ -44,7 +43,6 @@ const nextWorkoutSelect = {
       profile: {
         select: {
           primaryGoal: true,
-          secondaryOutcome: true,
         },
       },
     },
@@ -493,7 +491,7 @@ async function assertCurrentCycle(
 function buildWeightContext(
   workout: NextWorkout,
   exerciseId: string,
-  profile: { primaryGoal: string; secondaryOutcome: string | null },
+  profile: { primaryGoal: string },
   plannedSets: NextWorkout["plannedExercises"][number]["plannedSets"],
   history: ExerciseLogRecord[],
   preferredUnit: "KG" | "LB",
@@ -513,18 +511,13 @@ function buildWeightContext(
   });
 
   const weightedSets = history.flatMap((record) =>
-    record.setLogs
-      .filter(
-        (set): set is typeof set & { actualWeight: number; weightUnit: "KG" | "LB" } =>
-          set.actualWeight !== null && set.weightUnit !== null,
-      )
-      .map((set) => ({
-        weight: set.actualWeight,
-        weightUnit: set.weightUnit,
-        reps: set.actualReps,
-        workoutId: record.workoutLog.workout.id,
-        recordedAt: getRecordTime(record).toISOString(),
-      })),
+    record.setLogs.map((set) => ({
+      weight: set.actualWeight,
+      weightUnit: set.weightUnit,
+      reps: set.actualReps,
+      workoutId: record.workoutLog.workout.id,
+      recordedAt: getRecordTime(record).toISOString(),
+    })),
   );
   const bestCandidates = weightedSets.filter(
     (set) => set.weightUnit === preferredUnit,
@@ -561,12 +554,10 @@ function buildWeightContext(
       : null,
     currentGoal: {
       primaryGoal: profile.primaryGoal,
-      secondaryOutcome: profile.secondaryOutcome,
     },
     nextWorkoutTarget: {
       workoutId: workout.id,
       scheduledDate: workout.scheduledDate.toISOString(),
-      location: workout.location,
       exerciseId,
       sets: plannedSets.length,
       targetReps: targetReps.length === 1 ? targetReps[0]! : targetReps,

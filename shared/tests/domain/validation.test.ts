@@ -11,34 +11,48 @@ describe("domain validation", () => {
     expect(cycleStatuses).toEqual(["DRAFT", "ACTIVE", "CLOSED"]);
   });
 
-  it("accepts the minimum profile scheduling inputs", () => {
+  it("accepts a complete profile for cycle creation", () => {
     const result = profileInputSchema.parse({
       weeklyTrainingDays: 3,
       sessionDurationMinutes: 60,
-      defaultLocation: "GYM",
       primaryGoal: "FAT_LOSS",
+      gender: "MALE",
+      age: 27,
+      heightCm: 178,
+      weightKg: 82,
     });
 
     expect(result).toMatchObject({
       weeklyTrainingDays: 3,
       sessionDurationMinutes: 60,
-      defaultLocation: "GYM",
+      gender: "MALE",
     });
   });
 
   it("rejects an RPE field because MVP does not collect RPE", () => {
     expect(() =>
-      setLogSchema.parse({ weight: 40, reps: 8, rpe: 7 }),
+      setLogSchema.parse({ weight: 40, reps: 8, weightUnit: "KG", rpe: 7 }),
     ).toThrow();
   });
 
-  it("rejects a home profile with an invalid training-day count", () => {
+  it("requires actual weight and weight unit for every set log", () => {
+    expect(() => setLogSchema.parse({ reps: 8, weightUnit: "KG" })).toThrow();
+    expect(() => setLogSchema.parse({ reps: 8, weight: 40 })).toThrow();
+    expect(
+      setLogSchema.parse({ reps: 8, weight: 0, weightUnit: "KG" }),
+    ).toMatchObject({ weight: 0, weightUnit: "KG" });
+  });
+
+  it("rejects an invalid training-day count", () => {
     expect(() =>
       profileInputSchema.parse({
         weeklyTrainingDays: 0,
         sessionDurationMinutes: 60,
-        defaultLocation: "HOME",
         primaryGoal: "MUSCLE_GAIN",
+        gender: "MALE",
+        age: 27,
+        heightCm: 178,
+        weightKg: 82,
       }),
     ).toThrow();
   });
@@ -47,8 +61,11 @@ describe("domain validation", () => {
     const result = cycleDraftInputSchema.parse({
       weeklyTrainingDays: 3,
       sessionDurationMinutes: 60,
-      defaultLocation: "GYM",
       primaryGoal: "FAT_LOSS",
+      gender: "MALE",
+      age: 27,
+      heightCm: 178,
+      weightKg: 82,
       timezone: "America/Los_Angeles",
     });
 
@@ -60,8 +77,11 @@ describe("domain validation", () => {
       cycleDraftInputSchema.parse({
         weeklyTrainingDays: 3,
         sessionDurationMinutes: 60,
-        defaultLocation: "GYM",
         primaryGoal: "FAT_LOSS",
+        gender: "MALE",
+        age: 27,
+        heightCm: 178,
+        weightKg: 82,
         timezone: "Not/A_Timezone",
       }),
     ).toThrow();

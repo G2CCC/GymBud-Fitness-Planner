@@ -5,20 +5,15 @@ const requiredProfile = {
   primaryGoal: "FAT_LOSS",
   weeklyTrainingDays: 3,
   sessionDurationMinutes: 60,
-  defaultLocation: "GYM" as const,
+  gender: "MALE" as const,
+  age: 27,
+  heightCm: 178,
+  weightKg: 82,
 };
 
 describe("profile validation", () => {
-  it("accepts optional demographic planning context", () => {
-    expect(
-      profileInputSchema.parse({
-        ...requiredProfile,
-        gender: "MALE",
-        age: 27,
-        heightCm: 178,
-        weightKg: 82,
-      }),
-    ).toMatchObject({
+  it("accepts the required demographic planning context", () => {
+    expect(profileInputSchema.parse(requiredProfile)).toMatchObject({
       gender: "MALE",
       age: 27,
       heightCm: 178,
@@ -26,8 +21,23 @@ describe("profile validation", () => {
     });
   });
 
-  it("allows missing demographic context", () => {
-    expect(profileInputSchema.parse(requiredProfile)).not.toHaveProperty("age");
+  it.each(["gender", "age", "heightCm", "weightKg"])(
+    "requires %s",
+    (field) => {
+      const input = { ...requiredProfile };
+      delete input[field as keyof typeof input];
+      expect(() => profileInputSchema.parse(input)).toThrow();
+    },
+  );
+
+  it("removes secondary outcome and default location from the profile contract", () => {
+    expect(() =>
+      profileInputSchema.parse({
+        ...requiredProfile,
+        secondaryOutcome: "MUSCLE_PRESERVATION",
+        defaultLocation: "GYM",
+      }),
+    ).toThrow();
   });
 
   it.each([

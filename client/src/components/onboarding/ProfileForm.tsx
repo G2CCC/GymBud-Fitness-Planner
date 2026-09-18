@@ -1,10 +1,8 @@
 import { useState, type FormEvent } from "react";
 import {
   genders,
-  locations,
   profileInputSchema,
   type Gender,
-  type Location,
   type ProfileInput,
 } from "@fitness/shared";
 
@@ -19,30 +17,49 @@ export type ProfileFormProps = {
   submitLabel?: string;
 };
 
-const defaultValue: ProfileInput = {
-  weeklyTrainingDays: 3,
-  sessionDurationMinutes: 60,
-  defaultLocation: "GYM",
-  primaryGoal: "FAT_LOSS",
-  secondaryOutcome: "MUSCLE_PRESERVATION",
+type ProfileFormValue = Omit<ProfileInput, "gender" | "age" | "heightCm" | "weightKg"> & {
+  gender: Gender | "";
+  age: number | "";
+  heightCm: number | "";
+  weightKg: number | "";
 };
 
+const defaultValue: ProfileFormValue = {
+  weeklyTrainingDays: 3,
+  sessionDurationMinutes: 60,
+  primaryGoal: "FAT_LOSS",
+  gender: "",
+  age: "",
+  heightCm: "",
+  weightKg: "",
+};
+
+function toFormValue(input?: ProfileInput): ProfileFormValue {
+  return input
+    ? {
+        ...input,
+      }
+    : defaultValue;
+}
+
 export function ProfileForm({
-  initialValue = defaultValue,
+  initialValue,
   onSubmit,
   submitting = false,
   error: externalError = null,
   title = "Your training setup",
   heading = "Give GymBud the rhythm of your week.",
-  description = "Training frequency and available time are required. Gender, age, height, and body weight are optional context for AI planning. Equipment is inferred from the location, so gym plans have no equipment restriction and home plans default to bodyweight movements.",
+  description = "Training frequency, body context, and goals are required so GymBud can build a more relevant plan.",
   submitLabel = "Save and open calendar",
 }: ProfileFormProps) {
-  const [value, setValue] = useState<ProfileInput>(initialValue);
+  const [value, setValue] = useState<ProfileFormValue>(() =>
+    toFormValue(initialValue),
+  );
   const [error, setError] = useState<string | null>(null);
 
-  function update<K extends keyof ProfileInput>(
+  function update<K extends keyof ProfileFormValue>(
     key: K,
-    nextValue: ProfileInput[K],
+    nextValue: ProfileFormValue[K],
   ) {
     setValue((current) => ({ ...current, [key]: nextValue }));
   }
@@ -107,18 +124,19 @@ export function ProfileForm({
 
       <div className="grid gap-4 sm:grid-cols-2">
         <label className="grid gap-2 text-sm font-medium text-gymbud-ink">
-          Gender <span className="font-normal text-gymbud-muted">Optional</span>
+          Gender <span className="font-normal text-gymbud-muted">Required</span>
           <select
             className="focus-ring min-h-11 rounded-[var(--radius-control)] border border-gymbud-border bg-gymbud-surface px-3"
-            value={value.gender ?? ""}
+            required
+            value={value.gender}
             onChange={(event) =>
               update(
                 "gender",
-                (event.target.value || null) as Gender | null,
+                event.target.value as Gender | "",
               )
             }
           >
-            <option value="">Prefer not to provide</option>
+            <option value="">Select gender</option>
             {genders.map((gender) => (
               <option key={gender} value={gender}>
                 {gender === "NON_BINARY"
@@ -131,75 +149,61 @@ export function ProfileForm({
           </select>
         </label>
         <label className="grid gap-2 text-sm font-medium text-gymbud-ink">
-          Age <span className="font-normal text-gymbud-muted">Optional</span>
+          Age <span className="font-normal text-gymbud-muted">Required</span>
           <input
             className="focus-ring min-h-11 rounded-[var(--radius-control)] border border-gymbud-border bg-gymbud-surface px-3"
             type="number"
             min={13}
             max={100}
-            value={value.age ?? ""}
+            required
+            value={value.age}
             onChange={(event) =>
               update(
                 "age",
-                event.target.value === "" ? null : Number(event.target.value),
+                event.target.value === "" ? "" : Number(event.target.value),
               )
             }
           />
         </label>
         <label className="grid gap-2 text-sm font-medium text-gymbud-ink">
-          Height (cm) <span className="font-normal text-gymbud-muted">Optional</span>
+          Height (cm) <span className="font-normal text-gymbud-muted">Required</span>
           <input
             className="focus-ring min-h-11 rounded-[var(--radius-control)] border border-gymbud-border bg-gymbud-surface px-3"
             type="number"
             min={50}
             max={250}
             step="0.1"
-            value={value.heightCm ?? ""}
+            required
+            value={value.heightCm}
             onChange={(event) =>
               update(
                 "heightCm",
-                event.target.value === "" ? null : Number(event.target.value),
+                event.target.value === "" ? "" : Number(event.target.value),
               )
             }
           />
         </label>
         <label className="grid gap-2 text-sm font-medium text-gymbud-ink">
-          Body weight (kg) <span className="font-normal text-gymbud-muted">Optional</span>
+          Body weight (kg) <span className="font-normal text-gymbud-muted">Required</span>
           <input
             className="focus-ring min-h-11 rounded-[var(--radius-control)] border border-gymbud-border bg-gymbud-surface px-3"
             type="number"
             min={20}
             max={350}
             step="0.1"
-            value={value.weightKg ?? ""}
+            required
+            value={value.weightKg}
             onChange={(event) =>
               update(
                 "weightKg",
-                event.target.value === "" ? null : Number(event.target.value),
+                event.target.value === "" ? "" : Number(event.target.value),
               )
             }
           />
         </label>
       </div>
 
-      <label className="grid gap-2 text-sm font-medium text-gymbud-ink">
-        Default training location
-        <select
-          className="focus-ring min-h-11 rounded-[var(--radius-control)] border border-gymbud-border bg-gymbud-surface px-3"
-          value={value.defaultLocation}
-          onChange={(event) =>
-            update("defaultLocation", event.target.value as Location)
-          }
-        >
-          {locations.map((location) => (
-            <option key={location} value={location}>
-              {location === "GYM" ? "Gym" : "Home"}
-            </option>
-          ))}
-        </select>
-      </label>
-
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div>
         <label className="grid gap-2 text-sm font-medium text-gymbud-ink">
           Primary goal
           <select
@@ -212,20 +216,6 @@ export function ProfileForm({
             <option value="PERFORMANCE">Performance</option>
             <option value="GENERAL_HEALTH">General health</option>
           </select>
-        </label>
-        <label className="grid gap-2 text-sm font-medium text-gymbud-ink">
-          Secondary outcome
-          <input
-            className="focus-ring min-h-11 rounded-[var(--radius-control)] border border-gymbud-border bg-gymbud-surface px-3"
-            value={value.secondaryOutcome ?? ""}
-            placeholder="Optional"
-            onChange={(event) =>
-              update(
-                "secondaryOutcome",
-                event.target.value.trim() || null,
-              )
-            }
-          />
         </label>
       </div>
 

@@ -1,5 +1,4 @@
 import type {
-  Location,
   PlannedExerciseInput,
   PlannedSetInput,
   WeightUnit,
@@ -9,7 +8,6 @@ import { ExercisePicker, type ExercisePickerOption } from "../exercises/Exercise
 export type ManualPlannedExercise = PlannedExerciseInput;
 
 type StrengthPlanBuilderProps = {
-  location: Location;
   exercises: ExercisePickerOption[];
   value: ManualPlannedExercise[];
   onChange: (value: ManualPlannedExercise[]) => void;
@@ -23,7 +21,6 @@ function createSet(setNumber: number): PlannedSetInput {
 }
 
 export function StrengthPlanBuilder({
-  location,
   exercises,
   value,
   onChange,
@@ -102,7 +99,7 @@ export function StrengthPlanBuilder({
   return (
     <fieldset className="grid gap-4 rounded-[var(--radius-control)] border border-gymbud-border bg-gymbud-surface/60 p-4">
       <legend className="px-1 text-sm font-semibold text-gymbud-ink">
-        Strength plan · {location === "GYM" ? "Gym" : "Home"}
+        Strength plan
       </legend>
 
       {value.length === 0 ? (
@@ -119,7 +116,6 @@ export function StrengthPlanBuilder({
           <div className="flex items-end justify-between gap-3">
             <ExercisePicker
               exercises={exercises}
-              location={location}
               value={exercise.exerciseId}
               label={`Exercise ${exerciseIndex + 1}`}
               onChange={(exerciseId) =>

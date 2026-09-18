@@ -71,10 +71,9 @@ describe("workout log validation", () => {
       createWorkoutInputSchema.parse({
         activityType: "CARDIO",
         scheduledDate: "2026-11-06T00:00:00Z",
-        location: "HOME",
         durationMinutes: 30,
       }),
-    ).toMatchObject({ activityType: "CARDIO", location: "HOME" });
+    ).toMatchObject({ activityType: "CARDIO" });
   });
 
   it("accepts nested strength plan data and rejects it for cardio", () => {
@@ -82,7 +81,6 @@ describe("workout log validation", () => {
       createWorkoutInputSchema.parse({
         activityType: "STRENGTH",
         scheduledDate: "2026-11-06T00:00:00Z",
-        location: "GYM",
         durationMinutes: 45,
         plannedExercises: [
           {
@@ -101,7 +99,6 @@ describe("workout log validation", () => {
       createWorkoutInputSchema.parse({
         activityType: "CARDIO",
         scheduledDate: "2026-11-06T00:00:00Z",
-        location: "GYM",
         durationMinutes: 30,
         plannedExercises: [
           {

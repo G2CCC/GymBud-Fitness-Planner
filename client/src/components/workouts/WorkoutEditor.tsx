@@ -1,11 +1,8 @@
-import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useState, type FormEvent } from "react";
 import {
-  isExerciseAvailableAtLocation,
   type ActivityType,
-  type Location,
   type WorkoutStatus,
 } from "@fitness/shared";
-import { LocationSelector } from "./LocationSelector";
 import type { CalendarWorkout } from "../calendar/WorkoutCard";
 
 export type EditorWorkout = CalendarWorkout;
@@ -14,21 +11,17 @@ export type EditorExerciseOption = {
   id: string;
   name: string;
   equipment: string | null;
-  availableLocations: Location[];
 };
 
 export type WorkoutEditorSubmitPayload = {
-  location: Location;
   completedAt?: string;
 };
 
 export type WorkoutEditorProps = {
   workout: EditorWorkout;
-  location: Location;
   legalExerciseOptions: EditorExerciseOption[];
   mode?: "complete" | "backfill";
   saving?: boolean;
-  onLocationChange: (location: Location) => void;
   onSubmit: (payload: WorkoutEditorSubmitPayload) => void;
 };
 
@@ -47,33 +40,15 @@ function toLocalDateTime(date: Date): string {
 
 export function WorkoutEditor({
   workout,
-  location,
   legalExerciseOptions,
   mode = "complete",
   saving = false,
-  onLocationChange,
   onSubmit,
 }: WorkoutEditorProps) {
-  const [selectedLocation, setSelectedLocation] = useState(location);
   const [completedAt, setCompletedAt] = useState("");
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    setSelectedLocation(location);
-  }, [location]);
-
-  const availableExercises = useMemo(
-    () =>
-      legalExerciseOptions.filter((exercise) =>
-        isExerciseAvailableAtLocation(exercise, selectedLocation),
-      ),
-    [legalExerciseOptions, selectedLocation],
-  );
-
-  function handleLocationChange(nextLocation: Location) {
-    setSelectedLocation(nextLocation);
-    onLocationChange(nextLocation);
-  }
+  const availableExercises = legalExerciseOptions;
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -92,13 +67,12 @@ export function WorkoutEditor({
       }
 
       onSubmit({
-        location: selectedLocation,
         completedAt: parsed.toISOString(),
       });
       return;
     }
 
-    onSubmit({ location: selectedLocation });
+    onSubmit({});
   }
 
   return (
@@ -114,11 +88,6 @@ export function WorkoutEditor({
           Log your actual session
         </h2>
       </div>
-
-      <LocationSelector
-        value={selectedLocation}
-        onChange={handleLocationChange}
-      />
 
       {workout.activityType === "STRENGTH" ? (
         <label className="grid gap-2 text-sm font-medium text-gymbud-ink">
@@ -173,4 +142,4 @@ export function WorkoutEditor({
   );
 }
 
-export type { ActivityType, Location, WorkoutStatus };
+export type { ActivityType, WorkoutStatus };

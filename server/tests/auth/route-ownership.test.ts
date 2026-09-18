@@ -54,7 +54,6 @@ describe.skipIf(!hasDatabase)("authenticated route ownership", () => {
         cycleId: cycle.id,
         activityType: "CARDIO",
         scheduledDate: new Date("2026-10-02T00:00:00Z"),
-        location: "GYM",
         durationMinutes: 30,
       },
     });

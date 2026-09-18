@@ -238,7 +238,6 @@ const currentCycleSelect = {
       id: true,
       activityType: true,
       scheduledDate: true,
-      location: true,
       durationMinutes: true,
       status: true,
       completedAt: true,

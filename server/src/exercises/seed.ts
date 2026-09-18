@@ -9,7 +9,6 @@ const systemExercises = [
     equipment: "NONE",
     targetMuscles: ["CHEST", "TRICEPS", "SHOULDERS"],
     movementPattern: "PUSH",
-    availableLocations: ["GYM", "HOME"] as const,
   },
   {
     id: "system-bodyweight-squat",
@@ -18,7 +17,6 @@ const systemExercises = [
     equipment: "NONE",
     targetMuscles: ["QUADRICEPS", "GLUTES"],
     movementPattern: "SQUAT",
-    availableLocations: ["GYM", "HOME"] as const,
   },
   {
     id: "system-plank",
@@ -27,7 +25,6 @@ const systemExercises = [
     equipment: "NONE",
     targetMuscles: ["CORE"],
     movementPattern: "ANTI_EXTENSION",
-    availableLocations: ["GYM", "HOME"] as const,
   },
   {
     id: "system-barbell-bench-press",
@@ -36,7 +33,6 @@ const systemExercises = [
     equipment: "BARBELL",
     targetMuscles: ["CHEST", "TRICEPS", "SHOULDERS"],
     movementPattern: "PUSH",
-    availableLocations: ["GYM"] as const,
   },
   {
     id: "system-barbell-back-squat",
@@ -45,7 +41,6 @@ const systemExercises = [
     equipment: "BARBELL",
     targetMuscles: ["QUADRICEPS", "GLUTES"],
     movementPattern: "SQUAT",
-    availableLocations: ["GYM"] as const,
   },
   {
     id: "system-lat-pulldown",
@@ -54,7 +49,6 @@ const systemExercises = [
     equipment: "CABLE_MACHINE",
     targetMuscles: ["LATS", "BICEPS"],
     movementPattern: "PULL",
-    availableLocations: ["GYM"] as const,
   },
 ] as const;
 
@@ -72,7 +66,6 @@ export async function seedSystemExercises(
           equipment: exercise.equipment,
           targetMuscles: [...exercise.targetMuscles],
           movementPattern: exercise.movementPattern,
-          availableLocations: [...exercise.availableLocations],
           aiEligible: true,
         },
         create: {
@@ -82,7 +75,6 @@ export async function seedSystemExercises(
           equipment: exercise.equipment,
           targetMuscles: [...exercise.targetMuscles],
           movementPattern: exercise.movementPattern,
-          availableLocations: [...exercise.availableLocations],
           aiEligible: true,
         },
       }),

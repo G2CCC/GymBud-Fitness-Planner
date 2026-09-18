@@ -9,13 +9,11 @@ import {
   startOfUtcDay,
   type CycleCloseWorkout,
   type CycleReviewStatus,
-  type Location,
 } from "@fitness/shared";
 
 export type CycleDraftProfile = {
   weeklyTrainingDays: number;
   sessionDurationMinutes: number;
-  defaultLocation: Location;
   timezone: string;
 };
 

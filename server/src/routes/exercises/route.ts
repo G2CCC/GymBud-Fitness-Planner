@@ -2,8 +2,6 @@ import { Router, type Response } from "express";
 import {
   customExerciseInputSchema,
 } from "@fitness/shared/domain/validation";
-import { locations } from "@fitness/shared/domain/enums";
-import { z } from "zod";
 import {
   ExerciseService,
   ExerciseServiceError,
@@ -11,32 +9,14 @@ import {
 import { getAuthenticatedUserId } from "../../current-user";
 import { db } from "../../db";
 
-const locationQuerySchema = z.object({
-  location: z.enum(locations),
-}).strict();
-
 const exerciseService = new ExerciseService(db);
 
 export const exerciseRouter = Router();
 
 exerciseRouter.get("/", async (request, response) => {
-  const parsed = locationQuerySchema.safeParse(request.query);
-
-  if (!parsed.success) {
-    return response.status(400).json({
-      error: {
-        code: "VALIDATION_ERROR",
-        message: parsed.error.message,
-      },
-    });
-  }
-
   try {
     const userId = getAuthenticatedUserId(request);
-    const exercises = await exerciseService.listAvailableExercises(
-      userId,
-      parsed.data.location,
-    );
+    const exercises = await exerciseService.listAvailableExercises(userId);
     return response.json({ data: exercises });
   } catch (error) {
     return sendRouteError(response, error);

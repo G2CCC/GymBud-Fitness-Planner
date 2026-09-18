@@ -1,4 +1,4 @@
-import type { CycleStatus, Location, WorkoutStatus } from "../enums";
+import type { CycleStatus, WorkoutStatus } from "../enums";
 
 export type WorkoutTransition = {
   id: string;
@@ -6,7 +6,6 @@ export type WorkoutTransition = {
   cycleStatus: CycleStatus;
   hasNextCycle: boolean;
   scheduledDate: Date;
-  location: Location;
   completedAt?: Date | null;
 };
 
@@ -77,20 +76,6 @@ export function rescheduleWorkout(
     ...workout,
     status: "PLANNED",
     scheduledDate: newScheduledDate,
-    completedAt: null,
-  };
-}
-
-export function updateWorkoutLocation(
-  workout: WorkoutTransition,
-  location: Location,
-): PlannedWorkout {
-  assertWritablePlannedWorkout(workout);
-
-  return {
-    ...workout,
-    status: "PLANNED",
-    location,
     completedAt: null,
   };
 }

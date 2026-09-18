@@ -14,11 +14,6 @@ enum ActivityType {
   SPORT
 }
 
-enum Location {
-  GYM
-  HOME
-}
-
 enum Gender {
   MALE
   FEMALE
@@ -68,14 +63,12 @@ model UserProfile {
   userId                 String   @id
   user                   User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   primaryGoal            String
-  secondaryOutcome       String?
   weeklyTrainingDays     Int
   sessionDurationMinutes Int
-  defaultLocation        Location
-  gender                 Gender?
-  age                    Int?
-  heightCm               Float?
-  weightKg               Float?
+  gender                 Gender
+  age                    Int
+  heightCm               Float
+  weightKg               Float
   createdAt              DateTime @default(now())
   updatedAt              DateTime @updatedAt
 }
@@ -95,30 +88,29 @@ model TrainingCycle {
   workouts       ScheduledWorkout[]
   reviewSnapshot CycleReviewSnapshot?
 
+  @@unique([userId, cycleNumber])
   @@index([userId, status])
   @@index([userId, startDate])
-  @@unique([userId, cycleNumber])
 }
 
 model ScheduledWorkout {
-  id                 String              @id @default(cuid())
-  userId             String
-  user               User                @relation(fields: [userId], references: [id], onDelete: Cascade)
-  cycleId            String
-  cycle              TrainingCycle       @relation(fields: [cycleId], references: [id], onDelete: Restrict)
-  activityType       ActivityType
-  scheduledDate      DateTime
-  location           Location
-  durationMinutes    Int
-  status             WorkoutStatus       @default(PLANNED)
-  rescheduleCount    Int                 @default(0)
-  completedAt        DateTime?
-  plannedDetails     Json?
-  createdAt          DateTime            @default(now())
-  updatedAt          DateTime            @updatedAt
-  plannedExercises   PlannedExercise[]
-  workoutLog         WorkoutLog?
-  recommendations    AIRecommendation[]
+  id               String             @id @default(cuid())
+  userId           String
+  user             User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  cycleId          String
+  cycle            TrainingCycle      @relation(fields: [cycleId], references: [id], onDelete: Restrict)
+  activityType     ActivityType
+  scheduledDate    DateTime
+  durationMinutes  Int
+  status           WorkoutStatus      @default(PLANNED)
+  rescheduleCount  Int                @default(0)
+  completedAt      DateTime?
+  plannedDetails   Json?
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+  plannedExercises PlannedExercise[]
+  workoutLog       WorkoutLog?
+  recommendations  AIRecommendation[]
 
   @@index([userId, scheduledDate])
   @@index([cycleId, status])
@@ -180,28 +172,27 @@ model SetLog {
   exerciseLog   ExerciseLog @relation(fields: [exerciseLogId], references: [id], onDelete: Cascade)
   setNumber     Int
   actualReps    Int
-  actualWeight  Float?
-  weightUnit    WeightUnit?
+  actualWeight  Float
+  weightUnit    WeightUnit
 
   @@unique([exerciseLogId, setNumber])
 }
 
 model Exercise {
-  id                 String             @id @default(cuid())
-  ownerId            String?
-  owner              User?              @relation(fields: [ownerId], references: [id], onDelete: SetNull)
-  name               String
-  description        String?
-  equipment          String?
-  targetMuscles      String[]
-  movementPattern    String?
-  availableLocations Location[]
-  aiEligible         Boolean            @default(false)
-  createdAt          DateTime           @default(now())
-  updatedAt          DateTime           @updatedAt
-  plannedExercises   PlannedExercise[]
-  exerciseLogs       ExerciseLog[]
-  recommendations    AIRecommendation[]
+  id               String             @id @default(cuid())
+  ownerId          String?
+  owner            User?              @relation(fields: [ownerId], references: [id], onDelete: SetNull)
+  name             String
+  description      String?
+  equipment        String?
+  targetMuscles    String[]
+  movementPattern  String?
+  aiEligible       Boolean            @default(false)
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+  plannedExercises PlannedExercise[]
+  exerciseLogs     ExerciseLog[]
+  recommendations  AIRecommendation[]
 
   @@index([ownerId, name])
 }
@@ -227,33 +218,33 @@ model AIRecommendation {
 }
 
 model CycleReviewSnapshot {
-  id                    String        @id @default(cuid())
-  cycleId               String        @unique
-  cycle                 TrainingCycle @relation(fields: [cycleId], references: [id], onDelete: Cascade)
-  processedSummary      String?
-  objectiveSummary      Json
-  previousCycleSummary  Json?
-  conclusions           Json
-  nextCycleDraft        Json
-  reviewedAt            DateTime?
-  createdAt             DateTime      @default(now())
-  updatedAt             DateTime      @updatedAt
+  id                   String        @id @default(cuid())
+  cycleId              String        @unique
+  cycle                TrainingCycle @relation(fields: [cycleId], references: [id], onDelete: Cascade)
+  processedSummary     String?
+  objectiveSummary     Json
+  previousCycleSummary Json?
+  conclusions          Json
+  nextCycleDraft       Json
+  reviewedAt           DateTime?
+  createdAt            DateTime      @default(now())
+  updatedAt            DateTime      @updatedAt
 }
 
 model CycleBatchReview {
-  id                String                @id @default(cuid())
-  userId            String
-  user              User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
-  startCycleNumber  Int
-  endCycleNumber    Int
-  status            CycleBatchReviewStatus @default(ELIGIBLE)
-  processedSummary  String?
-  objectiveSummary  Json
-  conclusions       Json?
-  nextCycleDraft    Json?
-  reviewedAt        DateTime?
-  createdAt         DateTime              @default(now())
-  updatedAt         DateTime              @updatedAt
+  id               String                 @id @default(cuid())
+  userId           String
+  user             User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  startCycleNumber Int
+  endCycleNumber   Int
+  status           CycleBatchReviewStatus @default(ELIGIBLE)
+  processedSummary String?
+  objectiveSummary Json
+  conclusions      Json?
+  nextCycleDraft   Json?
+  reviewedAt       DateTime?
+  createdAt        DateTime               @default(now())
+  updatedAt        DateTime               @updatedAt
 
   @@unique([userId, startCycleNumber, endCycleNumber])
   @@index([userId, status])

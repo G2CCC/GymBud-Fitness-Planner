@@ -25,7 +25,6 @@ const planDraft: ApiPlanDraft = {
     {
       scheduledDate: "2026-09-15T00:00:00.000Z",
       activityType: "CARDIO",
-      location: "HOME",
       durationMinutes: 30,
       exercises: [],
     },
@@ -50,8 +49,11 @@ beforeEach(() => {
   vi.mocked(api.saveProfile).mockResolvedValue({
     weeklyTrainingDays: 3,
     sessionDurationMinutes: 60,
-    defaultLocation: "GYM",
     primaryGoal: "FAT_LOSS",
+    gender: "FEMALE",
+    age: 27,
+    heightCm: 178,
+    weightKg: 82,
   });
   vi.mocked(api.createCycleDraft).mockResolvedValue({
     id: "draft-1",
@@ -79,6 +81,11 @@ afterEach(() => {
 
 async function saveProfileAndReachChoice(user: ReturnType<typeof userEvent.setup>) {
   renderOnboarding();
+  await screen.findByLabelText(/gender/i);
+  await user.selectOptions(screen.getByLabelText(/gender/i), "MALE");
+  await user.type(screen.getByLabelText(/^Age/i), "30");
+  await user.type(screen.getByLabelText(/Height \(cm\)/i), "180");
+  await user.type(screen.getByLabelText(/Body weight \(kg\)/i), "80");
   await user.click(
     await screen.findByRole("button", { name: /save and open calendar/i }),
   );
@@ -88,7 +95,7 @@ async function saveProfileAndReachChoice(user: ReturnType<typeof userEvent.setup
 }
 
 describe("onboarding profile form", () => {
-  it("submits optional body context with the training profile", async () => {
+  it("submits the required body context with the training profile", async () => {
     const user = userEvent.setup();
     const onSubmit = vi.fn();
 

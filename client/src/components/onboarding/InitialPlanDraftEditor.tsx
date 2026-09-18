@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { locations, type Location } from "@fitness/shared";
 import type { ApiPlanDraft } from "../../api/contracts";
 
 export type InitialPlanDraftEditorProps = {
@@ -66,7 +65,7 @@ export function InitialPlanDraftEditor({
                 {workout.exercises.length} exercises
               </span>
             </div>
-            <div className="grid gap-3 sm:grid-cols-3">
+            <div className="grid gap-3 sm:grid-cols-2">
               <label className="grid gap-1 text-xs font-semibold text-gymbud-ink">
                 Date
                 <input
@@ -80,25 +79,6 @@ export function InitialPlanDraftEditor({
                   }
                   className="focus-ring min-h-11 rounded-[var(--radius-control)] border border-gymbud-border bg-gymbud-surface px-3"
                 />
-              </label>
-              <label className="grid gap-1 text-xs font-semibold text-gymbud-ink">
-                Location
-                <select
-                  aria-label={`Session ${index + 1} location`}
-                  value={workout.location}
-                  onChange={(event) =>
-                    updateWorkout(index, {
-                      location: event.target.value as Location,
-                    })
-                  }
-                  className="focus-ring min-h-11 rounded-[var(--radius-control)] border border-gymbud-border bg-gymbud-surface px-3"
-                >
-                  {locations.map((location) => (
-                    <option key={location} value={location}>
-                      {location === "GYM" ? "Gym" : "Home"}
-                    </option>
-                  ))}
-                </select>
               </label>
               <label className="grid gap-1 text-xs font-semibold text-gymbud-ink">
                 Minutes

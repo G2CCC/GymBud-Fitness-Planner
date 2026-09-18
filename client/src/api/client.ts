@@ -1,7 +1,6 @@
 import {
   validateCompletionTimestamp,
   type CardioWorkoutLogInput,
-  type Location,
   type PlannedExerciseInput,
   type ProfileInput,
   type SportWorkoutLogInput,
@@ -26,7 +25,6 @@ import {
   createWorkoutInputSchema,
   profileInputSchema,
   rescheduleWorkoutInputSchema,
-  updateWorkoutLocationInputSchema,
 } from "./validation";
 import { getAccessToken } from "../auth/client";
 
@@ -136,14 +134,13 @@ export async function getWorkout(workoutId: string): Promise<ApiWorkout> {
   return request<ApiWorkout>("/workouts/" + workoutId);
 }
 
-export async function listExercises(location: Location): Promise<ApiExercise[]> {
-  return request<ApiExercise[]>("/exercises?location=" + location);
+export async function listExercises(): Promise<ApiExercise[]> {
+  return request<ApiExercise[]>("/exercises");
 }
 
 export async function createWorkout(input: {
   activityType: "STRENGTH" | "CARDIO" | "SPORT";
   scheduledDate: string;
-  location: Location;
   durationMinutes: number;
   plannedDetails?: Record<string, unknown>;
   plannedExercises?: PlannedExerciseInput[];
@@ -173,17 +170,6 @@ export async function rescheduleWorkout(
 
 export async function cancelWorkout(workoutId: string): Promise<ApiWorkout> {
   return request<ApiWorkout>("/workouts/" + workoutId + "/cancel", jsonBody({}));
-}
-
-export async function updateWorkoutLocation(
-  workoutId: string,
-  location: Location,
-): Promise<ApiWorkout> {
-  const parsed = updateWorkoutLocationInputSchema.parse({ location });
-  return request<ApiWorkout>(
-    "/workouts/" + workoutId + "/location",
-    { method: "PATCH", body: JSON.stringify(parsed) },
-  );
 }
 
 export type WorkoutLogInput =

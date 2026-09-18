@@ -13,7 +13,6 @@ import {
   type CycleTrainingVolume,
   type CycleTrainingVolumeComparison,
 } from "@fitness/shared";
-import type { Location, WeightUnit } from "@fitness/shared";
 import { env } from "../config/env";
 import { CycleService, CycleServiceError } from "../cycles/service";
 import { PlanService, PlanServiceError } from "../ai/plan-service";
@@ -639,7 +638,6 @@ export class CycleReviewService {
       select: {
         weeklyTrainingDays: true,
         sessionDurationMinutes: true,
-        defaultLocation: true,
       },
     });
 
@@ -660,7 +658,6 @@ export class CycleReviewService {
         {
           weeklyTrainingDays: profile.weeklyTrainingDays,
           sessionDurationMinutes: profile.sessionDurationMinutes,
-          defaultLocation: profile.defaultLocation as Location,
           timezone: cycle.timezone ?? "UTC",
         },
         now,
@@ -745,7 +742,6 @@ export class CycleReviewService {
     profile: {
       weeklyTrainingDays: number;
       sessionDurationMinutes: number;
-      defaultLocation: Location;
       timezone: string;
     },
     now: Date,
@@ -1130,7 +1126,7 @@ function toTrainingVolumeInput(
           sets: exercise.setLogs.map((set) => ({
             actualReps: set.actualReps,
             actualWeight: set.actualWeight,
-            weightUnit: toWeightUnit(set.weightUnit),
+            weightUnit: set.weightUnit,
           })),
         }),
       ),
@@ -1166,10 +1162,6 @@ function toActualDetails(value: Prisma.JsonValue | null | undefined):
       ? { distanceKm: value.distanceKm }
       : {}),
   };
-}
-
-function toWeightUnit(value: string | null): WeightUnit | null {
-  return value === "KG" || value === "LB" ? value : null;
 }
 
 function normalizeOptionalSummary(value?: string): string | undefined {

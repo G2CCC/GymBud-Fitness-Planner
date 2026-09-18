@@ -1,7 +1,6 @@
 import { Prisma, PrismaClient } from "@prisma/client";
 import {
   startOfUtcDay,
-  type Location,
 } from "@fitness/shared";
 import { env } from "../config/env";
 import {
@@ -35,10 +34,8 @@ const cycleContextSelect = {
       profile: {
         select: {
           primaryGoal: true,
-          secondaryOutcome: true,
           weeklyTrainingDays: true,
           sessionDurationMinutes: true,
-          defaultLocation: true,
           gender: true,
           age: true,
           heightCm: true,
@@ -55,7 +52,6 @@ const legalExerciseSelect = {
   equipment: true,
   targetMuscles: true,
   movementPattern: true,
-  availableLocations: true,
 } satisfies Prisma.ExerciseSelect;
 
 type DatabaseClient = PrismaClient | Prisma.TransactionClient;
@@ -107,21 +103,15 @@ export class PlanService {
     assertDraftCycle(cycle);
 
     const profile = requireProfile(cycle);
-    const exercises = await this.getLegalExercises(
-      this.prisma,
-      userId,
-      profile.defaultLocation,
-    );
+    const exercises = await this.getLegalExercises(this.prisma, userId);
 
     const request = buildPlanRequest({
       cycleId: cycle.id,
       startDate: cycle.startDate,
       endDate: cycle.endDate,
       primaryGoal: profile.primaryGoal,
-      secondaryOutcome: profile.secondaryOutcome,
       weeklyTrainingDays: profile.weeklyTrainingDays,
       sessionDurationMinutes: profile.sessionDurationMinutes,
-      location: profile.defaultLocation,
       gender: profile.gender,
       age: profile.age,
       heightCm: profile.heightCm,
@@ -147,7 +137,6 @@ export class PlanService {
       exercises,
       request.model,
       request.promptVersion,
-      true,
     );
   }
 
@@ -178,7 +167,6 @@ export class PlanService {
         exercises,
         parsed.data.model,
         parsed.data.promptVersion,
-        false,
       );
 
       for (const workout of response.workouts) {
@@ -188,7 +176,6 @@ export class PlanService {
             cycleId,
             activityType: workout.activityType,
             scheduledDate: workout.scheduledDate,
-            location: workout.location,
             durationMinutes: workout.durationMinutes,
             status: "PLANNED",
             ...(workout.plannedDetails
@@ -258,13 +245,11 @@ export class PlanService {
   private async getLegalExercises(
     database: DatabaseClient,
     userId: string,
-    location?: Location,
   ): Promise<LegalExercise[]> {
     return database.exercise.findMany({
       where: {
         aiEligible: true,
         OR: [{ ownerId: null }, { ownerId: userId }],
-        ...(location ? { availableLocations: { has: location } } : {}),
       },
       select: legalExerciseSelect,
       orderBy: { name: "asc" },
@@ -277,7 +262,6 @@ export class PlanService {
     exercises: LegalExercise[],
     model: string,
     promptVersion: string,
-    requireDefaultLocation: boolean,
   ): PlanDraft {
     requireProfile(cycle);
     const exerciseById = new Map(
@@ -286,12 +270,6 @@ export class PlanService {
 
     for (const workout of response.workouts) {
       validateWorkoutDate(workout.scheduledDate, cycle);
-
-      if (requireDefaultLocation && workout.location !== profileLocation(cycle)) {
-        throw validationError(
-          "Generated workouts must use the user's default location",
-        );
-      }
 
       if (workout.activityType === "STRENGTH") {
         if (workout.exercises.length === 0) {
@@ -307,12 +285,9 @@ export class PlanService {
 
         for (const exercise of workout.exercises) {
           const legalExercise = exerciseById.get(exercise.exerciseId);
-          if (
-            !legalExercise ||
-            !legalExercise.availableLocations.includes(workout.location)
-          ) {
+          if (!legalExercise) {
             throw validationError(
-              `Exercise ${exercise.exerciseId} is not legal for this user and location`,
+              `Exercise ${exercise.exerciseId} is not legal for this user`,
             );
           }
 
@@ -348,7 +323,6 @@ export class PlanService {
             ...exercise,
             name: legalExercise.name,
             equipment: legalExercise.equipment,
-            availableLocations: legalExercise.availableLocations,
           };
         }),
       })),
@@ -376,10 +350,6 @@ function requireProfile(cycle: CycleContext) {
   }
 
   return cycle.user.profile;
-}
-
-function profileLocation(cycle: CycleContext): Location {
-  return requireProfile(cycle).defaultLocation;
 }
 
 function validateWorkoutDate(date: Date, cycle: CycleContext): void {
@@ -431,7 +401,6 @@ function toPromptExercise(exercise: LegalExercise) {
     equipment: exercise.equipment,
     targetMuscles: exercise.targetMuscles,
     movementPattern: exercise.movementPattern,
-    availableLocations: exercise.availableLocations,
   };
 }
 
@@ -440,7 +409,6 @@ function toPlanResponse(draft: PlanDraft): PlanResponse {
     workouts: draft.workouts.map((workout) => ({
       scheduledDate: workout.scheduledDate,
       activityType: workout.activityType,
-      location: workout.location,
       durationMinutes: workout.durationMinutes,
       plannedDetails: workout.plannedDetails,
       exercises: workout.exercises.map((exercise) => ({

@@ -1,9 +1,6 @@
 export const activityTypes = ["STRENGTH", "CARDIO", "SPORT"] as const;
 export type ActivityType = (typeof activityTypes)[number];
 
-export const locations = ["GYM", "HOME"] as const;
-export type Location = (typeof locations)[number];
-
 export const genders = ["MALE", "FEMALE", "NON_BINARY", "PREFER_NOT_TO_SAY"] as const;
 export type Gender = (typeof genders)[number];
 

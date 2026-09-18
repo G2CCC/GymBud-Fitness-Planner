@@ -2,7 +2,6 @@ import { Prisma, PrismaClient } from "@prisma/client";
 import {
   customExerciseInputSchema,
   normalizeEquipment,
-  type Location,
 } from "@fitness/shared";
 import type { z } from "zod";
 
@@ -14,7 +13,6 @@ const exerciseSelect = {
   equipment: true,
   targetMuscles: true,
   movementPattern: true,
-  availableLocations: true,
   aiEligible: true,
   createdAt: true,
   updatedAt: true,
@@ -42,12 +40,10 @@ export class ExerciseService {
 
   async listAvailableExercises(
     userId: string,
-    location: Location,
     options: { aiEligibleOnly?: boolean } = {},
   ): Promise<ExerciseRecord[]> {
     return this.prisma.exercise.findMany({
       where: {
-        availableLocations: { has: location },
         OR: [{ ownerId: null }, { ownerId: userId }],
         ...(options.aiEligibleOnly ? { aiEligible: true } : {}),
       },
@@ -93,7 +89,6 @@ export class ExerciseService {
         equipment: normalizeEquipment(parsed.equipment),
         targetMuscles: parsed.targetMuscles,
         movementPattern: parsed.movementPattern ?? null,
-        availableLocations: parsed.availableLocations,
         aiEligible: true,
       },
       select: exerciseSelect,

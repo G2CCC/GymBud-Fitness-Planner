@@ -16,7 +16,6 @@ vi.mock("../../src/api/client", () => ({
   completeWorkout: vi.fn(),
   getWorkout: vi.fn(),
   listExercises: vi.fn(),
-  updateWorkoutLocation: vi.fn(),
 }));
 
 const plannedExercises: ApiPlannedExercise[] = [
@@ -39,7 +38,6 @@ const plannedWorkout: ApiWorkout = {
   id: "workout-1",
   activityType: "STRENGTH",
   scheduledDate: "2026-09-15T09:00:00.000Z",
-  location: "GYM",
   durationMinutes: 60,
   status: "PLANNED",
   completedAt: null,
@@ -72,10 +70,8 @@ beforeEach(() => {
       id: "bench",
       name: "Bench Press",
       equipment: "BARBELL",
-      availableLocations: ["GYM"],
     },
   ]);
-  vi.mocked(api.updateWorkoutLocation).mockResolvedValue(plannedWorkout);
   vi.mocked(api.completeWorkout).mockResolvedValue(completedWorkout);
 });
 

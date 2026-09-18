@@ -2,7 +2,6 @@ import { z } from "zod";
 import {
   activityTypes,
   customExerciseInputSchema,
-  locations,
   plannedSetSchema,
   weightUnits,
 } from "@fitness/shared";
@@ -89,7 +88,6 @@ export const sportDetailsSchema = z.object({
 const planWorkoutSchema = z.object({
   scheduledDate: z.coerce.date(),
   activityType: z.enum(activityTypes),
-  location: z.enum(locations),
   durationMinutes: z.number().int().min(1).max(600),
   plannedDetails: z.record(z.unknown()).optional(),
   exercises: z.array(planExerciseSchema),
@@ -102,7 +100,6 @@ export const planResponseSchema = z.object({
 export const planDraftExerciseSchema = planExerciseSchema.extend({
   name: z.string().trim().min(1),
   equipment: z.string().nullable(),
-  availableLocations: z.array(z.enum(locations)).min(1).max(2),
 }).strict();
 
 export const planDraftWorkoutSchema = planWorkoutSchema.extend({

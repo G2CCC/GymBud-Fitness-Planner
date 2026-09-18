@@ -1,7 +1,6 @@
 import type {
   ActivityType,
   Gender,
-  Location,
   WeightUnit,
   WorkoutStatus,
 } from "./enums";
@@ -9,25 +8,22 @@ import type {
 export type ProfileInput = {
   weeklyTrainingDays: number;
   sessionDurationMinutes: number;
-  defaultLocation: Location;
   primaryGoal: string;
-  secondaryOutcome?: string | null;
-  gender?: Gender | null;
-  age?: number | null;
-  heightCm?: number | null;
-  weightKg?: number | null;
+  gender: Gender;
+  age: number;
+  heightCm: number;
+  weightKg: number;
 };
 
 export type ScheduledWorkoutInput = {
   activityType: ActivityType;
   scheduledDate: Date;
-  location: Location;
   durationMinutes: number;
   status?: WorkoutStatus;
 };
 
 export type SetLogInput = {
-  weight?: number;
+  weight: number;
   reps: number;
-  weightUnit?: WeightUnit;
+  weightUnit: WeightUnit;
 };

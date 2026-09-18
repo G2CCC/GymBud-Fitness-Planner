@@ -40,10 +40,7 @@ export function OnboardingPage() {
         }
 
         if (result) {
-          setProfile({
-            ...result,
-            secondaryOutcome: result.secondaryOutcome ?? undefined,
-          });
+          setProfile(result);
         }
 
         if (currentCycle?.status === "DRAFT") {

@@ -18,9 +18,7 @@ afterEach(() => {
 const profile = {
   weeklyTrainingDays: 4,
   sessionDurationMinutes: 60,
-  defaultLocation: "GYM" as const,
   primaryGoal: "FAT_LOSS",
-  secondaryOutcome: "MUSCLE_PRESERVATION",
   gender: "MALE" as const,
   age: 30,
   heightCm: 180,

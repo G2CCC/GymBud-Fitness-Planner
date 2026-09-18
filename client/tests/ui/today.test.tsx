@@ -47,7 +47,6 @@ function workout(
     id,
     activityType: "STRENGTH",
     scheduledDate,
-    location: "GYM",
     durationMinutes: 60,
     status,
     completedAt: status === "COMPLETED" ? scheduledDate : null,
@@ -88,10 +87,13 @@ function renderToday() {
 }
 
 beforeEach(() => {
+  vi.useFakeTimers({ shouldAdvanceTime: true });
+  vi.setSystemTime(now);
   vi.clearAllMocks();
 });
 
 afterEach(() => {
+  vi.useRealTimers();
   cleanup();
 });
 

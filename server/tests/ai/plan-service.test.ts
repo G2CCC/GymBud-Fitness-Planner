@@ -18,7 +18,6 @@ const validPlanResponse = {
     {
       scheduledDate: "2026-12-02T00:00:00Z",
       activityType: "STRENGTH",
-      location: "HOME",
       durationMinutes: 45,
       exercises: [
         {
@@ -63,9 +62,12 @@ describe.skipIf(!hasDatabase)("AI plan persistence", () => {
         profile: {
           create: {
             primaryGoal: "FAT_LOSS",
+            gender: "MALE",
+            age: 30,
+            heightCm: 180,
+            weightKg: 80,
             weeklyTrainingDays: 3,
             sessionDurationMinutes: 45,
-            defaultLocation: "HOME",
           },
         },
       },
@@ -77,9 +79,12 @@ describe.skipIf(!hasDatabase)("AI plan persistence", () => {
         profile: {
           create: {
             primaryGoal: "MUSCLE_GAIN",
+            gender: "FEMALE",
+            age: 28,
+            heightCm: 165,
+            weightKg: 60,
             weeklyTrainingDays: 3,
             sessionDurationMinutes: 45,
-            defaultLocation: "HOME",
           },
         },
       },
@@ -92,7 +97,6 @@ describe.skipIf(!hasDatabase)("AI plan persistence", () => {
         equipment: "NONE",
         targetMuscles: ["CHEST"],
         movementPattern: "PUSH",
-        availableLocations: ["GYM", "HOME"],
         aiEligible: true,
       },
     });
@@ -122,7 +126,7 @@ describe.skipIf(!hasDatabase)("AI plan persistence", () => {
     await db.$disconnect();
   }, integrationTestTimeout);
 
-  it("passes only legal exercises for the workout location", async () => {
+  it("passes only user-available exercises to the planner", async () => {
     const service = new PlanService(
       db,
       new FakeAiClient(validPlanResponse),
@@ -130,12 +134,10 @@ describe.skipIf(!hasDatabase)("AI plan persistence", () => {
 
     const result = await service.generateDraft(userId, cycleId);
 
-    expect(
-      result.workouts
-        .flatMap((workout) => workout.exercises)
-        .every((exercise) => exercise.availableLocations.includes("HOME")),
-    ).toBe(true);
     expect(result.workouts[0]?.exercises[0]?.name).toBe("Push-up");
+    expect(result.workouts[0]?.exercises[0]).not.toHaveProperty(
+      "availableLocations",
+    );
   }, integrationTestTimeout);
 
   it("rejects an exercise owned by another user without writing calendar rows", async () => {

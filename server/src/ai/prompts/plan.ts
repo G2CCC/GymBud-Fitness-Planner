@@ -3,30 +3,27 @@ import type {
   CycleTrainingVolume,
   CycleTrainingVolumeAggregate,
 } from "@fitness/shared/domain/reviews/cycle-volume";
-import type { Gender, Location } from "@fitness/shared";
+import type { Gender } from "@fitness/shared";
 
-export const PLAN_PROMPT_VERSION = "plan.v2";
+export const PLAN_PROMPT_VERSION = "plan.v3";
 
 export type PlanPromptInput = {
   cycleId: string;
   startDate: Date;
   endDate: Date;
   primaryGoal: string;
-  secondaryOutcome: string | null;
   weeklyTrainingDays: number;
   sessionDurationMinutes: number;
-  location: Location;
-  gender: Gender | null;
-  age: number | null;
-  heightCm: number | null;
-  weightKg: number | null;
+  gender: Gender;
+  age: number;
+  heightCm: number;
+  weightKg: number;
   exercises: Array<{
     id: string;
     name: string;
     equipment: string | null;
     targetMuscles: string[];
     movementPattern: string | null;
-    availableLocations: string[];
   }>;
   reviewContext?: {
     processedSummary: string | null;
@@ -37,15 +34,6 @@ export type PlanPromptInput = {
 };
 
 export function buildPlanRequest(input: PlanPromptInput): AiRequest {
-  const optionalProfileContext = Object.fromEntries(
-    Object.entries({
-      gender: input.gender,
-      age: input.age,
-      heightCm: input.heightCm,
-      weightKg: input.weightKg,
-    }).filter(([, value]) => value !== null && value !== undefined),
-  );
-
   const context: Record<string, unknown> = {
     cycle: {
       id: input.cycleId,
@@ -54,13 +42,12 @@ export function buildPlanRequest(input: PlanPromptInput): AiRequest {
     },
     profile: {
       primaryGoal: input.primaryGoal,
-      ...(input.secondaryOutcome
-        ? { secondaryOutcome: input.secondaryOutcome }
-        : {}),
       weeklyTrainingDays: input.weeklyTrainingDays,
       sessionDurationMinutes: input.sessionDurationMinutes,
-      location: input.location,
-      ...optionalProfileContext,
+      gender: input.gender,
+      age: input.age,
+      heightCm: input.heightCm,
+      weightKg: input.weightKg,
     },
     legalExercisePool: input.exercises,
     outputShape: {
@@ -68,7 +55,6 @@ export function buildPlanRequest(input: PlanPromptInput): AiRequest {
         {
           scheduledDate: "ISO date",
           activityType: "STRENGTH | CARDIO | SPORT",
-          location: input.location,
           durationMinutes: input.sessionDurationMinutes,
           plannedDetails: "activity-specific object when needed",
           exercises: [
@@ -94,11 +80,10 @@ export function buildPlanRequest(input: PlanPromptInput): AiRequest {
     systemPrompt: [
       "You generate a four-week fitness plan as JSON only.",
       "Use only exercise IDs from the supplied legal exercise pool.",
-      "Every workout must use the supplied location.",
       "Strength workouts must contain at least one exercise and one planned set per exercise.",
       "Do not return RPE, subjective feedback, or unknown fields.",
       "Keep every scheduled date within the inclusive cycle dates.",
-      "Body context is optional planning context; never invent missing values.",
+      "Use the supplied body context as planning context; never invent or reinterpret values.",
       "Do not infer medical diagnoses, calorie prescriptions, nutrition plans, or unsupported safety claims from body context.",
     ].join(" "),
     userPrompt: JSON.stringify(context),

@@ -12,20 +12,18 @@ The server remains authoritative for:
 
 - cycle ownership and `DRAFT` status;
 - the four-week date range;
-- the user's default location during generation;
-- exercise ownership, AI eligibility, and location compatibility;
+- exercise ownership and AI eligibility;
 - strength exercise and set uniqueness;
 - activation and calendar writes.
 
 The model receives only the legal exercise pool. Its exercise names and
-location claims are not trusted; the server reloads the exercise records and
-adds the authoritative metadata to the returned draft.
+metadata claims are not trusted; the server reloads the exercise records and
+adds authoritative metadata to the returned draft.
 
 The profile context sent to the plan prompt includes the required training
-preferences plus any supplied optional body fields: gender, age, height in
-centimeters, and body weight in kilograms. Missing optional values are omitted
-from the prompt rather than inferred. These fields are planning context only;
-the prompt does not authorize medical, calorie, or nutrition advice.
+preferences and required body fields: gender, age, height in centimeters, and
+body weight in kilograms. These fields are planning context only; the prompt
+does not authorize medical, calorie, or nutrition advice.
 
 ## Draft and confirmation flow
 

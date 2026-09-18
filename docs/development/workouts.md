@@ -8,7 +8,7 @@ Normal workout writes are allowed only while the workout belongs to an
 ```text
 PLANNED -> COMPLETED
 PLANNED -> CANCELLED
-PLANNED -> PLANNED  (reschedule or location change)
+PLANNED -> PLANNED  (reschedule)
 ```
 
 The shared state machine in
@@ -37,10 +37,11 @@ WorkoutLog (one per workout)
 ```
 
 For strength logs, the service validates that every exercise belongs to the
-current user or is a system exercise and is available at the workout location.
-It then upserts exercise positions and set numbers, deleting rows omitted from
-the latest complete form submission. Editing a log therefore changes the same
-records instead of creating a second log.
+current user or is a system exercise. `weight` and `weightUnit` are required on
+every actual set; bodyweight or no external load is represented as `0 KG`. The
+service then upserts exercise positions and set numbers, deleting rows omitted
+from the latest complete form submission. Editing a log therefore changes the
+same records instead of creating a second log.
 
 Cardio and sport logs use the existing `WorkoutLog.actualDetails` JSON field.
 Their Zod schemas are activity-specific and reject unknown fields, including
@@ -55,7 +56,6 @@ POST  /api/workouts/:workoutId/complete
 POST  /api/workouts/:workoutId/backfill
 POST  /api/workouts/:workoutId/cancel
 POST  /api/workouts/:workoutId/reschedule
-PATCH /api/workouts/:workoutId/location
 PUT   /api/workouts/:workoutId/log
 ```
 

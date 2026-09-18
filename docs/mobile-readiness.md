@@ -9,11 +9,12 @@ native screens and navigation instead of trying to render the existing DOM UI.
 The following code is platform-neutral or server-owned and should remain the
 source of truth:
 
-- `shared/src/domain`: activity types, locations, statuses, cycle lifecycle,
-  review timing, actual-volume aggregation, and Zod input contracts.
+- `shared/src/domain`: activity types, equipment metadata, statuses, cycle
+  lifecycle, review timing, actual-volume aggregation, and Zod input
+  contracts.
 - `shared/src/api/contracts.ts`: response shapes shared with a future client.
 - Express route contracts under `server/src/routes`.
-- Prisma persistence and ownership/location validation in the server services.
+- Prisma persistence and ownership validation in the server services.
 - The API's device-timezone contract. Web reads the computer's IANA timezone;
   iOS will read the phone's system timezone. The server stores the cycle
   timezone snapshot and remains authoritative for instants such as

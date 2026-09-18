@@ -8,15 +8,10 @@ import {
   rescheduleWorkout as rescheduleWorkoutState,
   sportWorkoutLogInputSchema,
   strengthWorkoutLogInputSchema,
-  type Location,
   type WorkoutLogInput,
-  updateWorkoutLocation as updateWorkoutLocationState,
   validateCompletionTimestamp,
 } from "@fitness/shared";
-import {
-  rescheduleWorkoutInputSchema,
-  updateWorkoutLocationInputSchema,
-} from "@fitness/shared/domain/workouts/validation";
+import { rescheduleWorkoutInputSchema } from "@fitness/shared/domain/workouts/validation";
 import { z } from "zod";
 
 const workoutSelect = {
@@ -25,7 +20,6 @@ const workoutSelect = {
   cycleId: true,
   activityType: true,
   scheduledDate: true,
-  location: true,
   durationMinutes: true,
   status: true,
   rescheduleCount: true,
@@ -253,41 +247,6 @@ export class WorkoutService {
     });
   }
 
-  async updateWorkoutLocation(
-    userId: string,
-    workoutId: string,
-    location: Location,
-  ): Promise<WorkoutRecord> {
-    const parsed = updateWorkoutLocationInputSchema.safeParse({ location });
-
-    if (!parsed.success) {
-      throw validationError(parsed.error);
-    }
-
-    return this.prisma.$transaction(async (tx) => {
-      const context = await this.getWritableWorkout(tx, userId, workoutId);
-      const transition = this.runTransition(() =>
-        updateWorkoutLocationState(
-          toTransition(context.workout, context.hasNextCycle),
-          parsed.data.location,
-        ),
-      );
-
-      const updated = await tx.scheduledWorkout.updateMany({
-        where: {
-          id: workoutId,
-          userId,
-          cycleId: context.workout.cycleId,
-          status: "PLANNED",
-        },
-        data: { location: transition.location },
-      });
-
-      assertSingleUpdate(updated.count, "Workout changed while moving");
-      return this.getWorkoutInTransaction(tx, userId, workoutId);
-    });
-  }
-
   async createWorkout(
     userId: string,
     input: unknown,
@@ -318,7 +277,6 @@ export class WorkoutService {
         const legalExercises = await tx.exercise.findMany({
           where: {
             id: { in: plannedExercises.map((exercise) => exercise.exerciseId) },
-            availableLocations: { has: parsed.data.location },
             OR: [{ ownerId: null }, { ownerId: userId }],
           },
           select: { id: true },
@@ -332,7 +290,7 @@ export class WorkoutService {
 
         if (illegalExercise) {
           throw new WorkoutServiceError(
-            "Exercise is not available to this user at the workout location",
+            "Exercise is not available to this user",
             "VALIDATION_ERROR",
             400,
           );
@@ -345,7 +303,6 @@ export class WorkoutService {
           cycleId: cycle.id,
           activityType: parsed.data.activityType,
           scheduledDate: parsed.data.scheduledDate,
-          location: parsed.data.location,
           durationMinutes: parsed.data.durationMinutes,
           status: "PLANNED",
           ...(parsed.data.plannedDetails
@@ -475,7 +432,6 @@ export class WorkoutService {
       const exercise = await tx.exercise.findFirst({
         where: {
           id: exerciseInput.exerciseId,
-          availableLocations: { has: workout.location },
           OR: [{ ownerId: null }, { ownerId: userId }],
         },
         select: { id: true },
@@ -483,7 +439,7 @@ export class WorkoutService {
 
       if (!exercise) {
         throw new WorkoutServiceError(
-          "Exercise is not available to this user at the workout location",
+          "Exercise is not available to this user",
           "VALIDATION_ERROR",
           400,
         );
@@ -533,13 +489,13 @@ export class WorkoutService {
             exerciseLogId: exerciseLog.id,
             setNumber: setInput.setNumber,
             actualReps: setInput.reps,
-            actualWeight: setInput.weight ?? null,
-            weightUnit: setInput.weightUnit ?? null,
+            actualWeight: setInput.weight,
+            weightUnit: setInput.weightUnit,
           },
           update: {
             actualReps: setInput.reps,
-            actualWeight: setInput.weight ?? null,
-            weightUnit: setInput.weightUnit ?? null,
+            actualWeight: setInput.weight,
+            weightUnit: setInput.weightUnit,
           },
         });
       }
@@ -626,7 +582,6 @@ function toTransition(
     cycleStatus: workout.cycle.status,
     hasNextCycle,
     scheduledDate: workout.scheduledDate,
-    location: workout.location,
     completedAt: workout.completedAt,
   } as const;
 }

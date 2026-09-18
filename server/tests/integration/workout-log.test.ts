@@ -26,9 +26,12 @@ describe.skipIf(!hasDatabase)("workout persistence", () => {
             profile: {
               create: {
                 primaryGoal: "FAT_LOSS",
+                gender: "MALE",
+                age: 30,
+                heightCm: 180,
+                weightKg: 80,
                 weeklyTrainingDays: 3,
                 sessionDurationMinutes: 60,
-                defaultLocation: "GYM",
               },
             },
           },
@@ -53,7 +56,6 @@ describe.skipIf(!hasDatabase)("workout persistence", () => {
         cycleId,
         activityType: "STRENGTH",
         scheduledDate: new Date("2026-11-03T00:00:00Z"),
-        location: "GYM",
         durationMinutes: 60,
         plannedExercises: {
           create: {
@@ -102,7 +104,6 @@ describe.skipIf(!hasDatabase)("workout persistence", () => {
         cycleId,
         activityType: "STRENGTH",
         scheduledDate: new Date("2026-11-04T00:00:00Z"),
-        location: "GYM",
         durationMinutes: 45,
       },
     });
@@ -175,7 +176,6 @@ describe.skipIf(!hasDatabase)("workout persistence", () => {
     const workout = await service.createWorkout(userId, {
       activityType: "CARDIO",
       scheduledDate: new Date("2026-11-06T00:00:00Z"),
-      location: "HOME",
       durationMinutes: 30,
     });
 
@@ -186,11 +186,10 @@ describe.skipIf(!hasDatabase)("workout persistence", () => {
     });
   }, integrationTestTimeout);
 
-  it("persists a manual strength plan and rejects an illegal home exercise", async () => {
+  it("persists a manual strength plan without location restrictions", async () => {
     const workout = await service.createWorkout(userId, {
       activityType: "STRENGTH",
       scheduledDate: new Date("2026-11-09T00:00:00Z"),
-      location: "GYM",
       durationMinutes: 60,
       plannedExercises: [
         {
@@ -207,32 +206,15 @@ describe.skipIf(!hasDatabase)("workout persistence", () => {
 
     expect(workout.plannedExercises).toHaveLength(1);
     expect(workout.plannedExercises[0]?.plannedSets).toHaveLength(2);
-
-    await expect(
-      service.createWorkout(userId, {
-        activityType: "STRENGTH",
-        scheduledDate: new Date("2026-11-10T00:00:00Z"),
-        location: "HOME",
-        durationMinutes: 45,
-        plannedExercises: [
-          {
-            exerciseId: "system-barbell-bench-press",
-            sortOrder: 1,
-            sets: [{ setNumber: 1, targetReps: 8 }],
-          },
-        ],
-      }),
-    ).rejects.toThrow(/available.*location/i);
   }, integrationTestTimeout);
 
-  it("reschedules, changes location, and cancels a planned workout", async () => {
+  it("reschedules and cancels a planned workout", async () => {
     const workout = await db.scheduledWorkout.create({
       data: {
         userId,
         cycleId,
         activityType: "CARDIO",
         scheduledDate: new Date("2026-11-07T00:00:00Z"),
-        location: "GYM",
         durationMinutes: 30,
       },
     });
@@ -246,13 +228,6 @@ describe.skipIf(!hasDatabase)("workout persistence", () => {
       new Date("2026-11-08T00:00:00Z"),
     );
     expect(rescheduled.rescheduleCount).toBe(1);
-
-    const moved = await service.updateWorkoutLocation(
-      userId,
-      workout.id,
-      "HOME",
-    );
-    expect(moved.location).toBe("HOME");
 
     const cancelled = await service.cancelWorkout(userId, workout.id);
     expect(cancelled).toMatchObject({

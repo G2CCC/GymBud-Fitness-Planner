@@ -87,7 +87,7 @@ export function ProfilePage() {
         error={error}
         title="Profile"
         heading="Your planning profile."
-        description="Keep your planning context up to date. These values are used as optional context when GymBud generates a plan."
+        description="Keep your required planning context up to date so GymBud can generate a relevant plan."
         submitLabel="Save profile"
       />
     </main>
@@ -95,10 +95,7 @@ export function ProfilePage() {
 }
 
 function toProfileInput(profile: ApiProfile): ProfileInput {
-  return {
-    ...profile,
-    secondaryOutcome: profile.secondaryOutcome ?? undefined,
-  };
+  return profile;
 }
 
 function ProfileMessage({

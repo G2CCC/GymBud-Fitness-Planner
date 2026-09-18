@@ -3,10 +3,8 @@ import {
   activityTypes,
   backfillCompletionInputSchema,
   createWorkoutInputSchema,
-  locations,
   profileInputSchema,
   rescheduleWorkoutInputSchema,
-  updateWorkoutLocationInputSchema,
   weightUnits,
 } from "@fitness/shared";
 
@@ -24,7 +22,6 @@ const planDraftExerciseSchema = z.object({
   ).min(1),
   name: z.string().trim().min(1),
   equipment: z.string().nullable(),
-  availableLocations: z.array(z.enum(locations)).min(1).max(2),
 }).strict();
 
 export const clientPlanDraftSchema = z.object({
@@ -35,7 +32,6 @@ export const clientPlanDraftSchema = z.object({
     z.object({
       scheduledDate: z.coerce.date(),
       activityType: z.enum(activityTypes),
-      location: z.enum(locations),
       durationMinutes: z.number().int().min(1).max(600),
       plannedDetails: z.record(z.unknown()).optional(),
       exercises: z.array(planDraftExerciseSchema),
@@ -48,5 +44,4 @@ export {
   createWorkoutInputSchema,
   profileInputSchema,
   rescheduleWorkoutInputSchema,
-  updateWorkoutLocationInputSchema,
 };

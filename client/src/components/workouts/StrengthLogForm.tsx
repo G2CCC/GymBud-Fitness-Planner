@@ -114,13 +114,11 @@ export function StrengthLogForm({
                     type="number"
                     min={0}
                     step="any"
-                    value={set.weight ?? ""}
+                    required
+                    value={set.weight}
                     onChange={(event) =>
                       updateSet(exerciseIndex, setIndex, {
-                        weight:
-                          event.target.value === ""
-                            ? undefined
-                            : Number(event.target.value),
+                        weight: Number(event.target.value),
                       })
                     }
                   />
@@ -132,6 +130,7 @@ export function StrengthLogForm({
                   <select
                     aria-label={`Actual weight unit for ${exerciseName} set ${set.setNumber}`}
                     className="focus-ring mt-1 min-h-11 rounded-[var(--radius-control)] border border-gymbud-border bg-gymbud-surface px-3"
+                    required
                     value={set.weightUnit ?? "KG"}
                     onChange={(event) =>
                       updateSet(exerciseIndex, setIndex, {

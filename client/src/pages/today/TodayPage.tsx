@@ -410,7 +410,7 @@ function WorkoutActionCard({
             {activityLabels[workout.activityType]}
           </h3>
           <p className="mt-1 text-sm text-gymbud-muted">
-            {formatDateKey(workout.scheduledDate)} · {workout.location} · {workout.durationMinutes} min
+            {formatDateKey(workout.scheduledDate)} · {workout.durationMinutes} min
           </p>
         </div>
         <div className="flex flex-wrap justify-end gap-2 text-xs font-semibold">

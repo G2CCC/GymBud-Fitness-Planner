@@ -1,9 +1,9 @@
 # GymBud Fitness Planner
 
 GymBud is a web-first fitness planner with four-week training cycles,
-location-aware exercises, per-set strength logs, actual training-volume
-reviews, and an explicit user confirmation step before an AI-generated plan is
-added to the calendar.
+equipment-aware exercise metadata, per-set strength logs, actual
+training-volume reviews, and an explicit user confirmation step before an
+AI-generated plan is added to the calendar.
 
 ## Architecture
 
@@ -49,6 +49,10 @@ npm run db:seed
 `migrate deploy` applies migrations already committed to the repository. Use
 `npm run db:migrate -- --name <name>` only when developing a new schema change
 locally and committing the generated migration afterwards.
+
+The profile/set-log migration intentionally stops if legacy rows still contain
+NULL demographic or actual-weight values; it does not invent historical data.
+Venue fields are removed as part of that migration.
 
 ## Run the web app locally
 
@@ -146,8 +150,9 @@ npx playwright test --list
   persisted.
 - A next-cycle draft is never inserted into the calendar until the user
   explicitly confirms it.
-- Workout locations are `GYM` and `HOME`. The server validates exercise
-  legality; equipment-only exercises cannot be logged at home.
+- Profile gender, age, height, and body weight are required planning context.
+- Actual strength-set weight and unit are required; bodyweight or no external
+  load is recorded as `0 KG`.
 - Backfilled completion always requires an actual past date and time.
 
 More detailed contracts live in [`docs/development`](docs/development) and the

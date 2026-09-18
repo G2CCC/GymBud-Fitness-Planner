@@ -53,7 +53,6 @@ export async function createExpiredCycleFixture() {
             userId: e2eUserId,
             activityType: "CARDIO",
             scheduledDate: addDays(now, -3),
-            location: "GYM",
             durationMinutes: 30,
             status: "PLANNED",
           },
@@ -61,7 +60,6 @@ export async function createExpiredCycleFixture() {
             userId: e2eUserId,
             activityType: "SPORT",
             scheduledDate: addDays(now, -2),
-            location: "GYM",
             durationMinutes: 45,
             status: "PLANNED",
           },
@@ -76,47 +74,6 @@ export async function createExpiredCycleFixture() {
     backfillWorkout: cycle.workouts[0]!,
     unresolvedWorkout: cycle.workouts[1]!,
   };
-}
-
-export async function createLocationFixture() {
-  const { db } = await import("../../../server/src/db");
-  const now = new Date();
-  const startDate = startOfUtcDay(now);
-  const endDate = addDays(startDate, 27);
-
-  const cycle = await db.trainingCycle.create({
-    data: {
-      userId: e2eUserId,
-      cycleNumber: 1,
-      startDate,
-      endDate,
-      timezone: "UTC",
-      status: "ACTIVE",
-    },
-  });
-
-  const workout = await db.scheduledWorkout.create({
-    data: {
-      userId: e2eUserId,
-      cycleId: cycle.id,
-      activityType: "STRENGTH",
-      scheduledDate: startDate,
-      location: "GYM",
-      durationMinutes: 60,
-      plannedExercises: {
-        create: {
-          exerciseId: "system-barbell-bench-press",
-          sortOrder: 1,
-          restSeconds: 120,
-          plannedSets: {
-            create: { setNumber: 1, targetReps: 8, plannedWeight: 40, weightUnit: "KG" },
-          },
-        },
-      },
-    },
-  });
-
-  return { cycle, workout };
 }
 
 function startOfUtcDay(date: Date): Date {

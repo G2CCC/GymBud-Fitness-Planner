@@ -11,7 +11,6 @@ describe.skipIf(!process.env.DATABASE_URL)("test user persistence", () => {
       include: { profile: true, cycles: true },
     });
 
-    expect(user?.profile?.defaultLocation).toBe("GYM");
     expect(user?.authUserId).toBe("test:seed-test-user");
     expect(user?.profile).toMatchObject({
       gender: "MALE",

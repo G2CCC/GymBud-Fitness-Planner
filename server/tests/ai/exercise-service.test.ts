@@ -13,7 +13,7 @@ const userId = `ai-exercise-test-${randomUUID()}`;
 
 describe.skipIf(!hasDatabase)("AI exercise workflows", () => {
   let activeCycleId: string;
-  let incompatibleWorkoutId: string;
+  let strengthWorkoutId: string;
 
   beforeAll(async () => {
     await seedSystemExercises();
@@ -24,9 +24,12 @@ describe.skipIf(!hasDatabase)("AI exercise workflows", () => {
         profile: {
           create: {
             primaryGoal: "FAT_LOSS",
+            gender: "MALE",
+            age: 30,
+            heightCm: 180,
+            weightKg: 80,
             weeklyTrainingDays: 3,
             sessionDurationMinutes: 45,
-            defaultLocation: "HOME",
           },
         },
       },
@@ -49,7 +52,6 @@ describe.skipIf(!hasDatabase)("AI exercise workflows", () => {
         cycleId: activeCycleId,
         activityType: "STRENGTH",
         scheduledDate: new Date("2026-12-03T00:00:00Z"),
-        location: "HOME",
         durationMinutes: 45,
         status: "PLANNED",
         plannedExercises: {
@@ -67,7 +69,7 @@ describe.skipIf(!hasDatabase)("AI exercise workflows", () => {
         },
       },
     });
-    incompatibleWorkoutId = workout.id;
+    strengthWorkoutId = workout.id;
   }, integrationTestTimeout);
 
   afterAll(async () => {
@@ -76,7 +78,7 @@ describe.skipIf(!hasDatabase)("AI exercise workflows", () => {
     await db.$disconnect();
   }, integrationTestTimeout);
 
-  it("rejects equipment metadata tagged for HOME and does not persist it", async () => {
+  it("accepts extracted equipment metadata without location tagging", async () => {
     const service = new AiExerciseService(
       db,
       new FakeAiClient({
@@ -85,16 +87,18 @@ describe.skipIf(!hasDatabase)("AI exercise workflows", () => {
         equipment: "BARBELL",
         targetMuscles: ["CHEST"],
         movementPattern: "PUSH",
-        availableLocations: ["HOME"],
       }),
     );
 
-    await expect(
-      service.extractExerciseMetadata({
-        name: "Home Barbell Press",
-        description: "A barbell press.",
-      }),
-    ).rejects.toThrow(/equipment|GYM|location/i);
+    const draft = await service.extractExerciseMetadata({
+      name: "Home Barbell Press",
+      description: "A barbell press.",
+    });
+
+    expect(draft).toMatchObject({
+      name: "Home Barbell Press",
+      equipment: "BARBELL",
+    });
 
     await expect(
       db.exercise.count({ where: { ownerId: userId } }),
@@ -110,7 +114,6 @@ describe.skipIf(!hasDatabase)("AI exercise workflows", () => {
         equipment: "NONE",
         targetMuscles: ["GLUTES", "QUADRICEPS"],
         movementPattern: "LUNGE",
-        availableLocations: ["GYM", "HOME"],
       }),
     );
 
@@ -122,7 +125,7 @@ describe.skipIf(!hasDatabase)("AI exercise workflows", () => {
     expect(draft.name).toBe("Home Reverse Lunge");
     const exerciseService = new ExerciseService(db);
     await expect(
-      exerciseService.listAvailableExercises(userId, "HOME", {
+      exerciseService.listAvailableExercises(userId, {
         aiEligibleOnly: true,
       }),
     ).resolves.not.toEqual(
@@ -131,7 +134,7 @@ describe.skipIf(!hasDatabase)("AI exercise workflows", () => {
 
     await exerciseService.createConfirmedCustomExercise(userId, draft);
     await expect(
-      exerciseService.listAvailableExercises(userId, "HOME", {
+      exerciseService.listAvailableExercises(userId, {
         aiEligibleOnly: true,
       }),
     ).resolves.toEqual(
@@ -139,7 +142,7 @@ describe.skipIf(!hasDatabase)("AI exercise workflows", () => {
     );
   }, integrationTestTimeout);
 
-  it("returns only AI-proposed replacements that are legal for the workout location", async () => {
+  it("returns only AI-proposed replacements in the user-available pool", async () => {
     const service = new AiExerciseService(
       db,
       new FakeAiClient({
@@ -156,16 +159,16 @@ describe.skipIf(!hasDatabase)("AI exercise workflows", () => {
 
     const replacements = await service.getCompatibleReplacements(
       userId,
-      incompatibleWorkoutId,
+      strengthWorkoutId,
       "system-barbell-bench-press",
     );
 
     expect(replacements).toEqual([
       expect.objectContaining({
         exerciseId: "system-push-up",
-        availableLocations: ["GYM", "HOME"],
       }),
     ]);
+    expect(replacements[0]).not.toHaveProperty("availableLocations");
   }, integrationTestTimeout);
 
   it("rejects a replacement ID that is outside the server-provided legal pool", async () => {
@@ -185,7 +188,7 @@ describe.skipIf(!hasDatabase)("AI exercise workflows", () => {
     await expect(
       service.getCompatibleReplacements(
         userId,
-        incompatibleWorkoutId,
+        strengthWorkoutId,
         "system-barbell-bench-press",
       ),
     ).rejects.toThrow(/not legal|replacement/i);

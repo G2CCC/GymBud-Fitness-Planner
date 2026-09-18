@@ -9,7 +9,6 @@ import {
   completeWorkout,
   getWorkout,
   listExercises,
-  updateWorkoutLocation,
 } from "../../api/client";
 import type { ApiExercise, ApiWorkout } from "../../api/contracts";
 import { CardioLogForm } from "../../components/workouts/CardioLogForm";
@@ -34,8 +33,8 @@ function initialStrengthLog(workout: ApiWorkout): StrengthWorkoutLogInput {
       sets: exercise.plannedSets.map((set) => ({
         setNumber: set.setNumber,
         reps: set.targetReps,
-        ...(set.plannedWeight === null ? {} : { weight: set.plannedWeight }),
-        ...(set.weightUnit === null ? {} : { weightUnit: set.weightUnit }),
+        weight: set.plannedWeight ?? 0,
+        weightUnit: set.weightUnit ?? "KG",
       })),
     })),
   };
@@ -75,7 +74,7 @@ export function WorkoutPage() {
               : { actualDurationMinutes: result.durationMinutes },
         );
         if (result.activityType === "STRENGTH") {
-          const availableExercises = await listExercises(result.location);
+          const availableExercises = await listExercises();
           setExercises(availableExercises);
           setExerciseNames(
             Object.fromEntries(
@@ -110,7 +109,6 @@ export function WorkoutPage() {
         id: exercise.id,
         name: exercise.name,
         equipment: exercise.equipment,
-        availableLocations: exercise.availableLocations,
       })),
     [exercises],
   );
@@ -129,28 +127,6 @@ export function WorkoutPage() {
   }
   const loadedWorkout = workout;
   const loadedLog = log;
-
-  async function handleLocationChange(location: "GYM" | "HOME") {
-    try {
-      const updated = await updateWorkoutLocation(loadedWorkout.id, location);
-      setWorkout(updated);
-      if (updated.activityType === "STRENGTH") {
-        const availableExercises = await listExercises(location);
-        setExercises(availableExercises);
-        setExerciseNames(
-          Object.fromEntries(
-            availableExercises.map((exercise) => [exercise.id, exercise.name]),
-          ),
-        );
-      }
-    } catch (locationError) {
-      setError(
-        locationError instanceof Error
-          ? locationError.message
-          : "The location could not be changed.",
-      );
-    }
-  }
 
   async function handleSubmit(payload: WorkoutEditorSubmitPayload) {
     setSaving(true);
@@ -186,7 +162,7 @@ export function WorkoutPage() {
             ← Back to calendar
           </Link>
           <p className="mt-5 text-xs font-semibold uppercase tracking-[0.16em] text-gymbud-muted">
-            {workout.activityType} · {workout.location}
+            {workout.activityType}
           </p>
           <h1 className="mt-2 text-3xl font-semibold tracking-tight text-gymbud-ink">
             Log your workout
@@ -250,11 +226,9 @@ export function WorkoutPage() {
         {workout.status === "PLANNED" ? (
           <WorkoutEditor
             workout={workout}
-            location={workout.location}
             legalExerciseOptions={legalExerciseOptions}
             saving={saving}
             mode={backfill ? "backfill" : "complete"}
-            onLocationChange={(location) => void handleLocationChange(location)}
             onSubmit={(payload) => {
               if (!saving) {
                 void handleSubmit(payload);

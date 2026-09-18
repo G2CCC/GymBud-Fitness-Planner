@@ -1,4 +1,3 @@
-import type { Location } from "@fitness/shared";
 import type { AiRequest } from "../client";
 import type {
   ExerciseExtractionInput,
@@ -13,11 +12,9 @@ type ReplacementExercise = {
   equipment: string | null;
   targetMuscles: string[];
   movementPattern: string | null;
-  availableLocations: Location[];
 };
 
 type ReplacementInput = {
-  location: Location;
   originalExercise: ReplacementExercise;
   candidates: ReplacementExercise[];
 };
@@ -31,11 +28,8 @@ export function buildExerciseExtractionRequest(
     promptVersion: exerciseExtractionPromptVersion,
     systemPrompt: [
       "You classify one user-described strength exercise.",
-      "Return JSON only with name, description, equipment, targetMuscles, movementPattern, and availableLocations.",
+      "Return JSON only with name, description, equipment, targetMuscles, and movementPattern.",
       "Use equipment NONE for bodyweight exercises.",
-      "A bodyweight exercise must support both GYM and HOME.",
-      "An exercise requiring named equipment must support GYM only.",
-      "Do not invent a location that violates those rules.",
     ].join(" "),
     userPrompt: JSON.stringify({
       exerciseName: input.name,
@@ -57,10 +51,9 @@ export function buildExerciseReplacementRequest(
       "Only choose exercise IDs from the provided candidate pool.",
       "Do not return the original exercise ID.",
       "Each replacement must include exerciseId, reason, sets, and may include restSeconds.",
-      "The server will validate all ownership and location rules.",
+      "The server will validate all ownership and exercise-pool rules.",
     ].join(" "),
     userPrompt: JSON.stringify({
-      workoutLocation: input.location,
       originalExercise: input.originalExercise,
       candidatePool: input.candidates,
     }),

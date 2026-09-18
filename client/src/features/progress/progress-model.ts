@@ -69,10 +69,8 @@ export function buildProgressSummary(
         for (const set of exercise.sets) {
           summary.activityTotals.strength.completedSets += 1;
           summary.activityTotals.strength.actualReps += set.actualReps;
-          if (set.actualWeight !== null && set.weightUnit !== null) {
-            summary.activityTotals.strength.weightedVolume[set.weightUnit] +=
-              set.actualWeight * set.actualReps;
-          }
+          summary.activityTotals.strength.weightedVolume[set.weightUnit] +=
+            set.actualWeight * set.actualReps;
         }
       }
     }

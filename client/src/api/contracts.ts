@@ -3,7 +3,6 @@ import type {
   CycleReviewStatus,
   CycleStatus,
   Gender,
-  Location,
   WorkoutStatus,
   WeightUnit,
 } from "@fitness/shared";
@@ -11,13 +10,11 @@ import type {
 export type ApiProfile = {
   weeklyTrainingDays: number;
   sessionDurationMinutes: number;
-  defaultLocation: Location;
   primaryGoal: string;
-  secondaryOutcome?: string | null;
-  gender?: Gender | null;
-  age?: number | null;
-  heightCm?: number | null;
-  weightKg?: number | null;
+  gender: Gender;
+  age: number;
+  heightCm: number;
+  weightKg: number;
 };
 
 export type ApiPlannedSet = {
@@ -38,7 +35,6 @@ export type ApiWorkout = {
   id: string;
   activityType: ActivityType;
   scheduledDate: string;
-  location: Location;
   durationMinutes: number;
   status: WorkoutStatus;
   completedAt: string | null;
@@ -55,8 +51,8 @@ export type ApiWorkout = {
     sets: Array<{
       setNumber: number;
       actualReps: number;
-      actualWeight: number | null;
-      weightUnit: WeightUnit | null;
+      actualWeight: number;
+      weightUnit: WeightUnit;
     }>;
   }>;
 };
@@ -96,7 +92,6 @@ export type ApiExercise = {
   id: string;
   name: string;
   equipment: string | null;
-  availableLocations: Location[];
 };
 
 export type ApiPlanDraftExercise = {
@@ -111,13 +106,11 @@ export type ApiPlanDraftExercise = {
   }>;
   name: string;
   equipment: string | null;
-  availableLocations: Location[];
 };
 
 export type ApiPlanDraftWorkout = {
   scheduledDate: string;
   activityType: ActivityType;
-  location: Location;
   durationMinutes: number;
   plannedDetails?: Record<string, unknown>;
   exercises: ApiPlanDraftExercise[];

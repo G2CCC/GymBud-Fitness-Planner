@@ -1,27 +1,10 @@
-# Location-aware exercise library
+# Exercise library
 
-## Location rules
+## Equipment metadata
 
-The MVP has two workout locations:
-
-```text
-GYM | HOME
-```
-
-Every exercise stores a non-empty `availableLocations` array. A confirmed
-bodyweight exercise uses both locations. An exercise that requires equipment is
-Gym-only because the MVP does not track a user's home equipment inventory.
-
-| Equipment | Valid locations |
-|---|---|
-| `NONE`, empty, or omitted | `GYM`, `HOME` |
-| Any named equipment, such as `BARBELL` or `CABLE_MACHINE` | `GYM` |
-
-These rules are implemented in `@fitness/shared` by
-`validateExerciseLocations`. They are applied by the custom-exercise Zod
-schema and again by `ExerciseService` before persistence. The duplicated check
-is intentional: route validation gives a useful client error, while the
-service protects callers that do not enter through HTTP.
+Exercises no longer distinguish a Gym from a home workout. An exercise stores
+its normalized equipment metadata only. Empty, omitted, or whitespace-only
+equipment is normalized to `NONE`, which represents bodyweight training.
 
 ## Ownership and AI eligibility
 
@@ -41,8 +24,9 @@ npm run db:seed
 ```
 
 The seed contains bodyweight examples (`Push-up`, `Bodyweight Squat`, and
-`Plank`) for both locations and equipment examples (`Barbell Bench Press`,
-`Barbell Back Squat`, and `Lat Pulldown`) for the Gym only.
+`Plank`) and equipment examples (`Barbell Bench Press`, `Barbell Back Squat`,
+and `Lat Pulldown`). All exercises use the same pool regardless of workout
+venue.
 
 ## API
 
@@ -51,26 +35,20 @@ service. The service contract remains user-id scoped, so ownership checks do
 not depend on client-supplied identity values.
 
 ```text
-GET  /api/exercises?location=GYM|HOME
+GET  /api/exercises
 GET  /api/exercises/:exerciseId
 POST /api/exercises
 ```
 
-`GET /api/exercises` returns system exercises and the current user's exercises
-whose `availableLocations` contains the requested location. The optional
-service-level `aiEligibleOnly` flag is reserved for AI plan generation and is
-not exposed as a client-controlled route parameter.
+`GET /api/exercises` returns system exercises and the current user's exercises.
+The optional service-level `aiEligibleOnly` flag is reserved for AI plan
+generation and is not exposed as a client-controlled route parameter.
 
 `POST /api/exercises` accepts only confirmed metadata. The server normalizes a
-blank equipment value to `NONE`, validates the location invariant, and sets
-`aiEligible` to `true`.
+blank equipment value to `NONE` and sets `aiEligible` to `true`.
 
 ## UI behavior
 
-`ExercisePicker` receives the scheduled workout location and filters its options
-with the same shared location predicate. The parent also passes the current
-selected exercise snapshot when it is not present in the newly fetched list.
-If a user changes an existing workout from Gym to Home and its selected
-equipment exercise becomes incompatible, the selection remains visible and is
-marked as incompatible. The UI does not silently replace it; a later
-replacement flow can ask the user to choose a compatible alternative.
+`ExercisePicker` and the strength-plan editor use the same user-available
+exercise pool without venue filtering. There is no workout location selector or
+location-change endpoint.

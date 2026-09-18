@@ -1,18 +1,16 @@
 import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
 import { Link } from "react-router-dom";
-import type { ActivityType, Location } from "@fitness/shared";
+import type { ActivityType } from "@fitness/shared";
 import {
   cancelWorkout,
   createWorkout,
   getCurrentCycle,
   listExercises,
   rescheduleWorkout,
-  updateWorkoutLocation,
 } from "../../api/client";
 import type { ApiCycle, ApiExercise } from "../../api/contracts";
 import { CalendarGrid } from "../../components/calendar/CalendarGrid";
 import { WorkoutCard, type CalendarWorkout } from "../../components/calendar/WorkoutCard";
-import { LocationSelector } from "../../components/workouts/LocationSelector";
 import {
   StrengthPlanBuilder,
   type ManualPlannedExercise,
@@ -40,7 +38,6 @@ export function CalendarPage() {
   const [actionMessage, setActionMessage] = useState<string | null>(null);
   const [addActivity, setAddActivity] = useState<ActivityType>("STRENGTH");
   const [addDate, setAddDate] = useState(systemDateKey());
-  const [addLocation, setAddLocation] = useState<Location>("GYM");
   const [addDuration, setAddDuration] = useState(60);
   const [addExercises, setAddExercises] = useState<ApiExercise[]>([]);
   const [addPlannedExercises, setAddPlannedExercises] = useState<
@@ -81,7 +78,7 @@ export function CalendarPage() {
     }
 
     let active = true;
-    void listExercises(addLocation)
+    void listExercises()
       .then((exercises) => {
         if (active) {
           setAddExercises(exercises);
@@ -100,7 +97,7 @@ export function CalendarPage() {
     return () => {
       active = false;
     };
-  }, [addActivity, addLocation]);
+  }, [addActivity]);
 
   async function handleAddWorkout(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -119,7 +116,6 @@ export function CalendarPage() {
       await createWorkout({
         activityType: addActivity,
         scheduledDate: new Date(addDate + "T12:00:00").toISOString(),
-        location: addLocation,
         durationMinutes: addDuration,
         ...(addActivity === "STRENGTH"
           ? { plannedExercises: addPlannedExercises }
@@ -159,23 +155,6 @@ export function CalendarPage() {
         rescheduleError instanceof Error
           ? rescheduleError.message
           : "The workout could not be rescheduled.",
-      );
-    }
-  }
-
-  async function handleLocationChange(location: Location) {
-    if (!selectedWorkout) {
-      return;
-    }
-    try {
-      await updateWorkoutLocation(selectedWorkout.id, location);
-      await loadCycle();
-      setActionMessage("This workout now uses the selected location.");
-    } catch (locationError) {
-      setActionMessage(
-        locationError instanceof Error
-          ? locationError.message
-          : "The workout location could not be changed.",
       );
     }
   }
@@ -264,7 +243,7 @@ export function CalendarPage() {
             Add a plan without changing any other workout.
           </p>
         </div>
-        <form className="grid gap-3 sm:grid-cols-4" onSubmit={handleAddWorkout}>
+        <form className="grid gap-3 sm:grid-cols-3" onSubmit={handleAddWorkout}>
           <label className="grid gap-1 text-xs font-semibold text-gymbud-ink">
             Activity
             <select
@@ -303,24 +282,9 @@ export function CalendarPage() {
               onChange={(event) => setAddDuration(Number(event.target.value))}
             />
           </label>
-          <label className="grid gap-1 text-xs font-semibold text-gymbud-ink">
-            Location
-            <select
-              className="min-h-11 rounded-[var(--radius-control)] border border-gymbud-border bg-gymbud-surface px-3"
-              value={addLocation}
-              onChange={(event) => {
-                setAddLocation(event.target.value as Location);
-                setAddPlannedExercises([]);
-              }}
-            >
-              <option value="GYM">Gym</option>
-              <option value="HOME">Home</option>
-            </select>
-          </label>
           {addActivity === "STRENGTH" ? (
-            <div className="sm:col-span-4">
+            <div className="sm:col-span-3">
               <StrengthPlanBuilder
-                location={addLocation}
                 exercises={addExercises}
                 value={addPlannedExercises}
                 onChange={setAddPlannedExercises}
@@ -378,10 +342,6 @@ export function CalendarPage() {
                 </button>
               </form>
               <div className="grid gap-3">
-                <LocationSelector
-                  value={selectedWorkout.location}
-                  onChange={(location) => void handleLocationChange(location)}
-                />
                 <button
                   className="focus-ring min-h-11 rounded-[var(--radius-control)] border border-gymbud-danger px-4 text-sm font-semibold text-gymbud-danger"
                   type="button"

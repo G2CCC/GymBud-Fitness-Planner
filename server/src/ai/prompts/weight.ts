@@ -1,6 +1,6 @@
 import type { AiRequest } from "../client";
 
-export const weightRecommendationPromptVersion = "weight-recommendation.v1";
+export const weightRecommendationPromptVersion = "weight-recommendation.v2";
 
 export type WeightContext = {
   recentPerformance: Array<{
@@ -10,8 +10,8 @@ export type WeightContext = {
     sets: Array<{
       setNumber: number;
       reps: number;
-      weight: number | null;
-      weightUnit: "KG" | "LB" | null;
+      weight: number;
+      weightUnit: "KG" | "LB";
     }>;
   }>;
   currentCycleSummary: {
@@ -32,12 +32,10 @@ export type WeightContext = {
   } | null;
   currentGoal: {
     primaryGoal: string;
-    secondaryOutcome: string | null;
   };
   nextWorkoutTarget: {
     workoutId: string;
     scheduledDate: string;
-    location: "GYM" | "HOME";
     exerciseId: string;
     sets: number;
     targetReps: number | number[];

@@ -39,14 +39,13 @@ describe.skipIf(!hasDatabase)("exercise persistence", () => {
     await db.$disconnect();
   }, integrationTestTimeout);
 
-  it("lists system and own custom exercises for the selected location", async () => {
+  it("lists system and own custom exercises without location filtering", async () => {
     const ownExercise = await service.createConfirmedCustomExercise(userId, {
       name: "Home Push-up Variation",
       description: "A custom bodyweight pressing variation.",
       equipment: "NONE",
       targetMuscles: ["CHEST", "TRICEPS"],
       movementPattern: "PUSH",
-      availableLocations: ["GYM", "HOME"],
     });
     const otherExercise = await service.createConfirmedCustomExercise(
       otherUserId,
@@ -54,28 +53,26 @@ describe.skipIf(!hasDatabase)("exercise persistence", () => {
         name: "Other User Exercise",
         equipment: "NONE",
         targetMuscles: ["CORE"],
-        availableLocations: ["GYM", "HOME"],
       },
     );
 
-    const homeExercises = await service.listAvailableExercises(userId, "HOME");
-    const homeNames = homeExercises.map((exercise) => exercise.name);
+    const exercises = await service.listAvailableExercises(userId);
+    const names = exercises.map((exercise) => exercise.name);
 
-    expect(homeNames).toContain("Push-up");
-    expect(homeNames).toContain(ownExercise.name);
-    expect(homeNames).not.toContain("Barbell Bench Press");
-    expect(homeNames).not.toContain(otherExercise.name);
+    expect(names).toContain("Push-up");
+    expect(names).toContain("Barbell Bench Press");
+    expect(names).toContain(ownExercise.name);
+    expect(names).not.toContain(otherExercise.name);
   }, integrationTestTimeout);
 
-  it("keeps a confirmed custom equipment exercise gym-only", async () => {
-    await expect(
-      service.createConfirmedCustomExercise(userId, {
-        name: "Home Barbell Exercise",
-        equipment: "BARBELL",
-        targetMuscles: ["BACK"],
-        availableLocations: ["HOME"],
-      }),
-    ).rejects.toThrow(/GYM/);
+  it("keeps equipment availability independent of location", async () => {
+    const exercise = await service.createConfirmedCustomExercise(userId, {
+      name: "Custom Barbell Exercise",
+      equipment: "BARBELL",
+      targetMuscles: ["BACK"],
+    });
+
+    expect(exercise.name).toBe("Custom Barbell Exercise");
   }, integrationTestTimeout);
 
   it("does not expose another user's custom exercise by id", async () => {
@@ -85,7 +82,6 @@ describe.skipIf(!hasDatabase)("exercise persistence", () => {
         name: "Private Custom Exercise",
         equipment: "NONE",
         targetMuscles: ["LEGS"],
-        availableLocations: ["GYM", "HOME"],
       },
     );
 

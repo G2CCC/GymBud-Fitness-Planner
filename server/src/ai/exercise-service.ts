@@ -2,7 +2,6 @@ import { Prisma, PrismaClient } from "@prisma/client";
 import {
   customExerciseInputSchema,
   normalizeEquipment,
-  type Location,
 } from "@fitness/shared";
 import { env } from "../config/env";
 import {
@@ -27,14 +26,12 @@ const exercisePromptSelect = {
   equipment: true,
   targetMuscles: true,
   movementPattern: true,
-  availableLocations: true,
 } satisfies Prisma.ExerciseSelect;
 
 const replacementWorkoutSelect = {
   id: true,
   status: true,
   activityType: true,
-  location: true,
   cycle: {
     select: {
       id: true,
@@ -157,7 +154,6 @@ export class AiExerciseService {
       where: {
         id: { not: exerciseId },
         aiEligible: true,
-        availableLocations: { has: workout.location },
         OR: [{ ownerId: null }, { ownerId: userId }],
       },
       select: exercisePromptSelect,
@@ -169,7 +165,6 @@ export class AiExerciseService {
       response = await this.aiClient.generateJson(
         buildExerciseReplacementRequest(
           {
-            location: workout.location,
             originalExercise,
             candidates,
           },

@@ -14,8 +14,8 @@ export type ObjectivePlannedSet = {
 export type ObjectiveActualSet = {
   setNumber: number;
   actualReps: number;
-  actualWeight: number | null;
-  weightUnit: WeightUnit | null;
+  actualWeight: number;
+  weightUnit: WeightUnit;
 };
 
 export type ObjectiveStrengthExercise = {

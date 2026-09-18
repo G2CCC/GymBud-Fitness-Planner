@@ -23,13 +23,9 @@ user edit the draft and then submit the final values to the existing
 `POST /api/exercises` endpoint. Only that confirmed write creates a custom
 exercise with `aiEligible = true`.
 
-The server validates the location invariant twice: once after the AI response
-and again in `ExerciseService` before persistence.
-
-| Equipment | Allowed locations |
-|---|---|
-| `NONE` | `GYM`, `HOME` |
-| named equipment | `GYM` only |
+The server validates and normalizes the extracted equipment metadata before it
+is returned. The draft remains unpersisted until the user confirms it through
+the normal exercise endpoint.
 
 ## Compatible replacements
 
@@ -45,13 +41,12 @@ Request:
 }
 ```
 
-The service loads the unfinished strength workout, builds a candidate pool from
-system exercises and the current user's confirmed AI-eligible exercises, and
-filters that pool by the workout location. The AI may only return IDs from that
-pool. The response is a set of replacement suggestions; it does not mutate the
-workout. A later client confirmation flow can apply one replacement to this
-unfinished workout only. The exercise's historical weight data is not copied to
-the replacement.
+The service loads the unfinished strength workout and builds a candidate pool
+from system exercises and the current user's confirmed AI-eligible exercises.
+The AI may only return IDs from that pool. The response is a set of replacement
+suggestions; it does not mutate the workout. A later client confirmation flow
+can apply one replacement to this unfinished workout only. The exercise's
+historical weight data is not copied to the replacement.
 
 ## Next-workout weight recommendation
 
@@ -74,8 +69,8 @@ context containing:
 - the latest completed workout records without plan-source labels;
 - a computed current-cycle summary;
 - the all-time best in the selected weight unit;
-- the user's primary goal and secondary outcome;
-- the next workout's planned sets, reps, and existing planned weights.
+  - the user's primary goal;
+  - the next workout's planned sets, reps, and existing planned weights.
 
 Raw cycle-review prompts are never copied into this context.
 
@@ -93,7 +88,6 @@ planned weight unchanged; a blank planned weight stays blank. Historical
 ## Ownership and lifecycle checks
 
 Every service query filters by the current user. An AI exercise ID is accepted
-only when it belongs to the system pool or the current user, is AI eligible,
-and is legal for the workout location. Recommendations and decisions are
-allowed only while the workout belongs to the current active cycle and no newer
-cycle exists.
+only when it belongs to the system pool or the current user and is AI eligible.
+Recommendations and decisions are allowed only while the workout belongs to the
+current active cycle and no newer cycle exists.

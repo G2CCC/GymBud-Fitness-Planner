@@ -13,9 +13,7 @@ profileRouter.get("/", async (request, response) => {
       select: {
         weeklyTrainingDays: true,
         sessionDurationMinutes: true,
-        defaultLocation: true,
         primaryGoal: true,
-        secondaryOutcome: true,
         gender: true,
         age: true,
         heightCm: true,
@@ -50,9 +48,7 @@ profileRouter.put("/", async (request, response) => {
       select: {
         weeklyTrainingDays: true,
         sessionDurationMinutes: true,
-        defaultLocation: true,
         primaryGoal: true,
-        secondaryOutcome: true,
         gender: true,
         age: true,
         heightCm: true,

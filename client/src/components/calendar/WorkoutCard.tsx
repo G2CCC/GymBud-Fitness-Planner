@@ -56,7 +56,7 @@ export function WorkoutCard({
             {activityLabels[workout.activityType]}
           </span>
           <span className="mt-1 block text-xs text-gymbud-muted">
-            {workout.location} · {workout.durationMinutes} min
+            {workout.durationMinutes} min
           </span>
         </span>
         <span className="flex flex-wrap justify-end gap-1 text-[0.7rem] font-semibold">

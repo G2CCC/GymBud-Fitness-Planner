@@ -23,10 +23,8 @@ test.describe("first cycle E2E flow", () => {
     const profileResponse = await api.put("/profile", {
       data: {
         primaryGoal: "FAT_LOSS",
-        secondaryOutcome: "MUSCLE_PRESERVATION",
         weeklyTrainingDays: 3,
         sessionDurationMinutes: 45,
-        defaultLocation: "HOME",
         gender: "MALE",
         age: 27,
         heightCm: 178,
@@ -38,10 +36,8 @@ test.describe("first cycle E2E flow", () => {
     const draftResponse = await api.post("/cycles", {
       data: {
         primaryGoal: "FAT_LOSS",
-        secondaryOutcome: "MUSCLE_PRESERVATION",
         weeklyTrainingDays: 3,
         sessionDurationMinutes: 45,
-        defaultLocation: "HOME",
         gender: "MALE",
         age: 27,
         heightCm: 178,

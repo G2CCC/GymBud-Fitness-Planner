@@ -46,7 +46,6 @@ describe("progress page", () => {
             id: "workout-1",
             activityType: "CARDIO",
             scheduledDate: "2026-09-03T00:00:00.000Z",
-            location: "GYM",
             durationMinutes: 30,
             status: "COMPLETED",
             completedAt: "2026-09-03T18:00:00.000Z",

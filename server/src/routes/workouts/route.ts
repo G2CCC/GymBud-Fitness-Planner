@@ -3,7 +3,6 @@ import {
   backfillCompletionInputSchema,
   createWorkoutInputSchema,
   rescheduleWorkoutInputSchema,
-  updateWorkoutLocationInputSchema,
 } from "@fitness/shared/domain/workouts/validation";
 import { z } from "zod";
 import {
@@ -117,26 +116,6 @@ workoutRouter.post("/:workoutId/reschedule", async (request, response) => {
       userId,
       request.params.workoutId,
       parsed.data.scheduledDate,
-    );
-    return response.json({ data: workout });
-  } catch (error) {
-    return sendRouteError(response, error);
-  }
-});
-
-workoutRouter.patch("/:workoutId/location", async (request, response) => {
-  const parsed = updateWorkoutLocationInputSchema.safeParse(request.body);
-
-  if (!parsed.success) {
-    return sendValidationError(response, parsed.error);
-  }
-
-  try {
-    const userId = getAuthenticatedUserId(request);
-    const workout = await workoutService.updateWorkoutLocation(
-      userId,
-      request.params.workoutId,
-      parsed.data.location,
     );
     return response.json({ data: workout });
   } catch (error) {
