@@ -1,9 +1,4 @@
-import type {
-  CancellationReason,
-  CycleStatus,
-  Location,
-  WorkoutStatus,
-} from "../enums";
+import type { CycleStatus, Location, WorkoutStatus } from "../enums";
 
 export type WorkoutTransition = {
   id: string;
@@ -13,7 +8,6 @@ export type WorkoutTransition = {
   scheduledDate: Date;
   location: Location;
   completedAt?: Date | null;
-  cancellationReason?: CancellationReason | null;
 };
 
 export type CompleteWorkoutInput = {
@@ -22,29 +16,26 @@ export type CompleteWorkoutInput = {
 
 export type CompletedWorkout = Omit<
   WorkoutTransition,
-  "status" | "completedAt" | "cancellationReason"
+  "status" | "completedAt"
 > & {
   status: "COMPLETED";
   completedAt: Date;
-  cancellationReason: null;
 };
 
 export type CancelledWorkout = Omit<
   WorkoutTransition,
-  "status" | "completedAt" | "cancellationReason"
+  "status" | "completedAt"
 > & {
   status: "CANCELLED";
   completedAt: null;
-  cancellationReason: "USER";
 };
 
 export type PlannedWorkout = Omit<
   WorkoutTransition,
-  "status" | "completedAt" | "cancellationReason"
+  "status" | "completedAt"
 > & {
   status: "PLANNED";
   completedAt: null;
-  cancellationReason: null;
 };
 
 export function completeWorkout(
@@ -62,7 +53,6 @@ export function completeWorkout(
     ...workout,
     status: "COMPLETED",
     completedAt,
-    cancellationReason: null,
   };
 }
 
@@ -73,7 +63,6 @@ export function cancelWorkout(workout: WorkoutTransition): CancelledWorkout {
     ...workout,
     status: "CANCELLED",
     completedAt: null,
-    cancellationReason: "USER",
   };
 }
 
@@ -89,7 +78,6 @@ export function rescheduleWorkout(
     status: "PLANNED",
     scheduledDate: newScheduledDate,
     completedAt: null,
-    cancellationReason: null,
   };
 }
 
@@ -104,7 +92,6 @@ export function updateWorkoutLocation(
     status: "PLANNED",
     location,
     completedAt: null,
-    cancellationReason: null,
   };
 }
 

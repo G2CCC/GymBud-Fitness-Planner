@@ -1,6 +1,5 @@
 import type {
   ActivityType,
-  CancellationReason,
   WeightUnit,
   WorkoutStatus,
 } from "../enums";
@@ -62,8 +61,6 @@ export type ObjectiveCycleSummary = {
   total: ObjectiveWorkoutCounts;
   cancellations: {
     total: number;
-    user: number;
-    automatic: number;
   };
   rescheduleCount: number;
   strength: {
@@ -96,7 +93,6 @@ export type ObjectiveWorkoutInput = {
   id: string;
   activityType: ActivityType;
   status: WorkoutStatus;
-  cancellationReason?: CancellationReason | null;
   durationMinutes: number;
   rescheduleCount: number;
   plannedDetails?: {
@@ -132,22 +128,7 @@ export function buildObjectiveCycleSummary(
 ): ObjectiveCycleSummary {
   const total = buildCounts(input.workouts);
 
-  const cancellations = input.workouts.reduce(
-    (result, workout) => {
-      if (workout.status !== "CANCELLED") {
-        return result;
-      }
-
-      result.total += 1;
-      if (workout.cancellationReason === "AUTO_CYCLE_CLOSE") {
-        result.automatic += 1;
-      } else if (workout.cancellationReason === "USER") {
-        result.user += 1;
-      }
-      return result;
-    },
-    { total: 0, user: 0, automatic: 0 },
-  );
+  const cancellations = { total: total.cancelled };
 
   const strengthWorkouts = input.workouts
     .filter((workout) => workout.activityType === "STRENGTH")

@@ -257,7 +257,6 @@ describe.skipIf(!hasDatabase)("workout persistence", () => {
     const cancelled = await service.cancelWorkout(userId, workout.id);
     expect(cancelled).toMatchObject({
       status: "CANCELLED",
-      cancellationReason: "USER",
     });
   }, integrationTestTimeout);
 

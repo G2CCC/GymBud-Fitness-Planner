@@ -841,6 +841,8 @@ export class CycleReviewService {
         endDate: draft.endDate,
         timezone: draft.timezone,
       };
+    }, {
+      isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
     });
   }
 

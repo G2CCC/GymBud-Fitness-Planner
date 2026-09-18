@@ -1,6 +1,5 @@
 import type {
   ActivityType,
-  CancellationReason,
   CycleReviewStatus,
   CycleStatus,
   Gender,
@@ -42,7 +41,6 @@ export type ApiWorkout = {
   location: Location;
   durationMinutes: number;
   status: WorkoutStatus;
-  cancellationReason: CancellationReason | null;
   completedAt: string | null;
   rescheduleCount: number;
   plannedDetails?: unknown;

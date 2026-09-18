@@ -186,7 +186,7 @@ cycleRouter.post(
 
     try {
       const userId = getAuthenticatedUserId(request);
-      const restored = await cycleService.restoreAutoCancelledWorkout(
+      const restored = await cycleService.restoreCancelledWorkout(
         userId,
         request.params.cycleId,
         request.params.workoutId,
@@ -241,7 +241,6 @@ const currentCycleSelect = {
       location: true,
       durationMinutes: true,
       status: true,
-      cancellationReason: true,
       completedAt: true,
       rescheduleCount: true,
       plannedDetails: true,

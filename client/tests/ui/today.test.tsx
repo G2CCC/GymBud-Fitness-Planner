@@ -50,7 +50,6 @@ function workout(
     location: "GYM",
     durationMinutes: 60,
     status,
-    cancellationReason: status === "CANCELLED" ? "USER" : null,
     completedAt: status === "COMPLETED" ? scheduledDate : null,
     rescheduleCount: 0,
     plannedDetails: null,

@@ -20,7 +20,6 @@ const plannedWorkout: EditorWorkout = {
   location: "GYM",
   durationMinutes: 60,
   status: "PLANNED",
-  cancellationReason: null,
   completedAt: null,
   rescheduleCount: 0,
 };

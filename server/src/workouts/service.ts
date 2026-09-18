@@ -28,7 +28,6 @@ const workoutSelect = {
   location: true,
   durationMinutes: true,
   status: true,
-  cancellationReason: true,
   rescheduleCount: true,
   completedAt: true,
   plannedDetails: true,
@@ -140,7 +139,6 @@ export class WorkoutService {
         data: {
           status: transition.status,
           completedAt: transition.completedAt,
-          cancellationReason: null,
         },
       });
 
@@ -209,7 +207,6 @@ export class WorkoutService {
         data: {
           status: transition.status,
           completedAt: null,
-          cancellationReason: "USER",
         },
       });
 
@@ -631,7 +628,6 @@ function toTransition(
     scheduledDate: workout.scheduledDate,
     location: workout.location,
     completedAt: workout.completedAt,
-    cancellationReason: workout.cancellationReason,
   } as const;
 }
 
