@@ -45,7 +45,6 @@ test.describe("backfill and cycle close E2E flow", () => {
     );
     expect((await unresolved.json()).data).toMatchObject({
       status: "CANCELLED",
-      cancellationReason: "AUTO_CYCLE_CLOSE",
     });
 
     const editAfterClose = await api.post(

@@ -1,14 +1,10 @@
-import {
-  Prisma,
-  PrismaClient,
-  type CancellationReason as PrismaCancellationReason,
-} from "@prisma/client";
+import { Prisma, PrismaClient } from "@prisma/client";
 import {
   addUtcDays,
   closeCycle as closeCycleDomain,
   distributeFirstWeek,
   getCycleReviewStatus,
-  restoreAutoCancelledWorkout,
+  restoreCancelledWorkout,
   startOfLocalDate,
   startOfUtcDay,
   type CycleCloseWorkout,
@@ -68,6 +64,12 @@ export class CycleService {
     now = new Date(),
     database: CycleDatabase = this.prisma,
   ): Promise<CycleDraft> {
+    if (database === this.prisma) {
+      return this.runSerializableTransaction((tx) =>
+        this.createDraft(userId, profile, now, tx),
+      );
+    }
+
     const startDate = startOfLocalDate(now, profile.timezone);
     const endDate = addUtcDays(startDate, 27);
     const firstWeekDates = distributeFirstWeek(
@@ -268,7 +270,6 @@ export class CycleService {
               status: true,
               scheduledDate: true,
               completedAt: true,
-              cancellationReason: true,
             },
           },
         },
@@ -336,7 +337,6 @@ export class CycleService {
           },
           data: {
             status: "CANCELLED",
-            cancellationReason: "AUTO_CYCLE_CLOSE",
           },
         });
 
@@ -377,18 +377,19 @@ export class CycleService {
     });
   }
 
-  async restoreAutoCancelledWorkout(
+  async restoreCancelledWorkout(
     userId: string,
     cycleId: string,
     workoutId: string,
     newScheduledDate: Date,
   ) {
-    return this.prisma.$transaction(async (tx) => {
+    return this.runSerializableTransaction(async (tx) => {
       const cycle = await tx.trainingCycle.findFirst({
         where: { id: cycleId, userId },
         select: {
           id: true,
           startDate: true,
+          cycleNumber: true,
           status: true,
         },
       });
@@ -406,7 +407,6 @@ export class CycleService {
         select: {
           id: true,
           status: true,
-          cancellationReason: true,
         },
       });
 
@@ -429,14 +429,13 @@ export class CycleService {
         }),
       );
 
-      let restored: ReturnType<typeof restoreAutoCancelledWorkout>;
+      let restored: ReturnType<typeof restoreCancelledWorkout>;
       try {
-        restored = restoreAutoCancelledWorkout({
+        restored = restoreCancelledWorkout({
           cycleStatus: cycle.status,
           hasNextCycle,
           workout: {
             status: workout.status,
-            cancellationReason: workout.cancellationReason,
           },
           newScheduledDate,
         });
@@ -448,17 +447,36 @@ export class CycleService {
         );
       }
 
+      if (!hasNextCycle) {
+        const newerCycleAppeared = Boolean(
+          await tx.trainingCycle.findFirst({
+            where: {
+              userId,
+              id: { not: cycleId },
+              startDate: { gt: cycle.startDate },
+            },
+            select: { id: true },
+          }),
+        );
+
+        if (newerCycleAppeared) {
+          throw new CycleServiceError(
+            "The cycle became read-only while the workout was being restored",
+            "CONFLICT",
+            409,
+          );
+        }
+      }
+
       const update = await tx.scheduledWorkout.updateMany({
         where: {
           id: workoutId,
           cycleId,
           userId,
           status: "CANCELLED",
-          cancellationReason: "AUTO_CYCLE_CLOSE",
         },
         data: {
           status: restored.status,
-          cancellationReason: null,
           scheduledDate: restored.scheduledDate,
           rescheduleCount: { increment: 1 },
         },
@@ -482,11 +500,40 @@ export class CycleService {
 
       await tx.cycleReviewSnapshot.deleteMany({ where: { cycleId } });
 
+      if (cycle.cycleNumber !== null) {
+        await tx.cycleBatchReview.deleteMany({
+          where: {
+            userId,
+            startCycleNumber: { lte: cycle.cycleNumber },
+            endCycleNumber: { gte: cycle.cycleNumber },
+          },
+        });
+      }
+
       return {
         id: workoutId,
         ...restored,
       };
     });
+  }
+
+  private async runSerializableTransaction<T>(
+    operation: (tx: Prisma.TransactionClient) => Promise<T>,
+  ): Promise<T> {
+    try {
+      return await this.prisma.$transaction(operation, {
+        isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+      });
+    } catch (error) {
+      if (isSerializationConflict(error)) {
+        throw new CycleServiceError(
+          "The cycle changed while the operation was in progress; please retry",
+          "CONFLICT",
+          409,
+        );
+      }
+      throw error;
+    }
   }
 }
 
@@ -494,13 +541,11 @@ function toDomainWorkout(workout: {
   id: string;
   status: PrismaCycleWorkoutStatus;
   completedAt: Date | null;
-  cancellationReason: PrismaCancellationReason | null;
 }): CycleCloseWorkout {
   return {
     id: workout.id,
     status: workout.status,
     completedAt: workout.completedAt,
-    cancellationReason: workout.cancellationReason,
   };
 }
 
@@ -545,4 +590,11 @@ function requireCycleTimezone(
   // read for a non-actionable prompt. UTC is a deterministic compatibility
   // fallback; all newly activated cycles always persist their timezone.
   return "UTC";
+}
+
+function isSerializationConflict(error: unknown): boolean {
+  return (
+    error instanceof Prisma.PrismaClientKnownRequestError &&
+    error.code === "P2034"
+  );
 }

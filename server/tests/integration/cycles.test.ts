@@ -104,6 +104,14 @@ describe.skipIf(!hasDatabase)("cycle persistence", () => {
               status: "COMPLETED",
               completedAt: new Date("2026-10-06T10:00:00Z"),
             },
+            {
+              userId: lifecycleUserId,
+              activityType: "SPORT",
+              scheduledDate: new Date("2026-10-04T00:00:00Z"),
+              location: "GYM",
+              durationMinutes: 45,
+              status: "CANCELLED",
+            },
           ],
         },
       },
@@ -150,14 +158,25 @@ describe.skipIf(!hasDatabase)("cycle persistence", () => {
 
     const persistedCancellation = await db.scheduledWorkout.findUnique({
       where: { id: plannedWorkout.id },
-      select: { status: true, cancellationReason: true },
+      select: { status: true },
     });
     expect(persistedCancellation).toEqual({
       status: "CANCELLED",
-      cancellationReason: "AUTO_CYCLE_CLOSE",
     });
 
-    const restored = await service.restoreAutoCancelledWorkout(
+    await db.cycleBatchReview.create({
+      data: {
+        userId: lifecycleUserId,
+        startCycleNumber: 1,
+        endCycleNumber: 4,
+        status: "READY",
+        processedSummary: "stale summary",
+        objectiveSummary: {},
+        conclusions: {},
+      },
+    });
+
+    const restored = await service.restoreCancelledWorkout(
       lifecycleUserId,
       cycle.id,
       plannedWorkout.id,
@@ -166,5 +185,26 @@ describe.skipIf(!hasDatabase)("cycle persistence", () => {
 
     expect(restored.status).toBe("PLANNED");
     expect(restored.scheduledDate).toEqual(new Date("2026-10-08T00:00:00Z"));
+    expect(
+      await db.cycleBatchReview.count({
+        where: { userId: lifecycleUserId },
+      }),
+    ).toBe(0);
+
+    const manuallyCancelledWorkout = cycle.workouts.find(
+      (workout) => workout.status === "CANCELLED",
+    );
+    if (!manuallyCancelledWorkout) {
+      throw new Error("Test fixture did not create a cancelled workout");
+    }
+
+    const restoredManualCancellation = await service.restoreCancelledWorkout(
+      lifecycleUserId,
+      cycle.id,
+      manuallyCancelledWorkout.id,
+      new Date("2026-10-09T00:00:00Z"),
+    );
+
+    expect(restoredManualCancellation.status).toBe("PLANNED");
   });
 });

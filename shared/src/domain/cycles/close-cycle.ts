@@ -1,14 +1,9 @@
-import type {
-  CancellationReason,
-  CycleStatus,
-  WorkoutStatus,
-} from "../enums";
+import type { CycleStatus, WorkoutStatus } from "../enums";
 
 export type CycleCloseWorkout = {
   id: string;
   status: WorkoutStatus;
   completedAt?: Date | null;
-  cancellationReason?: CancellationReason | null;
 };
 
 export type CloseCycleInput = {
@@ -22,7 +17,6 @@ export type CycleObjectiveSummary = {
   completedWorkouts: number;
   cancelledWorkoutsBeforeClose: number;
   unresolvedWorkouts: number;
-  autoCancelledWorkouts: number;
 };
 
 export type NextCycleEligibility = "ELIGIBLE" | "RESET_REQUIRED";
@@ -34,7 +28,6 @@ export type CloseCycleResult = {
   workoutUpdates: Array<{
     id: string;
     status: "CANCELLED";
-    cancellationReason: "AUTO_CYCLE_CLOSE";
   }>;
   objectiveSummary: CycleObjectiveSummary;
   nextCycleMayBeGenerated: boolean;
@@ -42,10 +35,10 @@ export type CloseCycleResult = {
   restoreableWorkoutIds: string[];
 };
 
-export type RestoreAutoCancelledWorkoutInput = {
+export type RestoreCancelledWorkoutInput = {
   cycleStatus: CycleStatus;
   hasNextCycle: boolean;
-  workout: Pick<CycleCloseWorkout, "status" | "cancellationReason">;
+  workout: Pick<CycleCloseWorkout, "status">;
   newScheduledDate: Date;
 };
 
@@ -75,6 +68,12 @@ export function closeCycle(
     (workout) => workout.status === "PLANNED",
   );
   const cancelledWorkoutIds = unresolvedWorkouts.map((workout) => workout.id);
+  const restoreableWorkoutIds = input.workouts
+    .filter(
+      (workout) =>
+        workout.status === "CANCELLED" || workout.status === "PLANNED",
+    )
+    .map((workout) => workout.id);
   const nextCycleMayBeGenerated = completedWorkouts.length > 0;
 
   return {
@@ -84,50 +83,43 @@ export function closeCycle(
     workoutUpdates: unresolvedWorkouts.map((workout) => ({
       id: workout.id,
       status: "CANCELLED" as const,
-      cancellationReason: "AUTO_CYCLE_CLOSE" as const,
     })),
     objectiveSummary: {
       totalWorkouts: input.workouts.length,
       completedWorkouts: completedWorkouts.length,
       cancelledWorkoutsBeforeClose: cancelledWorkouts.length,
       unresolvedWorkouts: unresolvedWorkouts.length,
-      autoCancelledWorkouts: unresolvedWorkouts.length,
     },
     nextCycleMayBeGenerated,
     nextCycleEligibility: nextCycleMayBeGenerated
       ? "ELIGIBLE"
       : "RESET_REQUIRED",
-    restoreableWorkoutIds: cancelledWorkoutIds,
+    restoreableWorkoutIds,
   };
 }
 
-export function restoreAutoCancelledWorkout(
-  input: RestoreAutoCancelledWorkoutInput,
+export function restoreCancelledWorkout(
+  input: RestoreCancelledWorkoutInput,
 ): {
   status: "PLANNED";
-  cancellationReason: null;
   scheduledDate: Date;
 } {
   if (input.hasNextCycle) {
     throw new Error("The cycle is read-only after the next cycle exists");
   }
 
-  if (input.cycleStatus !== "CLOSED") {
-    throw new Error("Only a closed cycle can restore a workout");
+  if (input.cycleStatus === "DRAFT") {
+    throw new Error("Only an active or closed cycle can restore a workout");
   }
 
-  if (
-    input.workout.status !== "CANCELLED" ||
-    input.workout.cancellationReason !== "AUTO_CYCLE_CLOSE"
-  ) {
-    throw new Error("Only an auto-cancelled workout can be restored");
+  if (input.workout.status !== "CANCELLED") {
+    throw new Error("Only a cancelled workout can be restored");
   }
 
   assertValidDate(input.newScheduledDate, "new scheduled date");
 
   return {
     status: "PLANNED",
-    cancellationReason: null,
     scheduledDate: input.newScheduledDate,
   };
 }

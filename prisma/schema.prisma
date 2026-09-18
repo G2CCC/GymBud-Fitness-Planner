@@ -32,11 +32,6 @@ enum WorkoutStatus {
   CANCELLED
 }
 
-enum CancellationReason {
-  USER
-  AUTO_CYCLE_CLOSE
-}
-
 enum CycleStatus {
   DRAFT
   ACTIVE
@@ -116,7 +111,6 @@ model ScheduledWorkout {
   location           Location
   durationMinutes    Int
   status             WorkoutStatus       @default(PLANNED)
-  cancellationReason CancellationReason?
   rescheduleCount    Int                 @default(0)
   completedAt        DateTime?
   plannedDetails     Json?

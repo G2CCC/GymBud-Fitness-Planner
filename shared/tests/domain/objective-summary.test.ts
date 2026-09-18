@@ -58,7 +58,6 @@ const baseInput: ObjectiveCycleSummaryInput = {
       id: "original-cardio",
       activityType: "CARDIO",
       status: "CANCELLED",
-      cancellationReason: "USER",
       durationMinutes: 30,
       rescheduleCount: 0,
       plannedDetails: { distanceKm: 5 },
@@ -77,7 +76,6 @@ const baseInput: ObjectiveCycleSummaryInput = {
       id: "auto-cancelled",
       activityType: "SPORT",
       status: "CANCELLED",
-      cancellationReason: "AUTO_CYCLE_CLOSE",
       durationMinutes: 45,
       rescheduleCount: 3,
     },
@@ -97,8 +95,6 @@ describe("objective cycle summary", () => {
     });
     expect(result.cancellations).toEqual({
       total: 2,
-      user: 1,
-      automatic: 1,
     });
     expect(result.rescheduleCount).toBe(6);
     expect(result.nextCycleEligibility).toBe("ELIGIBLE");

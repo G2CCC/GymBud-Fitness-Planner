@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   assertCycleWritable,
   closeCycle,
-  restoreAutoCancelledWorkout,
+  restoreCancelledWorkout,
 } from "@fitness/shared/domain/cycles/close-cycle";
 
 const now = new Date("2026-10-07T12:00:00Z");
@@ -20,7 +20,7 @@ describe("cycle closure", () => {
             status: "COMPLETED",
             completedAt: new Date("2026-10-06T10:00:00Z"),
           },
-          { id: "cancelled-1", status: "CANCELLED", cancellationReason: "USER" },
+          { id: "cancelled-1", status: "CANCELLED" },
         ],
       },
       now,
@@ -32,38 +32,52 @@ describe("cycle closure", () => {
       {
         id: "planned-1",
         status: "CANCELLED",
-        cancellationReason: "AUTO_CYCLE_CLOSE",
       },
+    ]);
+    expect(result.restoreableWorkoutIds).toEqual([
+      "planned-1",
+      "cancelled-1",
     ]);
     expect(result.nextCycleMayBeGenerated).toBe(true);
   });
 
-  it("allows an auto-cancelled workout to be restored before a next cycle exists", () => {
-    const restored = restoreAutoCancelledWorkout({
+  it("allows any cancelled workout to be restored before a next cycle exists", () => {
+    const restored = restoreCancelledWorkout({
       cycleStatus: "CLOSED",
       hasNextCycle: false,
       workout: {
         status: "CANCELLED",
-        cancellationReason: "AUTO_CYCLE_CLOSE",
       },
       newScheduledDate: new Date("2026-10-08T00:00:00Z"),
     });
 
     expect(restored).toEqual({
       status: "PLANNED",
-      cancellationReason: null,
+      scheduledDate: new Date("2026-10-08T00:00:00Z"),
+    });
+  });
+
+  it("allows a cancelled workout to be restored in an unlocked active cycle", () => {
+    const restored = restoreCancelledWorkout({
+      cycleStatus: "ACTIVE",
+      hasNextCycle: false,
+      workout: { status: "CANCELLED" },
+      newScheduledDate: new Date("2026-10-08T00:00:00Z"),
+    });
+
+    expect(restored).toEqual({
+      status: "PLANNED",
       scheduledDate: new Date("2026-10-08T00:00:00Z"),
     });
   });
 
   it("rejects restoration after the next cycle exists", () => {
     expect(() =>
-      restoreAutoCancelledWorkout({
+      restoreCancelledWorkout({
         cycleStatus: "CLOSED",
         hasNextCycle: true,
         workout: {
           status: "CANCELLED",
-          cancellationReason: "AUTO_CYCLE_CLOSE",
         },
         newScheduledDate: new Date("2026-10-08T00:00:00Z"),
       }),

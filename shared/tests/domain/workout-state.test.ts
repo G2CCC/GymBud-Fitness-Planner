@@ -19,11 +19,14 @@ const plannedWorkout = {
 
 describe("workout state machine", () => {
   it("completes an immediate workout with the supplied current time", () => {
-    expect(completeWorkout(plannedWorkout, {}, now)).toMatchObject({
+    expect(completeWorkout(plannedWorkout, {}, now)).toEqual({
       id: "workout-1",
       status: "COMPLETED",
+      cycleStatus: "ACTIVE",
+      hasNextCycle: false,
+      scheduledDate: new Date("2026-11-03T00:00:00Z"),
+      location: "GYM",
       completedAt: now,
-      cancellationReason: null,
     });
   });
 
@@ -45,10 +48,11 @@ describe("workout state machine", () => {
     ).toThrow(/future/);
   });
 
-  it("cancels a planned workout as a user action", () => {
-    expect(cancelWorkout(plannedWorkout)).toMatchObject({
+  it("cancels a planned workout using only the cancelled status", () => {
+    expect(cancelWorkout(plannedWorkout)).toEqual({
+      ...plannedWorkout,
       status: "CANCELLED",
-      cancellationReason: "USER",
+      completedAt: null,
     });
   });
 

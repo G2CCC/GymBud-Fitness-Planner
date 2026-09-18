@@ -124,7 +124,7 @@
 
 **Interfaces**
 
-- DashboardWorkout contains id, activityType, scheduledDate, location, durationMinutes, status, source, cancellationReason, completedAt, and rescheduleCount.
+- DashboardWorkout contains id, activityType, scheduledDate, location, durationMinutes, status, source, completedAt, and rescheduleCount.
 - DashboardResponse contains profile, an optional cycle with id, status, startDate, endDate, timezone, and reviewStatus, and a workouts array.
 - Profile endpoints use the existing ProfileInput shape and existing profileInputSchema; they do not create a second profile validation model.
 - ApiClient exposes get<T>, post<T>, patch<T>, and put<T>, all using one request method that parses ApiResponse<T> and converts non-success responses to ApiError.

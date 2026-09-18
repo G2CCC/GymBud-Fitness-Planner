@@ -42,7 +42,6 @@ const plannedWorkout: ApiWorkout = {
   location: "GYM",
   durationMinutes: 60,
   status: "PLANNED",
-  cancellationReason: null,
   completedAt: null,
   rescheduleCount: 0,
   plannedExercises,

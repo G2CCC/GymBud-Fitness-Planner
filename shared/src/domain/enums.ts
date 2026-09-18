@@ -10,9 +10,6 @@ export type Gender = (typeof genders)[number];
 export const workoutStatuses = ["PLANNED", "COMPLETED", "CANCELLED"] as const;
 export type WorkoutStatus = (typeof workoutStatuses)[number];
 
-export const cancellationReasons = ["USER", "AUTO_CYCLE_CLOSE"] as const;
-export type CancellationReason = (typeof cancellationReasons)[number];
-
 export const cycleStatuses = ["DRAFT", "ACTIVE", "CLOSED"] as const;
 export type CycleStatus = (typeof cycleStatuses)[number];
 

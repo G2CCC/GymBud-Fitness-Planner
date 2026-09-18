@@ -22,9 +22,9 @@ separate endpoint and requires an explicit `completedAt` date and time. Future
 completion timestamps are rejected. The actual timestamp is never replaced by
 the scheduled date.
 
-User cancellation stores `cancellationReason = USER`. Automatic cancellation
-at cycle review uses the existing `AUTO_CYCLE_CLOSE` reason and is handled by
-the cycle service instead.
+User cancellation and cycle-review cleanup both persist only
+`status = CANCELLED`. The system does not record which actor caused the
+cancellation.
 
 ## Log persistence
 

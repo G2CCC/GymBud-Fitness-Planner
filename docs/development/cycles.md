@@ -77,15 +77,15 @@ cycle, or generates a new plan. The cycle stays `ACTIVE` until the user
 responds. This avoids making irreversible decisions from inactivity alone.
 
 During an active cycle, an overdue planned workout stays `PLANNED`. When the
-review is submitted, unresolved planned workouts change to `CANCELLED` with
-`cancellationReason = AUTO_CYCLE_CLOSE`. The reason is persisted so the system
-can distinguish automatic review cleanup from a user's explicit cancellation.
+review is submitted, unresolved planned workouts change to `CANCELLED`.
+Cancellation has no separate reason field.
 
-Before a next cycle exists, an automatically cancelled workout may be restored
-to `PLANNED`, but a new scheduled date is required. Restoration reopens the old
-cycle so it can be resolved again. Once a newer cycle exists, the old cycle is
-read-only and restoration is rejected. The restored workout remains owned by
-the old cycle.
+Before a next cycle exists, any cancelled workout may be restored to `PLANNED`,
+but a new scheduled date is required. Restoration reopens the old cycle so it
+can be resolved again. Once a newer cycle exists, the old cycle is read-only
+and restoration is rejected. The restored workout remains owned by the old
+cycle. Any cached batch review containing that cycle is invalidated and must be
+recomputed from the restored workout data.
 
 ## Review and next-cycle draft
 

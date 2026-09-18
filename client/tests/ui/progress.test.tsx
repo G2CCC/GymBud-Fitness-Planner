@@ -49,7 +49,6 @@ describe("progress page", () => {
             location: "GYM",
             durationMinutes: 30,
             status: "COMPLETED",
-            cancellationReason: null,
             completedAt: "2026-09-03T18:00:00.000Z",
             rescheduleCount: 1,
             actualDetails: { actualDurationMinutes: 35, distanceKm: 5.2 },
