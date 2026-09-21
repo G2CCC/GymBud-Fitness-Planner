@@ -8,6 +8,7 @@ import {
   type ManualPlannedExercise,
 } from "../../src/components/workouts/StrengthPlanBuilder";
 import { WorkoutEditor } from "../../src/components/workouts/WorkoutEditor";
+import { getMondayDateKey } from "../../src/components/calendar/CalendarGrid";
 import type {
   EditorExerciseOption,
   EditorWorkout,
@@ -37,6 +38,11 @@ const exerciseOptions: EditorExerciseOption[] = [
 ];
 
 describe("calendar and workout editor UI", () => {
+  it("normalizes any selected date to the Monday of its calendar week", () => {
+    expect(getMondayDateKey("2026-09-23")).toBe("2026-09-21");
+    expect(getMondayDateKey("2026-09-27")).toBe("2026-09-21");
+  });
+
   it("shows an overdue label for a planned workout whose date has passed", () => {
     render(
       <WorkoutCard

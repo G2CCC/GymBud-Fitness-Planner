@@ -12,6 +12,14 @@ export type CalendarGridProps = {
 
 function dateKey(value: Date): string { return value.toISOString().slice(0, 10); }
 
+export function getMondayDateKey(value: string): string {
+  const date = new Date(value + "T00:00:00.000Z");
+  const day = date.getUTCDay();
+  const daysSinceMonday = day === 0 ? 6 : day - 1;
+  date.setUTCDate(date.getUTCDate() - daysSinceMonday);
+  return dateKey(date);
+}
+
 export function CalendarGrid({ cycle, onSelectWorkout }: CalendarGridProps) {
   const workouts = new Map(cycle.workouts.map((workout) => [workout.id, workout]));
   const events = cycle.workouts.map((workout) => ({
@@ -35,10 +43,10 @@ export function CalendarGrid({ cycle, onSelectWorkout }: CalendarGridProps) {
     <section aria-label="Weekly training calendar" className="grid gap-3">
       <FullCalendar
         plugins={[dayGridPlugin]}
-        initialView="dayGrid"
-        views={{ dayGrid: { type: "dayGrid", duration: { days: 7 } } }}
-        initialDate={cycle.startDate.slice(0, 10)}
-        dateIncrement={{ days: 7 }}
+        initialView="dayGridWeek"
+        firstDay={1}
+        initialDate={getMondayDateKey(cycle.startDate.slice(0, 10))}
+        dateIncrement={{ weeks: 1 }}
         headerToolbar={{ left: "prev,next today", center: "title", right: "" }}
         events={events}
         eventContent={renderEvent}
