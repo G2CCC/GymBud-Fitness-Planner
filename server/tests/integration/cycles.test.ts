@@ -45,7 +45,7 @@ describe.skipIf(!hasDatabase)("cycle persistence", () => {
     await db.$disconnect();
   });
 
-  it("creates a four-week draft with deterministic first-week dates", async () => {
+  it("creates a seven-day draft with deterministic training dates", async () => {
     const draft = await service.createDraft(
       userId,
       {
@@ -57,7 +57,7 @@ describe.skipIf(!hasDatabase)("cycle persistence", () => {
     );
 
     expect(draft.status).toBe("DRAFT");
-    expect(draft.endDate).toEqual(new Date("2026-11-04T00:00:00Z"));
+    expect(draft.endDate).toEqual(new Date("2026-10-14T00:00:00Z"));
     expect(draft.firstWeekDates.map((date) => date.toISOString().slice(0, 10))).toEqual([
       "2026-10-08",
       "2026-10-11",
@@ -75,7 +75,7 @@ describe.skipIf(!hasDatabase)("cycle persistence", () => {
     expect(active.cycleNumber).toBe(1);
     expect(active.timezone).toBe("Pacific/Auckland");
     expect(active.startDate).toEqual(new Date("2026-10-08T00:00:00Z"));
-    expect(active.endDate).toEqual(new Date("2026-11-04T00:00:00Z"));
+    expect(active.endDate).toEqual(new Date("2026-10-14T00:00:00Z"));
   });
 
   it("closes, auto-cancels, and restores a workout before the next cycle exists", async () => {
@@ -163,18 +163,6 @@ describe.skipIf(!hasDatabase)("cycle persistence", () => {
       status: "CANCELLED",
     });
 
-    await db.cycleBatchReview.create({
-      data: {
-        userId: lifecycleUserId,
-        startCycleNumber: 1,
-        endCycleNumber: 4,
-        status: "READY",
-        processedSummary: "stale summary",
-        objectiveSummary: {},
-        conclusions: {},
-      },
-    });
-
     const restored = await service.restoreCancelledWorkout(
       lifecycleUserId,
       cycle.id,
@@ -184,12 +172,6 @@ describe.skipIf(!hasDatabase)("cycle persistence", () => {
 
     expect(restored.status).toBe("PLANNED");
     expect(restored.scheduledDate).toEqual(new Date("2026-10-08T00:00:00Z"));
-    expect(
-      await db.cycleBatchReview.count({
-        where: { userId: lifecycleUserId },
-      }),
-    ).toBe(0);
-
     const manuallyCancelledWorkout = cycle.workouts.find(
       (workout) => workout.status === "CANCELLED",
     );

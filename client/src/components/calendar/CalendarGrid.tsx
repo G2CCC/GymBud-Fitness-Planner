@@ -1,3 +1,6 @@
+import FullCalendar from "@fullcalendar/react";
+import dayGridPlugin from "@fullcalendar/daygrid";
+import type { EventClickArg, EventContentArg } from "@fullcalendar/core";
 import type { ApiCycle } from "../../api/contracts";
 import { WorkoutCard, type CalendarWorkout } from "./WorkoutCard";
 
@@ -7,79 +10,42 @@ export type CalendarGridProps = {
   onSelectWorkout: (workout: CalendarWorkout) => void;
 };
 
-function dateKey(value: Date): string {
-  return value.toISOString().slice(0, 10);
-}
+function dateKey(value: Date): string { return value.toISOString().slice(0, 10); }
 
-function cycleDates(startDate: string): string[] {
-  const start = new Date(startDate);
-  return Array.from({ length: 28 }, (_, index) => {
-    const date = new Date(start);
-    date.setUTCDate(start.getUTCDate() + index);
-    return dateKey(date);
-  });
-}
+export function CalendarGrid({ cycle, onSelectWorkout }: CalendarGridProps) {
+  const workouts = new Map(cycle.workouts.map((workout) => [workout.id, workout]));
+  const events = cycle.workouts.map((workout) => ({
+    id: workout.id,
+    title: workout.activityType,
+    date: dateKey(new Date(workout.scheduledDate)),
+    extendedProps: { workout },
+  }));
 
-function formatDate(date: string): string {
-  return new Intl.DateTimeFormat(undefined, {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-  }).format(new Date(date + "T00:00:00"));
-}
+  function renderEvent(content: EventContentArg) {
+    const workout = content.event.extendedProps.workout as CalendarWorkout;
+    return <WorkoutCard workout={workout} onSelect={onSelectWorkout} />;
+  }
 
-export function CalendarGrid({
-  cycle,
-  today = dateKey(new Date()),
-  onSelectWorkout,
-}: CalendarGridProps) {
-  const workoutsByDate = new Map<string, CalendarWorkout[]>();
-  for (const workout of cycle.workouts) {
-    const key = dateKey(new Date(workout.scheduledDate));
-    const workouts = workoutsByDate.get(key) ?? [];
-    workouts.push(workout);
-    workoutsByDate.set(key, workouts);
+  function handleClick(info: EventClickArg) {
+    const workout = workouts.get(info.event.id);
+    if (workout) onSelectWorkout(workout);
   }
 
   return (
-    <section aria-label="Four-week training calendar" className="grid gap-3">
-      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-        {cycleDates(cycle.startDate).map((date) => (
-          <article
-            key={date}
-            className={
-              "grid min-h-36 content-start gap-3 rounded-[var(--radius-card)] border p-3 " +
-              (date === today
-                ? "border-gymbud-accent-strong bg-gymbud-surface"
-                : "border-gymbud-border bg-gymbud-surface/75")
-            }
-          >
-            <header className="flex items-center justify-between gap-2">
-              <h2 className="text-sm font-semibold text-gymbud-ink">
-                {formatDate(date)}
-              </h2>
-              {date === today ? (
-                <span className="rounded-full bg-gymbud-accent-soft px-2 py-1 text-[0.7rem] font-semibold text-gymbud-ink">
-                  Today
-                </span>
-              ) : null}
-            </header>
-            <div className="grid gap-2">
-              {(workoutsByDate.get(date) ?? []).map((workout) => (
-                <WorkoutCard
-                  key={workout.id}
-                  workout={workout}
-                  today={today}
-                  onSelect={onSelectWorkout}
-                />
-              ))}
-              {(workoutsByDate.get(date) ?? []).length === 0 ? (
-                <p className="py-3 text-xs text-gymbud-muted">Rest day</p>
-              ) : null}
-            </div>
-          </article>
-        ))}
-      </div>
+    <section aria-label="Weekly training calendar" className="grid gap-3">
+      <FullCalendar
+        plugins={[dayGridPlugin]}
+        initialView="dayGrid"
+        views={{ dayGrid: { type: "dayGrid", duration: { days: 7 } } }}
+        initialDate={cycle.startDate.slice(0, 10)}
+        dateIncrement={{ days: 7 }}
+        headerToolbar={{ left: "prev,next today", center: "title", right: "" }}
+        events={events}
+        eventContent={renderEvent}
+        eventClick={handleClick}
+        height="auto"
+        dayMaxEvents={4}
+      />
     </section>
   );
 }

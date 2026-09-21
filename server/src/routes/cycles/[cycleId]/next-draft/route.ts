@@ -34,7 +34,7 @@ nextCycleDraftRouter.post<{ cycleId: string }>("/", async (request, response) =>
 
   try {
     const userId = getAuthenticatedUserId(request);
-    const result = await reviewService.generateBatchNextCycleDraft(
+    const result = await reviewService.generateNextWeeklyDraft(
       userId,
       request.params.cycleId,
       parsed.data.reviewId,

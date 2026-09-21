@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import {
-  aggregateCycleTrainingVolumes,
   buildCycleTrainingVolume,
   compareCycleTrainingVolume,
   type CycleTrainingVolumeInput,
@@ -121,20 +120,4 @@ describe("cycle training volume", () => {
     });
   });
 
-  it("aggregates exactly four cycles without including an outside cycle", () => {
-    const current = buildCycleTrainingVolume(input);
-    const batch = aggregateCycleTrainingVolumes({
-      startCycleNumber: 5,
-      endCycleNumber: 8,
-      cycles: [5, 6, 7, 8].map((cycleNumber) => ({
-        cycleNumber,
-        trainingVolume: { ...current, cycleId: `cycle-${cycleNumber}` },
-      })),
-    });
-
-    expect(batch.cycles).toHaveLength(4);
-    expect(batch.cycles.map((cycle) => cycle.cycleNumber)).toEqual([5, 6, 7, 8]);
-    expect(batch.aggregate.completedWorkoutCount).toBe(16);
-    expect(batch.aggregate.cardio.actualDistanceKm).toBe(20);
-  });
 });

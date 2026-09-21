@@ -32,7 +32,6 @@ function cycle(overrides: Partial<ApiCycle> = {}): ApiCycle {
     timezone: "Pacific/Auckland",
     reviewStatus: null,
     reviewAvailable: false,
-    batchReviewStatus: null,
     workouts: [],
     ...overrides,
   };
@@ -108,18 +107,6 @@ describe("today view model", () => {
   it.each([
     ["active review status", { reviewStatus: reviewStatus() }],
     ["closed cycle review", { reviewAvailable: true }],
-    [
-      "eligible batch review",
-      {
-        batchReviewStatus: {
-          eligible: true,
-          reviewId: null,
-          startCycleNumber: 1,
-          endCycleNumber: 4,
-          status: "ELIGIBLE" as const,
-        },
-      },
-    ],
   ])("prioritizes %s over workout actions", (_label, overrides) => {
     const result = buildTodayViewModel(
       cycle({ workouts: [workout("today", "2026-09-15T00:00:00.000Z")], ...overrides }),
@@ -131,27 +118,6 @@ describe("today view model", () => {
       expect(result.todayWorkouts).toHaveLength(1);
       expect(result.reviewLabel).toMatch(/review/i);
       expect(result.summary.completedSessions).toBe(0);
-    }
-  });
-
-  it("names an eligible four-cycle batch when its bounds are valid", () => {
-    const result = buildTodayViewModel(
-      cycle({
-        status: "CLOSED",
-        batchReviewStatus: {
-          eligible: true,
-          reviewId: null,
-          startCycleNumber: 5,
-          endCycleNumber: 8,
-          status: "ELIGIBLE",
-        },
-      }),
-      now,
-    );
-
-    expect(result.kind).toBe("REVIEW_REQUIRED");
-    if (result.kind === "REVIEW_REQUIRED") {
-      expect(result.reviewLabel).toContain("5–8");
     }
   });
 
@@ -310,7 +276,7 @@ describe("today page", () => {
     renderToday();
 
     expect(await screen.findByText(/review required/i)).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /review cycle/i })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: /review this week/i })).toHaveAttribute(
       "href",
       "/review/cycle-1",
     );

@@ -19,9 +19,9 @@ calendar dates. A new cycle can snapshot the new system timezone.
 
 ## Scheduling
 
-GymBud creates a four-week draft from the user's current local calendar date.
-The cycle contains 28 inclusive days, so `endDate = startDate + 27 days`. The
-fourth week's last day is therefore the cycle end date.
+GymBud creates a seven-day draft from the user's current local calendar date.
+The cycle contains seven inclusive days, so `endDate = startDate + 6 days`. The
+last day is therefore the cycle end date.
 
 The first week's training dates are suggestions derived from the user's weekly
 training-day count. They are spread across the seven-day window, while the

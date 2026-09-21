@@ -16,11 +16,11 @@ function cycle(overrides: Partial<ApiCycle> = {}): ApiCycle {
     status: "ACTIVE",
     cycleNumber: 1,
     startDate: "2026-09-01T00:00:00.000Z",
-    endDate: "2026-09-28T00:00:00.000Z",
+    endDate: "2026-09-07T00:00:00.000Z",
     timezone: "UTC",
     reviewStatus: null,
     reviewAvailable: false,
-    batchReviewStatus: null,
+    weeklyReview: null,
     workouts: [],
     ...overrides,
   };

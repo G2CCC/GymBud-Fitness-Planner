@@ -177,7 +177,7 @@ export function CalendarPage() {
   }
 
   if (loading) {
-    return <PageMessage message="Loading your four-week calendar…" />;
+    return <PageMessage message="Loading your weekly calendar…" />;
   }
 
   if (error) {
@@ -208,7 +208,7 @@ export function CalendarPage() {
             Your training calendar
           </h1>
           <p className="mt-2 text-sm text-gymbud-muted">
-            Four weeks, one clear place to adjust the plan.
+            One week at a time, with a clear place to adjust the plan.
           </p>
         </div>
         {cycle.reviewStatus?.reviewRequired || cycle.reviewAvailable ? (
@@ -217,15 +217,6 @@ export function CalendarPage() {
             to={"/review/" + cycle.id}
           >
             Review cycle
-          </Link>
-        ) : null}
-        {cycle.batchReviewStatus?.eligible ? (
-          <Link
-            className="focus-ring rounded-[var(--radius-control)] border border-gymbud-border px-4 py-3 text-sm font-semibold text-gymbud-ink"
-            to={"/review/" + cycle.id}
-          >
-            Review cycles {cycle.batchReviewStatus.startCycleNumber}–
-            {cycle.batchReviewStatus.endCycleNumber}
           </Link>
         ) : null}
       </header>

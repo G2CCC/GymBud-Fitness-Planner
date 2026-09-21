@@ -64,7 +64,7 @@ export function createDeterministicFakeAiClient(): AiClient {
   return new FakeAiClient((request: AiRequest) => {
     const feature = request.metadata?.feature;
 
-    if (feature === "four-week-plan") {
+    if (feature === "weekly-plan") {
       const context = parsePrompt(request);
       const cycle = context.cycle ?? {};
       const profile = context.profile ?? {};
@@ -87,7 +87,7 @@ export function createDeterministicFakeAiClient(): AiClient {
       };
     }
 
-    if (feature === "cycle-review" || feature === "four-cycle-review") {
+    if (feature === "weekly-review") {
       return {
         processedSummary: "The actual training volume is ready for review.",
         conclusions: {

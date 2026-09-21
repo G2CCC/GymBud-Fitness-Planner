@@ -1,7 +1,6 @@
 import type { AiRequest } from "../client";
 import type {
   CycleTrainingVolume,
-  CycleTrainingVolumeAggregate,
 } from "@fitness/shared/domain/reviews/cycle-volume";
 import type { Gender } from "@fitness/shared";
 
@@ -28,7 +27,7 @@ export type PlanPromptInput = {
   reviewContext?: {
     processedSummary: string | null;
     conclusions: unknown;
-    trainingVolume: CycleTrainingVolume | CycleTrainingVolumeAggregate;
+    trainingVolume: CycleTrainingVolume;
   };
   model: string;
 };
@@ -78,17 +77,17 @@ export function buildPlanRequest(input: PlanPromptInput): AiRequest {
     model: input.model,
     promptVersion: PLAN_PROMPT_VERSION,
     systemPrompt: [
-      "You generate a four-week fitness plan as JSON only.",
+      "You generate a seven-day weekly fitness plan as JSON only.",
       "Use only exercise IDs from the supplied legal exercise pool.",
       "Strength workouts must contain at least one exercise and one planned set per exercise.",
       "Do not return RPE, subjective feedback, or unknown fields.",
-      "Keep every scheduled date within the inclusive cycle dates.",
+      "Keep every scheduled date within the inclusive seven-day cycle dates.",
       "Use the supplied body context as planning context; never invent or reinterpret values.",
       "Do not infer medical diagnoses, calorie prescriptions, nutrition plans, or unsupported safety claims from body context.",
     ].join(" "),
     userPrompt: JSON.stringify(context),
     metadata: {
-      feature: "four-week-plan",
+      feature: "weekly-plan",
       cycleId: input.cycleId,
     },
   };

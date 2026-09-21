@@ -15,13 +15,13 @@ describe("deterministic fake AI client", () => {
           cycle: {
             id: "cycle-e2e",
             startDate: "2026-09-15T00:00:00.000Z",
-            endDate: "2026-10-12T00:00:00.000Z",
+        endDate: "2026-09-21T00:00:00.000Z",
           },
           profile: {
             sessionDurationMinutes: 45,
           },
         }),
-        metadata: { feature: "four-week-plan" },
+        metadata: { feature: "weekly-plan" },
       },
       planResponseSchema,
     );
@@ -44,7 +44,7 @@ describe("deterministic fake AI client", () => {
         promptVersion: "cycle-review.v2",
         systemPrompt: "",
         userPrompt: "{}",
-        metadata: { feature: "cycle-review" },
+        metadata: { feature: "weekly-review" },
       },
       cycleReviewResponseSchema,
     );

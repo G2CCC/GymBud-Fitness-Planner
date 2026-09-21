@@ -49,7 +49,7 @@ export function PlanChoice({
             Generate a plan with AI
           </span>
           <span className="text-sm leading-6 text-gymbud-muted">
-            Review the four-week draft before anything is added to your
+            Review the weekly draft before anything is added to your
             calendar.
           </span>
         </button>

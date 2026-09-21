@@ -94,7 +94,7 @@ const planWorkoutSchema = z.object({
 }).strict();
 
 export const planResponseSchema = z.object({
-  workouts: z.array(planWorkoutSchema).min(1).max(28),
+  workouts: z.array(planWorkoutSchema).min(1).max(7),
 }).strict();
 
 export const planDraftExerciseSchema = planExerciseSchema.extend({
@@ -110,7 +110,7 @@ export const planDraftSchema = z.object({
   cycleId: z.string().trim().min(1),
   model: z.string().trim().min(1),
   promptVersion: z.string().trim().min(1),
-  workouts: z.array(planDraftWorkoutSchema).min(1).max(28),
+  workouts: z.array(planDraftWorkoutSchema).min(1).max(7),
 }).strict();
 
 export type PlanResponse = z.infer<typeof planResponseSchema>;

@@ -10,7 +10,6 @@ import { db } from "../../db";
 import { z } from "zod";
 import { cycleReviewRouter } from "./[cycleId]/review/route";
 import { nextCycleDraftRouter } from "./[cycleId]/next-draft/route";
-import { batchReviewRouter } from "./[cycleId]/batch-review/route";
 import { createConfiguredAiClient } from "../../ai/client";
 import { CycleReviewService } from "../../reviews/service";
 
@@ -62,9 +61,9 @@ cycleRouter.get("/current", async (request, response) => {
       cycle.status === "ACTIVE"
         ? await cycleService.getReviewStatus(userId, cycle.id)
         : null;
-    const batchReviewStatus =
-      cycle.status === "CLOSED"
-        ? await cycleReviewService.getBatchReviewStatus(userId, cycle.id)
+    const weeklyReview =
+      cycle.status === "ACTIVE" || cycle.status === "CLOSED"
+        ? await cycleReviewService.processDueWeeklyCycle(userId, cycle.id)
         : null;
 
     return response.json({
@@ -86,10 +85,8 @@ cycleRouter.get("/current", async (request, response) => {
             })),
           })),
           reviewStatus,
-          reviewAvailable:
-            cycle.status === "CLOSED" &&
-            reviewSnapshot?.processedSummary == null,
-          batchReviewStatus,
+          reviewAvailable: weeklyReview !== null,
+          weeklyReview,
         },
       },
     });
@@ -200,7 +197,6 @@ cycleRouter.post(
 );
 
 cycleRouter.use("/:cycleId/review", cycleReviewRouter);
-cycleRouter.use("/:cycleId/batch-review", batchReviewRouter);
 cycleRouter.use("/:cycleId/next-draft", nextCycleDraftRouter);
 
 function sendRouteError(response: Response, error: unknown) {

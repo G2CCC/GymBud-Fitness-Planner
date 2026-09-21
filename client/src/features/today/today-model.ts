@@ -99,21 +99,12 @@ function hasDueReview(cycle: ApiCycle): boolean {
   return (
     cycle.reviewStatus?.reviewRequired === true ||
     cycle.reviewAvailable === true ||
-    cycle.batchReviewStatus?.eligible === true
+    cycle.weeklyReview != null
   );
 }
 
 function getReviewLabel(cycle: ApiCycle): string {
-  const batch = cycle.batchReviewStatus;
-  if (
-    batch?.eligible === true &&
-    Number.isInteger(batch.startCycleNumber) &&
-    Number.isInteger(batch.endCycleNumber)
-  ) {
-    return `Review cycles ${batch.startCycleNumber}–${batch.endCycleNumber}`;
-  }
-
-  return "Review cycle";
+  return "Review this week";
 }
 
 function selectFocusWorkout(

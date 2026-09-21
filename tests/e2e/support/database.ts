@@ -28,7 +28,6 @@ export async function resetE2eData(): Promise<void> {
   }
 
   const { db } = await import("../../../server/src/db");
-  await db.cycleBatchReview.deleteMany({ where: { userId: e2eUserId } });
   await db.scheduledWorkout.deleteMany({ where: { userId: e2eUserId } });
   await db.trainingCycle.deleteMany({ where: { userId: e2eUserId } });
 }
@@ -36,8 +35,8 @@ export async function resetE2eData(): Promise<void> {
 export async function createExpiredCycleFixture() {
   const { db } = await import("../../../server/src/db");
   const now = new Date();
-  const startDate = startOfUtcDay(addDays(now, -28));
-  const endDate = addDays(startDate, 27);
+  const startDate = startOfUtcDay(addDays(now, -7));
+  const endDate = addDays(startDate, 6);
 
   const cycle = await db.trainingCycle.create({
     data: {

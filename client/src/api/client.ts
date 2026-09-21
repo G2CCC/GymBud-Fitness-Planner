@@ -9,9 +9,7 @@ import {
 import type {
   ApiCycle,
   ApiActiveCycle,
-  ApiCycleBatchReviewResult,
   ApiCycleReviewResult,
-  ApiBatchReviewStatus,
   ApiCycleDraft,
   ApiExercise,
   ApiNextCycleDraft,
@@ -211,31 +209,12 @@ export async function backfillWorkout(
   );
 }
 
-export async function generateCycleReview(
+export async function processWeeklyReview(
   cycleId: string,
-  summary?: string,
-): Promise<ApiCycleReviewResult> {
+): Promise<ApiCycleReviewResult | null> {
   return request<ApiCycleReviewResult>(
     "/cycles/" + cycleId + "/review",
-    jsonBody(summary?.trim() ? { summary: summary.trim() } : {}),
-  );
-}
-
-export async function getBatchReviewStatus(
-  cycleId: string,
-): Promise<ApiBatchReviewStatus> {
-  return request<ApiBatchReviewStatus>(
-    "/cycles/" + cycleId + "/batch-review",
-  );
-}
-
-export async function generateBatchReview(
-  cycleId: string,
-  summary?: string,
-): Promise<ApiCycleBatchReviewResult> {
-  return request<ApiCycleBatchReviewResult>(
-    "/cycles/" + cycleId + "/batch-review",
-    jsonBody(summary?.trim() ? { summary: summary.trim() } : {}),
+    jsonBody({}),
   );
 }
 

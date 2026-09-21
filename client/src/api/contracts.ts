@@ -66,7 +66,7 @@ export type ApiCycle = {
   timezone: string | null;
   reviewStatus: CycleReviewStatus | null;
   reviewAvailable: boolean;
-  batchReviewStatus: ApiBatchReviewStatus | null;
+  weeklyReview: ApiWeeklyReviewResult | null;
   workouts: ApiWorkout[];
 };
 
@@ -129,7 +129,6 @@ export type ApiCycleReviewResult = {
   cycleNumber: number;
   cycleStatus: "CLOSED";
   trainingVolume: Record<string, unknown>;
-  objectiveSummary: Record<string, unknown>;
   previousCycle: Record<string, unknown> | null;
   processedSummary: string;
   conclusions: {
@@ -137,46 +136,12 @@ export type ApiCycleReviewResult = {
     keyFindings: string[];
     recommendations: string[];
   };
-  nextCycleEligibility: "BATCH_REVIEW_REQUIRED" | "RESET_REQUIRED";
-  nextCycleDraftStatus: "NOT_AVAILABLE";
-  batchReview: {
-    eligible: boolean;
-    reviewId: string | null;
-    status:
-      | "NOT_ELIGIBLE"
-      | "ELIGIBLE"
-      | "GENERATING"
-      | "READY"
-      | "RESET_REQUIRED";
-  };
+  nextCycleEligibility: "READY" | "RESET_REQUIRED";
+  nextWeeklyDraftStatus: "NOT_AVAILABLE" | "PENDING" | "READY";
+  nextWeeklyDraft: ApiNextCycleDraft | null;
 };
 
-export type ApiBatchReviewStatus = {
-  eligible: boolean;
-  reviewId: string | null;
-  startCycleNumber: number | null;
-  endCycleNumber: number | null;
-  status:
-    | "NOT_ELIGIBLE"
-    | "ELIGIBLE"
-    | "GENERATING"
-    | "READY"
-    | "RESET_REQUIRED";
-};
-
-export type ApiCycleBatchReviewResult = {
-  reviewId: string;
-  startCycleNumber: number;
-  endCycleNumber: number;
-  batchVolume: Record<string, unknown>;
-  processedSummary: string;
-  conclusions: {
-    status: "CONTINUE" | "ADJUST_PLAN" | "RESET_REQUIRED";
-    keyFindings: string[];
-    recommendations: string[];
-  };
-  nextCycleDraftStatus: "PENDING" | "READY" | "RESET_REQUIRED";
-};
+export type ApiWeeklyReviewResult = ApiCycleReviewResult;
 
 export type ApiNextCycleDraft = {
   reviewId: string;

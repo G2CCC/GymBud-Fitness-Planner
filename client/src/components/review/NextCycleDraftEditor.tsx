@@ -41,6 +41,49 @@ export function NextCycleDraftEditor({
       <p className="text-sm text-gymbud-muted">
         Review the AI draft before adding it to your calendar.
       </p>
+      {value.plan ? (
+        <div className="grid gap-3" aria-label="Weekly workout draft">
+          {value.plan.workouts.map((workout, index) => (
+            <fieldset key={`${workout.scheduledDate}-${index}`} className="grid gap-2 rounded-[var(--radius-control)] border border-gymbud-border p-3">
+              <legend className="px-1 text-sm font-semibold text-gymbud-ink">
+                {workout.activityType} workout {index + 1}
+              </legend>
+              <label className="grid gap-1 text-xs font-semibold text-gymbud-ink">
+                Date
+                <input
+                  className="min-h-10 rounded-[var(--radius-control)] border border-gymbud-border bg-gymbud-surface px-3"
+                  type="date"
+                  value={workout.scheduledDate.slice(0, 10)}
+                  onChange={(event) => setValue((current) => current.plan ? {
+                    ...current,
+                    plan: {
+                      ...current.plan,
+                      workouts: current.plan.workouts.map((item, itemIndex) => itemIndex === index ? { ...item, scheduledDate: `${event.target.value}T00:00:00.000Z` } : item),
+                    },
+                  } : current)}
+                />
+              </label>
+              <label className="grid gap-1 text-xs font-semibold text-gymbud-ink">
+                Minutes
+                <input
+                  className="min-h-10 rounded-[var(--radius-control)] border border-gymbud-border bg-gymbud-surface px-3"
+                  type="number"
+                  min={1}
+                  max={600}
+                  value={workout.durationMinutes}
+                  onChange={(event) => setValue((current) => current.plan ? {
+                    ...current,
+                    plan: {
+                      ...current.plan,
+                      workouts: current.plan.workouts.map((item, itemIndex) => itemIndex === index ? { ...item, durationMinutes: Number(event.target.value) } : item),
+                    },
+                  } : current)}
+                />
+              </label>
+            </fieldset>
+          ))}
+        </div>
+      ) : null}
       <label className="grid gap-2 text-sm font-medium text-gymbud-ink">
         Cycle title
         <input

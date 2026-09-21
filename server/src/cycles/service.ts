@@ -69,7 +69,7 @@ export class CycleService {
     }
 
     const startDate = startOfLocalDate(now, profile.timezone);
-    const endDate = addUtcDays(startDate, 27);
+    const endDate = addUtcDays(startDate, 6);
     const firstWeekDates = distributeFirstWeek(
       startDate,
       profile.weeklyTrainingDays,
@@ -123,7 +123,7 @@ export class CycleService {
     now = new Date(),
   ): Promise<ActiveCycle> {
     const startDate = startOfLocalDate(now, timezone);
-    const endDate = addUtcDays(startDate, 27);
+    const endDate = addUtcDays(startDate, 6);
 
     return this.prisma.$transaction(async (tx) => {
       const cycle = await tx.trainingCycle.findFirst({
@@ -497,16 +497,6 @@ export class CycleService {
       });
 
       await tx.cycleReviewSnapshot.deleteMany({ where: { cycleId } });
-
-      if (cycle.cycleNumber !== null) {
-        await tx.cycleBatchReview.deleteMany({
-          where: {
-            userId,
-            startCycleNumber: { lte: cycle.cycleNumber },
-            endCycleNumber: { gte: cycle.cycleNumber },
-          },
-        });
-      }
 
       return {
         id: workoutId,

@@ -26,12 +26,10 @@ export default async function globalSetup(_config: FullConfig) {
 }
 
 async function resetDatabase(database: {
-  cycleBatchReview: { deleteMany: (args: { where: { userId: string } }) => Promise<unknown> };
   scheduledWorkout: { deleteMany: (args: { where: { userId: string } }) => Promise<unknown> };
   trainingCycle: { deleteMany: (args: { where: { userId: string } }) => Promise<unknown> };
 }) {
   const userId = process.env.E2E_USER_ID ?? "e2e-demo-user";
-  await database.cycleBatchReview.deleteMany({ where: { userId } });
   await database.scheduledWorkout.deleteMany({ where: { userId } });
   await database.trainingCycle.deleteMany({ where: { userId } });
 }

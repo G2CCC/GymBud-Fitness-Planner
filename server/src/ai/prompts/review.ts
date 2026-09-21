@@ -4,8 +4,7 @@ import type {
 } from "@fitness/shared/domain/reviews/cycle-volume";
 import type { AiRequest } from "../client";
 
-export const CYCLE_REVIEW_PROMPT_VERSION = "cycle-review.v2";
-export const FOUR_CYCLE_REVIEW_PROMPT_VERSION = "four-cycle-review.v1";
+export const WEEKLY_REVIEW_PROMPT_VERSION = "weekly-review.v1";
 
 export type PreviousCycleReviewContext = {
   cycleNumber: number;
@@ -18,21 +17,9 @@ export type CycleReviewPromptInput = {
   cycleNumber: number;
   trainingVolume: CycleTrainingVolume;
   previousCycle?: PreviousCycleReviewContext;
-  optionalUserSummary?: string;
 };
 
-export type CycleBatchReviewPromptInput = {
-  model: string;
-  startCycleNumber: number;
-  endCycleNumber: number;
-  cycleVolumes: Array<{
-    cycleNumber: number;
-    trainingVolume: CycleTrainingVolume;
-  }>;
-  optionalUserSummary?: string;
-};
-
-export function buildCycleReviewRequest(
+export function buildWeeklyReviewRequest(
   input: CycleReviewPromptInput,
 ): AiRequest {
   const context: Record<string, unknown> = {
@@ -44,16 +31,11 @@ export function buildCycleReviewRequest(
     context.previousCycle = input.previousCycle;
   }
 
-  const optionalUserSummary = input.optionalUserSummary?.trim();
-  if (optionalUserSummary) {
-    context.userSummary = optionalUserSummary;
-  }
-
   return {
     model: input.model,
-    promptVersion: CYCLE_REVIEW_PROMPT_VERSION,
+    promptVersion: WEEKLY_REVIEW_PROMPT_VERSION,
     systemPrompt: [
-      "You review one completed fitness cycle as JSON only.",
+      "You review one completed weekly fitness cycle as JSON only.",
       "Use actual training volume as the source of truth.",
       "Do not infer whether a workout came from AI or the user.",
       "Do not invent planned workouts, measurements, or subjective feedback.",
@@ -63,42 +45,9 @@ export function buildCycleReviewRequest(
     ].join(" "),
     userPrompt: JSON.stringify(context),
     metadata: {
-      feature: "cycle-review",
+      feature: "weekly-review",
       cycleNumber: String(input.cycleNumber),
       cycleId: input.trainingVolume.cycleId,
-    },
-  };
-}
-
-export function buildCycleBatchReviewRequest(
-  input: CycleBatchReviewPromptInput,
-): AiRequest {
-  const context: Record<string, unknown> = {
-    startCycleNumber: input.startCycleNumber,
-    endCycleNumber: input.endCycleNumber,
-    cycleVolumes: input.cycleVolumes,
-  };
-
-  const optionalUserSummary = input.optionalUserSummary?.trim();
-  if (optionalUserSummary) {
-    context.userSummary = optionalUserSummary;
-  }
-
-  return {
-    model: input.model,
-    promptVersion: FOUR_CYCLE_REVIEW_PROMPT_VERSION,
-    systemPrompt: [
-      "You review exactly one fixed four-cycle fitness batch as JSON only.",
-      "Use only the four supplied cycles and their actual training volumes.",
-      "Never accumulate or infer volume from cycles outside this batch.",
-      "Do not infer workout source, planned workouts, or unsupported subjective feedback.",
-      "Return processedSummary and concise keyFindings and recommendations.",
-    ].join(" "),
-    userPrompt: JSON.stringify(context),
-    metadata: {
-      feature: "four-cycle-review",
-      startCycleNumber: String(input.startCycleNumber),
-      endCycleNumber: String(input.endCycleNumber),
     },
   };
 }

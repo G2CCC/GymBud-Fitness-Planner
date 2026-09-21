@@ -33,14 +33,6 @@ enum CycleStatus {
   CLOSED
 }
 
-enum CycleBatchReviewStatus {
-  ELIGIBLE
-  GENERATING
-  READY
-  CONFIRMED
-  RESET_REQUIRED
-}
-
 enum WeightUnit {
   KG
   LB
@@ -53,7 +45,6 @@ model User {
   createdAt         DateTime           @default(now())
   profile           UserProfile?
   cycles            TrainingCycle[]
-  batchReviews      CycleBatchReview[]
   scheduledWorkouts ScheduledWorkout[]
   exercises         Exercise[]
   recommendations   AIRecommendation[]
@@ -229,23 +220,4 @@ model CycleReviewSnapshot {
   reviewedAt           DateTime?
   createdAt            DateTime      @default(now())
   updatedAt            DateTime      @updatedAt
-}
-
-model CycleBatchReview {
-  id               String                 @id @default(cuid())
-  userId           String
-  user             User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  startCycleNumber Int
-  endCycleNumber   Int
-  status           CycleBatchReviewStatus @default(ELIGIBLE)
-  processedSummary String?
-  objectiveSummary Json
-  conclusions      Json?
-  nextCycleDraft   Json?
-  reviewedAt       DateTime?
-  createdAt        DateTime               @default(now())
-  updatedAt        DateTime               @updatedAt
-
-  @@unique([userId, startCycleNumber, endCycleNumber])
-  @@index([userId, status])
 }

@@ -1,5 +1,4 @@
 import { Router, type Response } from "express";
-import { z } from "zod";
 import { createConfiguredAiClient } from "../../../../ai/client";
 import {
   CycleReviewService,
@@ -9,10 +8,6 @@ import { CycleService } from "../../../../cycles/service";
 import { PlanService } from "../../../../ai/plan-service";
 import { getAuthenticatedUserId } from "../../../../current-user";
 import { db } from "../../../../db";
-
-const inputSchema = z.object({
-  summary: z.string().trim().max(5000).optional(),
-}).strict();
 
 const aiClient = createConfiguredAiClient();
 const reviewService = new CycleReviewService(
@@ -25,19 +20,11 @@ const reviewService = new CycleReviewService(
 export const cycleReviewRouter = Router({ mergeParams: true });
 
 cycleReviewRouter.post<{ cycleId: string }>("/", async (request, response) => {
-  const parsed = inputSchema.safeParse(request.body ?? {});
-  if (!parsed.success) {
-    return response.status(400).json({
-      error: { code: "VALIDATION_ERROR", message: parsed.error.message },
-    });
-  }
-
   try {
     const userId = getAuthenticatedUserId(request);
-    const result = await reviewService.generateCycleReview(
+    const result = await reviewService.processDueWeeklyCycle(
       userId,
       request.params.cycleId,
-      parsed.data.summary,
     );
     return response.json({ data: result });
   } catch (error) {

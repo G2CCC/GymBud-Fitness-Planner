@@ -76,7 +76,7 @@ export function ProgressPage() {
   const reviewRequired =
     cycle.reviewStatus?.reviewRequired === true ||
     cycle.reviewAvailable ||
-    cycle.batchReviewStatus?.eligible === true;
+    cycle.weeklyReview != null;
 
   return (
     <main className="mx-auto grid max-w-5xl gap-6 px-4 py-6 sm:px-8">

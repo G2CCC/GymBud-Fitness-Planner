@@ -233,7 +233,7 @@ function ClosedCycleState({
       <CycleSummary summary={model.summary} />
       <EmptyPanel
         title="Ready for your next cycle?"
-        message="Start a new setup flow when you are ready to plan your next four weeks."
+        message="Start a new setup flow when you are ready to plan your next week."
         action={
           <Link className="button-primary focus-ring" to="/onboarding">
             Start next cycle

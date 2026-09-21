@@ -11,7 +11,7 @@ tests and never makes a network request.
 The server remains authoritative for:
 
 - cycle ownership and `DRAFT` status;
-- the four-week date range;
+- the seven-day date range;
 - exercise ownership and AI eligibility;
 - strength exercise and set uniqueness;
 - activation and calendar writes.

@@ -1,6 +1,6 @@
 # GymBud Fitness Planner
 
-GymBud is a web-first fitness planner with four-week training cycles,
+GymBud is a web-first fitness planner with weekly training cycles,
 equipment-aware exercise metadata, per-set strength logs, actual
 training-volume reviews, and an explicit user confirmation step before an
 AI-generated plan is added to the calendar.
@@ -138,16 +138,12 @@ npx playwright test --list
 ## Product rules implemented in the MVP
 
 - Cycles are `DRAFT`, `ACTIVE`, or `CLOSED`; there is no pause state.
-- A cycle covers 28 inclusive days, and the fourth week's final day is its
-  end date.
+- A cycle covers seven inclusive days, and its final day is the end date.
 - A cycle remains active after its end date until the user responds to the
   review prompt. Review closes the old cycle and auto-cancels unresolved
   planned workouts in that same cycle.
-- Each cycle can receive one manual actual-volume review. Fixed four-cycle
-  reviews cover `1–4`, `5–8`, `9–12`, and later batches without accumulating
-  older volume.
-- An optional review note is sent to AI for context, but raw user text is not
-  persisted.
+- Each completed cycle receives one automatic actual-volume review. The
+  immediately previous week is used only for shallow comparison.
 - A next-cycle draft is never inserted into the calendar until the user
   explicitly confirms it.
 - Profile gender, age, height, and body weight are required planning context.

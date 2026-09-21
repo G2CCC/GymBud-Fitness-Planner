@@ -18,7 +18,6 @@ import {
 import { buildPlanRequest } from "./prompts/plan";
 import type {
   CycleTrainingVolume,
-  CycleTrainingVolumeAggregate,
 } from "@fitness/shared/domain/reviews/cycle-volume";
 
 const cycleContextSelect = {
@@ -95,7 +94,7 @@ export class PlanService {
       reviewContext?: {
         processedSummary: string | null;
         conclusions: unknown;
-        trainingVolume: CycleTrainingVolume | CycleTrainingVolumeAggregate;
+        trainingVolume: CycleTrainingVolume;
       };
     } = {},
   ): Promise<PlanDraft> {

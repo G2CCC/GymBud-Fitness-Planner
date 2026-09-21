@@ -214,7 +214,7 @@ describe.skipIf(!hasDatabase)("AI plan persistence", () => {
       data: {
         userId,
         startDate: new Date("2027-01-01T00:00:00Z"),
-        endDate: new Date("2027-01-28T00:00:00Z"),
+        endDate: new Date("2027-01-07T00:00:00Z"),
         timezone: "UTC",
         status: "DRAFT",
       },
