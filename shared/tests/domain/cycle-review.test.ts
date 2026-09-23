@@ -10,11 +10,17 @@ describe("cycle review timing", () => {
       cycleEndDate,
       now: new Date("2026-10-07T12:00:00Z"),
       timezone: "Pacific/Auckland",
+      plannedWorkoutCount: 0,
     });
 
     expect(result).toEqual({
       reviewRequired: false,
+      reviewAvailable: false,
       today: new Date("2026-10-08T00:00:00Z"),
+      reviewAvailableOn: cycleEndDate,
+      daysUntilReview: 26,
+      plannedWorkoutCount: 0,
+      blockedReason: "BEFORE_REVIEW_DATE",
     });
   });
 
@@ -24,12 +30,17 @@ describe("cycle review timing", () => {
       cycleEndDate,
       now: new Date("2026-11-03T23:00:00Z"),
       timezone: "UTC",
-      finalDayWorkoutsResolved: false,
+      plannedWorkoutCount: 1,
     });
 
     expect(result).toEqual({
       reviewRequired: false,
+      reviewAvailable: false,
       today: cycleEndDate,
+      reviewAvailableOn: cycleEndDate,
+      daysUntilReview: 0,
+      plannedWorkoutCount: 1,
+      blockedReason: "PLANNED_WORKOUTS_REMAINING",
     });
   });
 
@@ -39,28 +50,57 @@ describe("cycle review timing", () => {
       cycleEndDate,
       now: new Date("2026-11-03T23:00:00Z"),
       timezone: "UTC",
-      finalDayWorkoutsResolved: true,
+      plannedWorkoutCount: 0,
     });
 
     expect(result).toEqual({
       reviewRequired: true,
-      reason: "FINAL_DAY_ACTION",
+      reviewAvailable: true,
       today: cycleEndDate,
+      reviewAvailableOn: cycleEndDate,
+      daysUntilReview: 0,
+      plannedWorkoutCount: 0,
+      blockedReason: null,
     });
   });
 
-  it("prompts on a later login while leaving the cycle active", () => {
+  it("keeps review blocked after the end date while planned work remains", () => {
     const result = getCycleReviewStatus({
       cycleStatus: "ACTIVE",
       cycleEndDate,
       now: new Date("2026-11-04T12:00:00Z"),
       timezone: "UTC",
+      plannedWorkoutCount: 1,
+    });
+
+    expect(result).toEqual({
+      reviewRequired: false,
+      reviewAvailable: false,
+      today: new Date("2026-11-04T00:00:00Z"),
+      reviewAvailableOn: cycleEndDate,
+      daysUntilReview: 0,
+      plannedWorkoutCount: 1,
+      blockedReason: "PLANNED_WORKOUTS_REMAINING",
+    });
+  });
+
+  it("prompts on a later login when all workouts are resolved", () => {
+    const result = getCycleReviewStatus({
+      cycleStatus: "ACTIVE",
+      cycleEndDate,
+      now: new Date("2026-11-04T12:00:00Z"),
+      timezone: "UTC",
+      plannedWorkoutCount: 0,
     });
 
     expect(result).toEqual({
       reviewRequired: true,
-      reason: "PAST_END_DATE",
+      reviewAvailable: true,
       today: new Date("2026-11-04T00:00:00Z"),
+      reviewAvailableOn: cycleEndDate,
+      daysUntilReview: 0,
+      plannedWorkoutCount: 0,
+      blockedReason: null,
     });
   });
 
@@ -71,10 +111,16 @@ describe("cycle review timing", () => {
         cycleEndDate,
         now: new Date("2026-11-04T12:00:00Z"),
         timezone: "UTC",
+        plannedWorkoutCount: 0,
       }),
     ).toEqual({
       reviewRequired: false,
+      reviewAvailable: false,
       today: new Date("2026-11-04T00:00:00Z"),
+      reviewAvailableOn: cycleEndDate,
+      daysUntilReview: 0,
+      plannedWorkoutCount: 0,
+      blockedReason: "CYCLE_NOT_ACTIVE",
     });
 
     expect(
@@ -83,10 +129,16 @@ describe("cycle review timing", () => {
         cycleEndDate,
         now: new Date("2026-11-04T12:00:00Z"),
         timezone: "UTC",
+        plannedWorkoutCount: 0,
       }),
     ).toEqual({
       reviewRequired: false,
+      reviewAvailable: false,
       today: new Date("2026-11-04T00:00:00Z"),
+      reviewAvailableOn: cycleEndDate,
+      daysUntilReview: 0,
+      plannedWorkoutCount: 0,
+      blockedReason: "CYCLE_NOT_ACTIVE",
     });
   });
 });

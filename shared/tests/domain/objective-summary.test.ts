@@ -57,7 +57,7 @@ const baseInput: ObjectiveCycleSummaryInput = {
     {
       id: "original-cardio",
       activityType: "CARDIO",
-      status: "CANCELLED",
+      status: "PLANNED",
       durationMinutes: 30,
       rescheduleCount: 0,
       plannedDetails: { distanceKm: 5 },
@@ -72,13 +72,6 @@ const baseInput: ObjectiveCycleSummaryInput = {
       plannedDetails: { distanceKm: 3 },
       actualDetails: { actualDurationMinutes: 25, distanceKm: 3.5 },
     },
-    {
-      id: "auto-cancelled",
-      activityType: "SPORT",
-      status: "CANCELLED",
-      durationMinutes: 45,
-      rescheduleCount: 3,
-    },
   ],
 };
 
@@ -87,16 +80,11 @@ describe("objective cycle summary", () => {
     const result = buildObjectiveCycleSummary(baseInput);
 
     expect(result.total).toMatchObject({
-      total: 4,
-      completed: 2,
-      cancelled: 2,
-      planned: 0,
-      completionRate: 1 / 2,
-    });
-    expect(result.cancellations).toEqual({
       total: 2,
+      completed: 2,
+      completionRate: 1,
     });
-    expect(result.rescheduleCount).toBe(6);
+    expect(result.rescheduleCount).toBe(3);
     expect(result.nextCycleEligibility).toBe("ELIGIBLE");
   });
 
@@ -148,9 +136,9 @@ describe("objective cycle summary", () => {
     const result = buildObjectiveCycleSummary(baseInput);
 
     expect(result.cardio).toMatchObject({
-      plannedDurationMinutes: 50,
+      plannedDurationMinutes: 20,
       actualDurationMinutes: 25,
-      plannedDistanceKm: 8,
+      plannedDistanceKm: 3,
       actualDistanceKm: 3.5,
     });
   });
@@ -160,7 +148,7 @@ describe("objective cycle summary", () => {
       ...baseInput,
       workouts: baseInput.workouts.map((workout) => ({
         ...workout,
-        status: "CANCELLED",
+        status: "PLANNED",
       })),
     });
 

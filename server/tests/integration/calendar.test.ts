@@ -81,9 +81,9 @@ describe.skipIf(!hasDatabase)("calendar persistence", () => {
           userId,
           cycleId: userCycleId,
           activityType: "CARDIO",
-          scheduledDate: new Date("2026-09-30T00:00:00.000Z"),
+          scheduledDate: new Date("2026-09-15T00:00:00.000Z"),
           durationMinutes: 30,
-          status: "CANCELLED",
+          status: "PLANNED",
         },
         {
           userId,
@@ -126,7 +126,7 @@ describe.skipIf(!hasDatabase)("calendar persistence", () => {
     ]);
     expect(workouts.map((workout) => workout.status)).toEqual([
       "COMPLETED",
-      "CANCELLED",
+      "PLANNED",
     ]);
   });
 });

@@ -29,7 +29,6 @@ const activityLabels: Record<ActivityType, string> = {
 const statusLabels: Record<WorkoutStatus, string> = {
   PLANNED: "Planned",
   COMPLETED: "Completed",
-  CANCELLED: "Cancelled",
 };
 
 function dateKey(value: string): string {
@@ -53,9 +52,7 @@ export function WorkoutCard({
   const statusClass =
     workout.status === "COMPLETED"
       ? "calendar-workout-card--completed"
-      : workout.status === "CANCELLED"
-        ? "calendar-workout-card--cancelled"
-        : "";
+      : "";
 
   return (
     <button

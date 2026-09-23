@@ -250,4 +250,98 @@ describe.skipIf(!hasDatabase)("AI plan persistence", () => {
       db.scheduledWorkout.count({ where: { cycleId: secondCycle.id } }),
     ).resolves.toBe(0);
   }, integrationTestTimeout);
+
+  it("keeps a single-day plan as a draft until confirmation and blocks occupied dates", async () => {
+    const dayCycle = await db.trainingCycle.create({
+      data: {
+        userId,
+        startDate: new Date("2027-02-01T00:00:00Z"),
+        endDate: new Date("2027-02-28T00:00:00Z"),
+        timezone: "UTC",
+        cycleNumber: 99,
+        status: "ACTIVE",
+      },
+    });
+    const service = new PlanService(
+      db,
+      new FakeAiClient({
+        workout: {
+          scheduledDate: "2027-02-03T00:00:00Z",
+          activityType: "STRENGTH",
+          durationMinutes: 45,
+          exercises: [
+            {
+              exerciseId: "system-push-up",
+              sortOrder: 1,
+              restSeconds: 60,
+              sets: [{ setNumber: 1, targetReps: 10 }],
+            },
+          ],
+        },
+      }),
+    );
+
+    const draft = await service.generateSingleDayDraft(
+      userId,
+      dayCycle.id,
+      {
+        scheduledDate: "2027-02-03T12:00:00Z",
+        focusAreas: ["FULL_BODY"],
+      },
+      new Date("2027-02-02T12:00:00Z"),
+    );
+
+    expect(draft.workouts).toHaveLength(1);
+    expect(draft.workouts[0]?.activityType).toBe("STRENGTH");
+    await expect(
+      db.scheduledWorkout.count({ where: { cycleId: dayCycle.id } }),
+    ).resolves.toBe(0);
+
+    const confirmed = await service.confirmSingleDayDraft(
+      userId,
+      dayCycle.id,
+      draft,
+      new Date("2027-02-02T12:00:00Z"),
+    );
+
+    expect(confirmed.status).toBe("PLANNED");
+    await expect(
+      db.scheduledWorkout.count({ where: { cycleId: dayCycle.id } }),
+    ).resolves.toBe(1);
+    await expect(
+      service.generateSingleDayDraft(
+        userId,
+        dayCycle.id,
+        {
+          scheduledDate: "2027-02-03T12:00:00Z",
+          focusAreas: ["FULL_BODY"],
+        },
+        new Date("2027-02-02T12:00:00Z"),
+      ),
+    ).rejects.toThrow(/delete the planned workout/i);
+
+    await db.scheduledWorkout.create({
+      data: {
+        userId,
+        cycleId: dayCycle.id,
+        activityType: "CARDIO",
+        scheduledDate: new Date("2027-02-04T00:00:00Z"),
+        durationMinutes: 30,
+        status: "COMPLETED",
+        completedAt: new Date("2027-02-04T00:30:00Z"),
+      },
+    });
+
+    await expect(
+      service.generateSingleDayDraft(
+        userId,
+        dayCycle.id,
+        {
+          scheduledDate: "2027-02-04T12:00:00Z",
+          focusAreas: ["FULL_BODY"],
+        },
+        new Date("2027-02-02T12:00:00Z"),
+      ),
+    ).rejects.toThrow(/delete the planned workout/i);
+  }, integrationTestTimeout);
 });

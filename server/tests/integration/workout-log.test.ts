@@ -208,7 +208,7 @@ describe.skipIf(!hasDatabase)("workout persistence", () => {
     expect(workout.plannedExercises[0]?.plannedSets).toHaveLength(2);
   }, integrationTestTimeout);
 
-  it("reschedules and cancels a planned workout", async () => {
+  it("reschedules and deletes a planned workout but never deletes completed history", async () => {
     const workout = await db.scheduledWorkout.create({
       data: {
         userId,
@@ -229,10 +229,32 @@ describe.skipIf(!hasDatabase)("workout persistence", () => {
     );
     expect(rescheduled.rescheduleCount).toBe(1);
 
-    const cancelled = await service.cancelWorkout(userId, workout.id);
-    expect(cancelled).toMatchObject({
-      status: "CANCELLED",
+    await expect(service.deletePlannedWorkout(userId, workout.id)).resolves.toEqual({
+      id: workout.id,
     });
+    await expect(
+      db.scheduledWorkout.findUnique({ where: { id: workout.id } }),
+    ).resolves.toBeNull();
+
+    const completed = await db.scheduledWorkout.create({
+      data: {
+        userId,
+        cycleId,
+        activityType: "CARDIO",
+        scheduledDate: new Date("2026-11-10T00:00:00Z"),
+        durationMinutes: 30,
+      },
+    });
+    await service.completeWorkout(
+      userId,
+      completed.id,
+      { completedAt: new Date("2026-11-10T10:00:00Z") },
+      new Date("2026-11-10T12:00:00Z"),
+    );
+
+    await expect(
+      service.deletePlannedWorkout(userId, completed.id),
+    ).rejects.toThrow(/completed/i);
   }, integrationTestTimeout);
 
   it("rejects an RPE field and prevents another user from reading the workout", async () => {

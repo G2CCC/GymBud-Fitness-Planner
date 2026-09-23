@@ -78,7 +78,7 @@ describe.skipIf(!hasDatabase)("cycle persistence", () => {
     expect(active.endDate).toEqual(new Date("2026-10-14T00:00:00Z"));
   });
 
-  it("closes, auto-cancels, and restores a workout before the next cycle exists", async () => {
+  it("requires planned workouts to be completed or deleted before closing", async () => {
     const cycle = await db.trainingCycle.create({
       data: {
         userId: lifecycleUserId,
@@ -109,7 +109,7 @@ describe.skipIf(!hasDatabase)("cycle persistence", () => {
               activityType: "SPORT",
               scheduledDate: new Date("2026-10-04T00:00:00Z"),
               durationMinutes: 45,
-              status: "CANCELLED",
+              status: "PLANNED",
             },
           ],
         },
@@ -123,8 +123,10 @@ describe.skipIf(!hasDatabase)("cycle persistence", () => {
       new Date("2026-10-06T12:00:00Z"),
     );
     expect(finalDayReview).toMatchObject({
-      reviewRequired: true,
-      reason: "FINAL_DAY_ACTION",
+      reviewRequired: false,
+      reviewAvailable: false,
+      blockedReason: "PLANNED_WORKOUTS_REMAINING",
+      plannedWorkoutCount: 2,
     });
 
     const overdueReview = await service.getReviewStatus(
@@ -133,8 +135,10 @@ describe.skipIf(!hasDatabase)("cycle persistence", () => {
       now,
     );
     expect(overdueReview).toMatchObject({
-      reviewRequired: true,
-      reason: "PAST_END_DATE",
+      reviewRequired: false,
+      reviewAvailable: false,
+      blockedReason: "PLANNED_WORKOUTS_REMAINING",
+      plannedWorkoutCount: 2,
     });
 
     const stillActive = await db.trainingCycle.findUnique({
@@ -143,49 +147,46 @@ describe.skipIf(!hasDatabase)("cycle persistence", () => {
     });
     expect(stillActive?.status).toBe("ACTIVE");
 
-    const closed = await service.close(lifecycleUserId, cycle.id, now);
-    expect(closed.cycleStatus).toBe("CLOSED");
-    expect(closed.nextCycleEligibility).toBe("ELIGIBLE");
-    expect(closed.cancelledWorkoutIds).toHaveLength(1);
+    await expect(service.close(lifecycleUserId, cycle.id, now)).rejects.toThrow(
+      /complete or delete/i,
+    );
 
-    const plannedWorkout = cycle.workouts.find(
+    const plannedWorkouts = cycle.workouts.filter(
       (workout) => workout.status === "PLANNED",
     );
-    if (!plannedWorkout) {
-      throw new Error("Test fixture did not create a planned workout");
-    }
-
-    const persistedCancellation = await db.scheduledWorkout.findUnique({
-      where: { id: plannedWorkout.id },
-      select: { status: true },
-    });
-    expect(persistedCancellation).toEqual({
-      status: "CANCELLED",
+    await db.scheduledWorkout.deleteMany({
+      where: { id: { in: plannedWorkouts.map((workout) => workout.id) } },
     });
 
-    const restored = await service.restoreCancelledWorkout(
+    const availableReview = await service.getReviewStatus(
       lifecycleUserId,
       cycle.id,
-      plannedWorkout.id,
-      new Date("2026-10-08T00:00:00Z"),
+      now,
     );
+    expect(availableReview).toMatchObject({
+      reviewRequired: true,
+      reviewAvailable: true,
+      blockedReason: null,
+      plannedWorkoutCount: 0,
+    });
 
-    expect(restored.status).toBe("PLANNED");
-    expect(restored.scheduledDate).toEqual(new Date("2026-10-08T00:00:00Z"));
-    const manuallyCancelledWorkout = cycle.workouts.find(
-      (workout) => workout.status === "CANCELLED",
+    const closed = await service.close(lifecycleUserId, cycle.id, now);
+    expect(closed.cycleStatus).toBe("CLOSED");
+    expect(closed.unresolvedWorkoutIds).toEqual([]);
+    expect(closed.nextCycleEligibility).toBe("ELIGIBLE");
+
+    const completedWorkout = cycle.workouts.find(
+      (workout) => workout.status === "COMPLETED",
     );
-    if (!manuallyCancelledWorkout) {
-      throw new Error("Test fixture did not create a cancelled workout");
+    if (!completedWorkout) {
+      throw new Error("Test fixture did not create a completed workout");
     }
 
-    const restoredManualCancellation = await service.restoreCancelledWorkout(
-      lifecycleUserId,
-      cycle.id,
-      manuallyCancelledWorkout.id,
-      new Date("2026-10-09T00:00:00Z"),
-    );
-
-    expect(restoredManualCancellation.status).toBe("PLANNED");
+    await expect(
+      db.scheduledWorkout.findUnique({
+        where: { id: completedWorkout.id },
+        select: { status: true },
+      }),
+    ).resolves.toEqual({ status: "COMPLETED" });
   });
 });

@@ -40,7 +40,15 @@ describe("progress page", () => {
   it("shows actual activity totals and exposes review only when the server requires it", async () => {
     vi.mocked(api.getCurrentCycle).mockResolvedValue(
       cycle({
-        reviewStatus: { reviewRequired: true, reason: "PAST_END_DATE", today: new Date() },
+        reviewStatus: {
+          reviewRequired: true,
+          reviewAvailable: true,
+          today: "2026-09-08T00:00:00.000Z",
+          reviewAvailableOn: "2026-09-07T00:00:00.000Z",
+          daysUntilReview: 0,
+          plannedWorkoutCount: 0,
+          blockedReason: null,
+        },
         workouts: [
           {
             id: "workout-1",
@@ -71,5 +79,6 @@ describe("progress page", () => {
       "href",
       "/review/cycle-1",
     );
+    expect(screen.queryByText("Cancelled")).not.toBeInTheDocument();
   });
 });

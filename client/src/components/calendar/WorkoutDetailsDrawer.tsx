@@ -12,7 +12,7 @@ export type WorkoutDetailsDrawerProps = {
   exerciseNames: Record<string, string>;
   onClose: () => void;
   onReschedule: (scheduledDate: string) => void | Promise<void>;
-  onCancel: () => void | Promise<void>;
+  onDelete: () => void | Promise<void>;
 };
 
 const activityLabels: Record<ActivityType, string> = {
@@ -24,7 +24,6 @@ const activityLabels: Record<ActivityType, string> = {
 const statusLabels: Record<WorkoutStatus, string> = {
   PLANNED: "Planned",
   COMPLETED: "Completed",
-  CANCELLED: "Cancelled",
 };
 
 function dateKey(value: string): string {
@@ -60,18 +59,12 @@ function statusCopy(summary: CalendarWorkout): string {
   if (summary.status === "COMPLETED") {
     return "Completed workout history";
   }
-  if (summary.status === "CANCELLED") {
-    return "Cancelled workout history";
-  }
   return isOverdue(summary) ? "Overdue planned workout" : "Planned workout";
 }
 
 function statusClass(summary: CalendarWorkout): string {
   if (summary.status === "COMPLETED") {
     return "bg-gymbud-accent-soft text-gymbud-accent-strong";
-  }
-  if (summary.status === "CANCELLED") {
-    return "bg-gymbud-surface-muted text-gymbud-muted";
   }
   return isOverdue(summary)
     ? "bg-gymbud-warning/10 text-gymbud-warning"
@@ -98,7 +91,7 @@ export function WorkoutDetailsDrawer({
   exerciseNames,
   onClose,
   onReschedule,
-  onCancel,
+  onDelete,
 }: WorkoutDetailsDrawerProps) {
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const onCloseRef = useRef(onClose);
@@ -294,9 +287,9 @@ export function WorkoutDetailsDrawer({
               <button
                 className="focus-ring min-h-11 rounded-[var(--radius-control)] border border-gymbud-danger px-4 text-sm font-semibold text-gymbud-danger"
                 type="button"
-                onClick={() => void onCancel()}
+                onClick={() => void onDelete()}
               >
-                Cancel this workout
+                Delete planned workout
               </button>
             </div>
           ) : null}

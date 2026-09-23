@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import {
-  cancelWorkout,
   completeWorkout,
   rescheduleWorkout,
 } from "@fitness/shared/domain/workouts/state-machine";
@@ -45,14 +44,6 @@ describe("workout state machine", () => {
     ).toThrow(/future/);
   });
 
-  it("cancels a planned workout using only the cancelled status", () => {
-    expect(cancelWorkout(plannedWorkout)).toEqual({
-      ...plannedWorkout,
-      status: "CANCELLED",
-      completedAt: null,
-    });
-  });
-
   it("reschedules a planned workout without location state", () => {
     const rescheduled = rescheduleWorkout(
       plannedWorkout,
@@ -75,7 +66,10 @@ describe("workout state machine", () => {
     ).toThrow(/cycle/);
 
     expect(() =>
-      cancelWorkout({ ...plannedWorkout, hasNextCycle: true }),
+      rescheduleWorkout(
+        { ...plannedWorkout, hasNextCycle: true },
+        new Date("2026-11-05T00:00:00Z"),
+      ),
     ).toThrow(/cycle/);
   });
 });

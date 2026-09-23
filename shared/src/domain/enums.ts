@@ -4,7 +4,7 @@ export type ActivityType = (typeof activityTypes)[number];
 export const genders = ["MALE", "FEMALE", "NON_BINARY", "PREFER_NOT_TO_SAY"] as const;
 export type Gender = (typeof genders)[number];
 
-export const workoutStatuses = ["PLANNED", "COMPLETED", "CANCELLED"] as const;
+export const workoutStatuses = ["PLANNED", "COMPLETED"] as const;
 export type WorkoutStatus = (typeof workoutStatuses)[number];
 
 export const cycleStatuses = ["DRAFT", "ACTIVE", "CLOSED"] as const;

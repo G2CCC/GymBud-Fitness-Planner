@@ -49,8 +49,6 @@ export type ObjectiveSportWorkout = {
 export type ObjectiveWorkoutCounts = {
   total: number;
   completed: number;
-  cancelled: number;
-  planned: number;
   completionRate: number;
 };
 
@@ -59,9 +57,6 @@ export type ObjectiveCycleSummary = {
   startDate: string;
   endDate: string;
   total: ObjectiveWorkoutCounts;
-  cancellations: {
-    total: number;
-  };
   rescheduleCount: number;
   strength: {
     workouts: ObjectiveStrengthWorkout[];
@@ -126,11 +121,12 @@ export type ObjectiveActualExerciseInput = {
 export function buildObjectiveCycleSummary(
   input: ObjectiveCycleSummaryInput,
 ): ObjectiveCycleSummary {
-  const total = buildCounts(input.workouts);
+  const workouts = input.workouts.filter(
+    (workout) => workout.status === "COMPLETED",
+  );
+  const total = buildCounts(workouts);
 
-  const cancellations = { total: total.cancelled };
-
-  const strengthWorkouts = input.workouts
+  const strengthWorkouts = workouts
     .filter((workout) => workout.activityType === "STRENGTH")
     .map((workout) => ({
       workoutId: workout.id,
@@ -138,7 +134,7 @@ export function buildObjectiveCycleSummary(
       exercises: mergeStrengthExercises(workout),
     }));
 
-  const cardioWorkouts = input.workouts
+  const cardioWorkouts = workouts
     .filter((workout) => workout.activityType === "CARDIO")
     .map((workout) => ({
       workoutId: workout.id,
@@ -149,7 +145,7 @@ export function buildObjectiveCycleSummary(
       actualDistanceKm: workout.actualDetails?.distanceKm ?? null,
     }));
 
-  const sportWorkouts = input.workouts
+  const sportWorkouts = workouts
     .filter((workout) => workout.activityType === "SPORT")
     .map((workout) => ({
       workoutId: workout.id,
@@ -166,8 +162,7 @@ export function buildObjectiveCycleSummary(
     startDate: input.startDate.toISOString(),
     endDate: input.endDate.toISOString(),
     total,
-    cancellations,
-    rescheduleCount: input.workouts.reduce(
+    rescheduleCount: workouts.reduce(
       (sum, workout) => sum + workout.rescheduleCount,
       0,
     ),
@@ -208,22 +203,12 @@ export function buildObjectiveCycleSummary(
 }
 
 function buildCounts(workouts: ObjectiveWorkoutInput[]): ObjectiveWorkoutCounts {
-  const completed = workouts.filter(
-    (workout) => workout.status === "COMPLETED",
-  ).length;
-  const cancelled = workouts.filter(
-    (workout) => workout.status === "CANCELLED",
-  ).length;
-  const planned = workouts.filter(
-    (workout) => workout.status === "PLANNED",
-  ).length;
+  const completed = workouts.length;
   const total = workouts.length;
 
   return {
     total,
     completed,
-    cancelled,
-    planned,
     completionRate: total === 0 ? 0 : completed / total,
   };
 }

@@ -1,6 +1,5 @@
 import type {
   ActivityType,
-  CycleReviewStatus,
   CycleStatus,
   Gender,
   WorkoutStatus,
@@ -68,6 +67,20 @@ export type ApiCalendarWorkout = {
   rescheduleCount: number;
 };
 
+export type ApiCycleReviewStatus = {
+  reviewRequired: boolean;
+  reviewAvailable: boolean;
+  today: string;
+  reviewAvailableOn: string;
+  daysUntilReview: number;
+  plannedWorkoutCount: number;
+  blockedReason:
+    | "BEFORE_REVIEW_DATE"
+    | "PLANNED_WORKOUTS_REMAINING"
+    | "CYCLE_NOT_ACTIVE"
+    | null;
+};
+
 export type ApiCycle = {
   id: string;
   status: CycleStatus;
@@ -75,7 +88,7 @@ export type ApiCycle = {
   startDate: string;
   endDate: string;
   timezone: string | null;
-  reviewStatus: CycleReviewStatus | null;
+  reviewStatus: ApiCycleReviewStatus | null;
   reviewAvailable: boolean;
   weeklyReview: ApiWeeklyReviewResult | null;
   workouts: ApiWorkout[];

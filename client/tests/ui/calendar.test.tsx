@@ -1,4 +1,4 @@
-import { cleanup, render, screen, within } from "@testing-library/react";
+import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -19,8 +19,10 @@ import type {
 } from "../../src/components/workouts/WorkoutEditor";
 
 vi.mock("../../src/api/client", () => ({
-  cancelWorkout: vi.fn(),
+  confirmSingleDayPlan: vi.fn(),
   createWorkout: vi.fn(),
+  deletePlannedWorkout: vi.fn(),
+  generateSingleDayPlan: vi.fn(),
   getCalendarWorkouts: vi.fn(),
   getCurrentCycle: vi.fn(),
   getWorkout: vi.fn(),
@@ -58,7 +60,15 @@ const activeCycle: ApiCycle = {
   startDate: "2026-09-01T00:00:00.000Z",
   endDate: "2026-09-28T00:00:00.000Z",
   timezone: "UTC",
-  reviewStatus: null,
+  reviewStatus: {
+    reviewRequired: false,
+    reviewAvailable: false,
+    today: "2026-09-15T00:00:00.000Z",
+    reviewAvailableOn: "2026-09-28T00:00:00.000Z",
+    daysUntilReview: 13,
+    plannedWorkoutCount: 0,
+    blockedReason: "BEFORE_REVIEW_DATE",
+  },
   reviewAvailable: false,
   weeklyReview: null,
   workouts: [],
@@ -94,6 +104,29 @@ const detailedWorkout: ApiWorkout = {
   ],
 };
 
+const singleDayDraft = {
+  cycleId: "cycle-1",
+  model: "test-model",
+  promptVersion: "day-plan.v1",
+  workouts: [
+    {
+      scheduledDate: "2026-09-23T00:00:00.000Z",
+      activityType: "STRENGTH" as const,
+      durationMinutes: 45,
+      exercises: [
+        {
+          exerciseId: "bench",
+          sortOrder: 1,
+          restSeconds: 90,
+          sets: [{ setNumber: 1, targetReps: 8 }],
+          name: "Bench Press",
+          equipment: "BARBELL",
+        },
+      ],
+    },
+  ],
+};
+
 function renderCalendar() {
   return render(
     <MemoryRouter initialEntries={["/calendar?month=2026-09"]}>
@@ -120,6 +153,49 @@ beforeEach(() => {
 });
 
 describe("calendar and workout editor UI", () => {
+  it("keeps Calendar actions visible and opens only one compact panel at a time", async () => {
+    const user = userEvent.setup();
+    renderCalendar();
+
+    expect(
+      await screen.findByRole("button", { name: /add a session/i }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /generate plan/i }),
+    ).toBeInTheDocument();
+    expect(screen.queryByLabelText("Activity")).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: /add a session/i }));
+    const addPanel = screen.getByTestId("add-session-panel");
+    expect(addPanel).toHaveClass("max-w-2xl", "justify-self-start");
+    expect(screen.getByLabelText("Activity")).toBeInTheDocument();
+
+    await user.click(
+      await screen.findByRole("button", { name: /generate plan/i }),
+    );
+    expect(screen.queryByTestId("add-session-panel")).not.toBeInTheDocument();
+    expect(screen.getByTestId("generate-day-plan-panel")).toHaveClass(
+      "max-w-2xl",
+      "justify-self-start",
+    );
+
+    await user.click(screen.getByRole("button", { name: /add a session/i }));
+    expect(screen.getByTestId("add-session-panel")).toBeInTheDocument();
+    expect(
+      screen.queryByTestId("generate-day-plan-panel"),
+    ).not.toBeInTheDocument();
+  });
+
+  it("keeps Review cycle visible but disabled before the server review date", async () => {
+    renderCalendar();
+
+    expect(
+      await screen.findByRole("button", { name: /review cycle/i }),
+    ).toBeDisabled();
+    expect(screen.getByText(/available in 13 days/i)).toBeInTheDocument();
+    expect(screen.getByText(/sep 28, 2026/i)).toBeInTheDocument();
+  });
+
   it("normalizes any selected date to the Monday of its calendar week", () => {
     expect(getMondayDateKey("2026-09-23")).toBe("2026-09-21");
     expect(getMondayDateKey("2026-09-27")).toBe("2026-09-21");
@@ -181,6 +257,39 @@ describe("calendar and workout editor UI", () => {
 
     expect(screen.getByRole("option", { name: /bench press/i })).toBeInTheDocument();
     expect(screen.getByRole("option", { name: /push up/i })).toBeInTheDocument();
+  });
+
+  it("keeps a generated day plan as a draft until explicit confirmation", async () => {
+    const user = userEvent.setup();
+    vi.mocked(api.generateSingleDayPlan).mockResolvedValue(singleDayDraft);
+    vi.mocked(api.confirmSingleDayPlan).mockResolvedValue(detailedWorkout);
+    renderCalendar();
+
+    await user.click(
+      await screen.findByRole("button", { name: /generate plan/i }),
+    );
+    await user.click(
+      screen.getByRole("button", { name: /generate day plan/i }),
+    );
+
+    expect(
+      await screen.findByTestId("single-day-plan-draft"),
+    ).toBeInTheDocument();
+    expect(api.confirmSingleDayPlan).not.toHaveBeenCalled();
+
+    await user.click(
+      screen.getByRole("button", { name: /confirm and add to calendar/i }),
+    );
+
+    await waitFor(() => {
+      expect(api.confirmSingleDayPlan).toHaveBeenCalledWith(
+        "cycle-1",
+        singleDayDraft,
+      );
+    });
+    expect(
+      await screen.findByText("The Strength day plan was added to your calendar."),
+    ).toBeInTheDocument();
   });
 
   it("requires actual completion date and time during backfill", async () => {
@@ -293,9 +402,34 @@ describe("calendar and workout editor UI", () => {
     expect(event).toHaveFocus();
   });
 
+  it("deletes a planned workout from the details drawer", async () => {
+    const user = userEvent.setup();
+    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
+    vi.mocked(api.deletePlannedWorkout).mockResolvedValue();
+    vi.mocked(api.getCalendarWorkouts)
+      .mockResolvedValueOnce([calendarWorkout])
+      .mockResolvedValue([]);
+    renderCalendar();
+
+    await user.click(
+      await screen.findByRole("button", { name: /strength workout/i }),
+    );
+    await user.click(
+      await screen.findByRole("button", { name: /delete planned workout/i }),
+    );
+
+    await waitFor(() => {
+      expect(api.deletePlannedWorkout).toHaveBeenCalledWith("workout-1");
+    });
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "This workout was deleted.",
+    );
+    confirmSpy.mockRestore();
+  });
+
   it.each([
     ["COMPLETED" as const, "Completed workout history"],
-    ["CANCELLED" as const, "Cancelled workout history"],
   ])("shows %s status copy in the details drawer", async (status, copy) => {
     const user = userEvent.setup();
     vi.mocked(api.getCalendarWorkouts).mockImplementation(async () => [

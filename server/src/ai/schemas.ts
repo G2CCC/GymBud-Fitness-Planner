@@ -41,6 +41,11 @@ export const weightDecisionSchema = z.discriminatedUnion("action", [
   z.object({ action: z.literal("REJECT") }).strict(),
 ]);
 
+export const singleDayPlanInputSchema = z.object({
+  scheduledDate: z.coerce.date(),
+  focusAreas: z.array(z.string().trim().min(1).max(80)).min(1).max(8),
+}).strict();
+
 export type ExerciseExtractionInput = z.infer<
   typeof exerciseExtractionInputSchema
 >;
@@ -52,6 +57,7 @@ export type WeightRecommendationResponse = z.infer<
   typeof weightRecommendationSchema
 >;
 export type WeightDecision = z.infer<typeof weightDecisionSchema>;
+export type SingleDayPlanInput = z.infer<typeof singleDayPlanInputSchema>;
 
 export const cycleReviewResponseSchema = z.object({
   processedSummary: z.string().trim().min(1).max(5000),
@@ -95,6 +101,10 @@ const planWorkoutSchema = z.object({
 
 export const planResponseSchema = z.object({
   workouts: z.array(planWorkoutSchema).min(1).max(7),
+}).strict();
+
+export const singleDayPlanResponseSchema = z.object({
+  workout: planWorkoutSchema,
 }).strict();
 
 export const planDraftExerciseSchema = planExerciseSchema.extend({

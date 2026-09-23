@@ -20,7 +20,6 @@ export type WeightContext = {
     endDate: string;
     workoutCount: number;
     completedWorkoutCount: number;
-    cancelledWorkoutCount: number;
     plannedWorkoutCount: number;
   };
   allTimeBest: {

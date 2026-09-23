@@ -4,7 +4,6 @@ import {
   closeCycle as closeCycleDomain,
   distributeFirstWeek,
   getCycleReviewStatus,
-  restoreCancelledWorkout,
   startOfLocalDate,
   startOfUtcDay,
   type CycleCloseWorkout,
@@ -239,17 +238,16 @@ export class CycleService {
 
     const timezone = requireCycleTimezone(cycle.status, cycle.timezone);
     const cycleEndDate = startOfUtcDay(cycle.endDate);
-    const finalDayWorkoutsResolved = areFinalDayWorkoutsResolved(
-      cycle.workouts,
-      cycleEndDate,
-    );
+    const plannedWorkoutCount = cycle.workouts.filter(
+      (workout) => workout.status === "PLANNED",
+    ).length;
 
     return getCycleReviewStatus({
       cycleStatus: cycle.status,
       cycleEndDate,
       now,
       timezone,
-      finalDayWorkoutsResolved,
+      plannedWorkoutCount,
     });
   }
 
@@ -291,21 +289,20 @@ export class CycleService {
 
       const timezone = requireCycleTimezone(cycle.status, cycle.timezone);
       const cycleEndDate = startOfUtcDay(cycle.endDate);
-      const finalDayWorkoutsResolved = areFinalDayWorkoutsResolved(
-        cycle.workouts,
-        cycleEndDate,
-      );
+      const plannedWorkoutCount = cycle.workouts.filter(
+        (workout) => workout.status === "PLANNED",
+      ).length;
       const reviewStatus = getCycleReviewStatus({
         cycleStatus: cycle.status,
         cycleEndDate,
         now,
         timezone,
-        finalDayWorkoutsResolved,
+        plannedWorkoutCount,
       });
 
-      if (!reviewStatus.reviewRequired) {
+      if (!reviewStatus.reviewAvailable) {
         throw new CycleServiceError(
-          "The cycle review is not due yet",
+          reviewBlockedMessage(reviewStatus.blockedReason),
           "INVALID_STATE",
           409,
         );
@@ -326,25 +323,12 @@ export class CycleService {
         );
       }
 
-      for (const workoutUpdate of result.workoutUpdates) {
-        const updated = await tx.scheduledWorkout.updateMany({
-          where: {
-            id: workoutUpdate.id,
-            cycleId,
-            status: "PLANNED",
-          },
-          data: {
-            status: "CANCELLED",
-          },
-        });
-
-        if (updated.count !== 1) {
-          throw new CycleServiceError(
-            "A workout changed while the cycle was closing",
-            "CONFLICT",
-            409,
-          );
-        }
+      if (result.unresolvedWorkoutIds.length > 0) {
+        throw new CycleServiceError(
+          "Complete or delete every planned workout before reviewing the cycle",
+          "INVALID_STATE",
+          409,
+        );
       }
 
       await tx.trainingCycle.update({
@@ -375,136 +359,6 @@ export class CycleService {
     });
   }
 
-  async restoreCancelledWorkout(
-    userId: string,
-    cycleId: string,
-    workoutId: string,
-    newScheduledDate: Date,
-  ) {
-    return this.runSerializableTransaction(async (tx) => {
-      const cycle = await tx.trainingCycle.findFirst({
-        where: { id: cycleId, userId },
-        select: {
-          id: true,
-          startDate: true,
-          cycleNumber: true,
-          status: true,
-        },
-      });
-
-      if (!cycle) {
-        throw new CycleServiceError(
-          "Training cycle not found",
-          "NOT_FOUND",
-          404,
-        );
-      }
-
-      const workout = await tx.scheduledWorkout.findFirst({
-        where: { id: workoutId, cycleId, userId },
-        select: {
-          id: true,
-          status: true,
-        },
-      });
-
-      if (!workout) {
-        throw new CycleServiceError(
-          "Workout not found in this cycle",
-          "NOT_FOUND",
-          404,
-        );
-      }
-
-      const hasNextCycle = Boolean(
-        await tx.trainingCycle.findFirst({
-          where: {
-            userId,
-            id: { not: cycleId },
-            startDate: { gt: cycle.startDate },
-          },
-          select: { id: true },
-        }),
-      );
-
-      let restored: ReturnType<typeof restoreCancelledWorkout>;
-      try {
-        restored = restoreCancelledWorkout({
-          cycleStatus: cycle.status,
-          hasNextCycle,
-          workout: {
-            status: workout.status,
-          },
-          newScheduledDate,
-        });
-      } catch (error) {
-        throw new CycleServiceError(
-          error instanceof Error ? error.message : "Workout cannot be restored",
-          "INVALID_STATE",
-          409,
-        );
-      }
-
-      if (!hasNextCycle) {
-        const newerCycleAppeared = Boolean(
-          await tx.trainingCycle.findFirst({
-            where: {
-              userId,
-              id: { not: cycleId },
-              startDate: { gt: cycle.startDate },
-            },
-            select: { id: true },
-          }),
-        );
-
-        if (newerCycleAppeared) {
-          throw new CycleServiceError(
-            "The cycle became read-only while the workout was being restored",
-            "CONFLICT",
-            409,
-          );
-        }
-      }
-
-      const update = await tx.scheduledWorkout.updateMany({
-        where: {
-          id: workoutId,
-          cycleId,
-          userId,
-          status: "CANCELLED",
-        },
-        data: {
-          status: restored.status,
-          scheduledDate: restored.scheduledDate,
-          rescheduleCount: { increment: 1 },
-        },
-      });
-
-      if (update.count !== 1) {
-        throw new CycleServiceError(
-          "The workout changed while it was being restored",
-          "CONFLICT",
-          409,
-        );
-      }
-
-      await tx.trainingCycle.update({
-        where: { id: cycleId },
-        data: {
-          status: "ACTIVE",
-          closedAt: null,
-        },
-      });
-
-      await tx.cycleReviewSnapshot.deleteMany({ where: { cycleId } });
-
-      return {
-        id: workoutId,
-        ...restored,
-      };
-    });
-  }
-
   private async runSerializableTransaction<T>(
     operation: (tx: Prisma.TransactionClient) => Promise<T>,
   ): Promise<T> {
@@ -527,7 +381,7 @@ export class CycleService {
 
 function toDomainWorkout(workout: {
   id: string;
-  status: PrismaCycleWorkoutStatus;
+  status: "PLANNED" | "COMPLETED";
   completedAt: Date | null;
 }): CycleCloseWorkout {
   return {
@@ -537,25 +391,18 @@ function toDomainWorkout(workout: {
   };
 }
 
-type PrismaCycleWorkoutStatus = "PLANNED" | "COMPLETED" | "CANCELLED";
+function reviewBlockedMessage(
+  reason: ReturnType<typeof getCycleReviewStatus>["blockedReason"],
+): string {
+  if (reason === "BEFORE_REVIEW_DATE") {
+    return "The cycle review is not available until the cycle end date";
+  }
 
-function areFinalDayWorkoutsResolved(
-  workouts: ReadonlyArray<{
-    scheduledDate: Date;
-    status: PrismaCycleWorkoutStatus;
-  }>,
-  cycleEndDate: Date,
-): boolean {
-  const finalDayWorkouts = workouts.filter(
-    (workout) =>
-      startOfUtcDay(workout.scheduledDate).getTime() ===
-      cycleEndDate.getTime(),
-  );
+  if (reason === "PLANNED_WORKOUTS_REMAINING") {
+    return "Complete or delete every planned workout before reviewing the cycle";
+  }
 
-  return (
-    finalDayWorkouts.length > 0 &&
-    finalDayWorkouts.every((workout) => workout.status !== "PLANNED")
-  );
+  return "Only an active cycle can be reviewed";
 }
 
 function requireCycleTimezone(

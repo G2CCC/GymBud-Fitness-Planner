@@ -527,7 +527,6 @@ function buildWeightContext(
   const cycleWorkouts = workout.cycle.workouts;
   const completed = cycleWorkouts.filter((item) => item.status === "COMPLETED");
   const planned = cycleWorkouts.filter((item) => item.status === "PLANNED");
-  const cancelled = cycleWorkouts.filter((item) => item.status === "CANCELLED");
   const targetReps = Array.from(
     new Set(plannedSets.map((set) => set.targetReps)),
   );
@@ -540,7 +539,6 @@ function buildWeightContext(
       endDate: workout.cycle.endDate.toISOString(),
       workoutCount: cycleWorkouts.length,
       completedWorkoutCount: completed.length,
-      cancelledWorkoutCount: cancelled.length,
       plannedWorkoutCount: planned.length,
     },
     allTimeBest: best

@@ -1,7 +1,6 @@
 import { Prisma, PrismaClient } from "@prisma/client";
 import {
   backfillCompletionInputSchema,
-  cancelWorkout as cancelWorkoutState,
   cardioWorkoutLogInputSchema,
   completeWorkout as completeWorkoutState,
   createWorkoutInputSchema,
@@ -181,31 +180,32 @@ export class WorkoutService {
     );
   }
 
-  async cancelWorkout(
+  async deletePlannedWorkout(
     userId: string,
     workoutId: string,
-  ): Promise<WorkoutRecord> {
+  ): Promise<{ id: string }> {
     return this.prisma.$transaction(async (tx) => {
       const context = await this.getWritableWorkout(tx, userId, workoutId);
-      const transition = this.runTransition(() =>
-        cancelWorkoutState(toTransition(context.workout, context.hasNextCycle)),
-      );
 
-      const updated = await tx.scheduledWorkout.updateMany({
+      if (context.workout.status !== "PLANNED") {
+        throw new WorkoutServiceError(
+          "Completed workouts cannot be deleted",
+          "CONFLICT",
+          409,
+        );
+      }
+
+      const deleted = await tx.scheduledWorkout.deleteMany({
         where: {
           id: workoutId,
           userId,
           cycleId: context.workout.cycleId,
           status: "PLANNED",
         },
-        data: {
-          status: transition.status,
-          completedAt: null,
-        },
       });
 
-      assertSingleUpdate(updated.count, "Workout changed while cancelling");
-      return this.getWorkoutInTransaction(tx, userId, workoutId);
+      assertSingleUpdate(deleted.count, "Workout changed while deleting");
+      return { id: workoutId };
     });
   }
 
@@ -343,14 +343,6 @@ export class WorkoutService {
     return this.prisma.$transaction(async (tx) => {
       const context = await this.getWritableWorkout(tx, userId, workoutId);
 
-      if (context.workout.status === "CANCELLED") {
-        throw new WorkoutServiceError(
-          "A cancelled workout cannot receive a log",
-          "INVALID_STATE",
-          409,
-        );
-      }
-
       return this.saveWorkoutLogInTransaction(
         tx,
         userId,
@@ -366,14 +358,6 @@ export class WorkoutService {
     workout: WritableWorkout,
     input: unknown,
   ): Promise<WorkoutLogRecord> {
-    if (workout.status === "CANCELLED") {
-      throw new WorkoutServiceError(
-        "A cancelled workout cannot receive a log",
-        "INVALID_STATE",
-        409,
-      );
-    }
-
     const parsed = parseWorkoutLog(workout.activityType, input);
     const workoutLog = await tx.workoutLog.upsert({
       where: { workoutId: workout.id },

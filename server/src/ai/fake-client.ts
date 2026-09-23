@@ -87,6 +87,27 @@ export function createDeterministicFakeAiClient(): AiClient {
       };
     }
 
+    if (feature === "single-day-strength-plan") {
+      const context = parsePrompt(request);
+      const profile = context.profile ?? {};
+      const selectedDate = context.scheduledDate ?? new Date().toISOString();
+      return {
+        workout: {
+          scheduledDate: selectedDate,
+          activityType: "STRENGTH",
+          durationMinutes: profile.sessionDurationMinutes ?? 60,
+          exercises: [
+            {
+              exerciseId: "system-push-up",
+              sortOrder: 1,
+              restSeconds: 60,
+              sets: [{ setNumber: 1, targetReps: 10 }],
+            },
+          ],
+        },
+      };
+    }
+
     if (feature === "weekly-review") {
       return {
         processedSummary: "The actual training volume is ready for review.",

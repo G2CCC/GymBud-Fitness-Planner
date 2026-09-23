@@ -90,14 +90,14 @@ workoutRouter.post("/:workoutId/backfill", async (request, response) => {
   }
 });
 
-workoutRouter.post("/:workoutId/cancel", async (request, response) => {
+workoutRouter.delete("/:workoutId", async (request, response) => {
   try {
     const userId = getAuthenticatedUserId(request);
-    const workout = await workoutService.cancelWorkout(
+    const result = await workoutService.deletePlannedWorkout(
       userId,
       request.params.workoutId,
     );
-    return response.json({ data: workout });
+    return response.json({ data: result });
   } catch (error) {
     return sendRouteError(response, error);
   }

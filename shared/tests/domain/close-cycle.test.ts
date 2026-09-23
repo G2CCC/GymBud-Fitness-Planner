@@ -2,13 +2,12 @@ import { describe, expect, it } from "vitest";
 import {
   assertCycleWritable,
   closeCycle,
-  restoreCancelledWorkout,
 } from "@fitness/shared/domain/cycles/close-cycle";
 
 const now = new Date("2026-10-07T12:00:00Z");
 
 describe("cycle closure", () => {
-  it("auto-cancels unresolved planned workouts in the old cycle", () => {
+  it("reports unresolved planned workouts without changing their state", () => {
     const result = closeCycle(
       {
         cycleId: "cycle-1",
@@ -20,68 +19,14 @@ describe("cycle closure", () => {
             status: "COMPLETED",
             completedAt: new Date("2026-10-06T10:00:00Z"),
           },
-          { id: "cancelled-1", status: "CANCELLED" },
         ],
       },
       now,
     );
 
     expect(result.cycleStatus).toBe("CLOSED");
-    expect(result.cancelledWorkoutIds).toEqual(["planned-1"]);
-    expect(result.workoutUpdates).toEqual([
-      {
-        id: "planned-1",
-        status: "CANCELLED",
-      },
-    ]);
-    expect(result.restoreableWorkoutIds).toEqual([
-      "planned-1",
-      "cancelled-1",
-    ]);
+    expect(result.unresolvedWorkoutIds).toEqual(["planned-1"]);
     expect(result.nextCycleMayBeGenerated).toBe(true);
-  });
-
-  it("allows any cancelled workout to be restored before a next cycle exists", () => {
-    const restored = restoreCancelledWorkout({
-      cycleStatus: "CLOSED",
-      hasNextCycle: false,
-      workout: {
-        status: "CANCELLED",
-      },
-      newScheduledDate: new Date("2026-10-08T00:00:00Z"),
-    });
-
-    expect(restored).toEqual({
-      status: "PLANNED",
-      scheduledDate: new Date("2026-10-08T00:00:00Z"),
-    });
-  });
-
-  it("allows a cancelled workout to be restored in an unlocked active cycle", () => {
-    const restored = restoreCancelledWorkout({
-      cycleStatus: "ACTIVE",
-      hasNextCycle: false,
-      workout: { status: "CANCELLED" },
-      newScheduledDate: new Date("2026-10-08T00:00:00Z"),
-    });
-
-    expect(restored).toEqual({
-      status: "PLANNED",
-      scheduledDate: new Date("2026-10-08T00:00:00Z"),
-    });
-  });
-
-  it("rejects restoration after the next cycle exists", () => {
-    expect(() =>
-      restoreCancelledWorkout({
-        cycleStatus: "CLOSED",
-        hasNextCycle: true,
-        workout: {
-          status: "CANCELLED",
-        },
-        newScheduledDate: new Date("2026-10-08T00:00:00Z"),
-      }),
-    ).toThrow();
   });
 
   it("requires an actual completion timestamp", () => {

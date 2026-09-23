@@ -103,11 +103,10 @@ export function ProgressPage() {
         ) : null}
       </header>
 
-      <section className="grid gap-4 sm:grid-cols-4" aria-label="Cycle totals">
+      <section className="grid gap-4 sm:grid-cols-3" aria-label="Cycle totals">
         <MetricCard label="Completed" value={`${summary.completedSessions} / ${summary.totalSessions}`} />
         <MetricCard label="Completion rate" value={`${Math.round(summary.completionRate * 100)}%`} />
         <MetricCard label="Planned" value={String(summary.plannedSessions)} />
-        <MetricCard label="Cancelled" value={String(summary.cancelledSessions)} />
       </section>
 
       <section className="grid gap-4 md:grid-cols-3">

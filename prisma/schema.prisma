@@ -24,7 +24,6 @@ enum Gender {
 enum WorkoutStatus {
   PLANNED
   COMPLETED
-  CANCELLED
 }
 
 enum CycleStatus {

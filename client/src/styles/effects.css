@@ -55,13 +55,6 @@
   opacity: 0.76;
 }
 
-.calendar-workout-card--cancelled {
-  border-color: var(--color-border);
-  background: var(--color-surface-muted);
-  color: var(--color-muted);
-  text-decoration: line-through;
-}
-
 @media (prefers-reduced-motion: no-preference) {
   .motion-interactive {
     transition:

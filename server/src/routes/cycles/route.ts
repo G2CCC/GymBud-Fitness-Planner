@@ -1,9 +1,6 @@
 import { Router, type Response } from "express";
 import { Prisma } from "@prisma/client";
-import {
-  cycleDraftInputSchema,
-  timeZoneSchema,
-} from "@fitness/shared/domain/validation";
+import { cycleDraftInputSchema, timeZoneSchema } from "@fitness/shared/domain/validation";
 import { CycleService, CycleServiceError } from "../../cycles/service";
 import { getAuthenticatedUserId } from "../../current-user";
 import { db } from "../../db";
@@ -12,10 +9,6 @@ import { cycleReviewRouter } from "./[cycleId]/review/route";
 import { nextCycleDraftRouter } from "./[cycleId]/next-draft/route";
 import { createConfiguredAiClient } from "../../ai/client";
 import { CycleReviewService } from "../../reviews/service";
-
-const restoreWorkoutInputSchema = z.object({
-  scheduledDate: z.coerce.date(),
-}).strict();
 
 const activateCycleInputSchema = z.object({
   timezone: timeZoneSchema,
@@ -85,7 +78,7 @@ cycleRouter.get("/current", async (request, response) => {
             })),
           })),
           reviewStatus,
-          reviewAvailable: weeklyReview !== null,
+          reviewAvailable: Boolean(reviewStatus?.reviewAvailable || weeklyReview),
           weeklyReview,
         },
       },
@@ -166,35 +159,6 @@ cycleRouter.post("/:cycleId/close", async (request, response) => {
     return sendRouteError(response, error);
   }
 });
-
-cycleRouter.post(
-  "/:cycleId/workouts/:workoutId/restore",
-  async (request, response) => {
-    const parsed = restoreWorkoutInputSchema.safeParse(request.body);
-
-    if (!parsed.success) {
-      return response.status(400).json({
-        error: {
-          code: "VALIDATION_ERROR",
-          message: parsed.error.message,
-        },
-      });
-    }
-
-    try {
-      const userId = getAuthenticatedUserId(request);
-      const restored = await cycleService.restoreCancelledWorkout(
-        userId,
-        request.params.cycleId,
-        request.params.workoutId,
-        parsed.data.scheduledDate,
-      );
-      return response.json({ data: restored });
-    } catch (error) {
-      return sendRouteError(response, error);
-    }
-  },
-);
 
 cycleRouter.use("/:cycleId/review", cycleReviewRouter);
 cycleRouter.use("/:cycleId/next-draft", nextCycleDraftRouter);

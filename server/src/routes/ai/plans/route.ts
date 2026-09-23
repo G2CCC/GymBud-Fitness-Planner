@@ -38,6 +38,34 @@ planRouter.post("/:cycleId/confirm", async (request, response) => {
   }
 });
 
+planRouter.post("/:cycleId/day-generate", async (request, response) => {
+  try {
+    const userId = getAuthenticatedUserId(request);
+    const draft = await planService.generateSingleDayDraft(
+      userId,
+      request.params.cycleId,
+      request.body,
+    );
+    return response.json({ data: draft });
+  } catch (error) {
+    return sendRouteError(response, error);
+  }
+});
+
+planRouter.post("/:cycleId/day-confirm", async (request, response) => {
+  try {
+    const userId = getAuthenticatedUserId(request);
+    const workout = await planService.confirmSingleDayDraft(
+      userId,
+      request.params.cycleId,
+      request.body,
+    );
+    return response.json({ data: workout });
+  } catch (error) {
+    return sendRouteError(response, error);
+  }
+});
+
 function sendRouteError(response: Response, error: unknown) {
   if (error instanceof PlanServiceError) {
     return response.status(error.statusCode).json({

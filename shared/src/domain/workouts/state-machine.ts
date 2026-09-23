@@ -21,14 +21,6 @@ export type CompletedWorkout = Omit<
   completedAt: Date;
 };
 
-export type CancelledWorkout = Omit<
-  WorkoutTransition,
-  "status" | "completedAt"
-> & {
-  status: "CANCELLED";
-  completedAt: null;
-};
-
 export type PlannedWorkout = Omit<
   WorkoutTransition,
   "status" | "completedAt"
@@ -52,16 +44,6 @@ export function completeWorkout(
     ...workout,
     status: "COMPLETED",
     completedAt,
-  };
-}
-
-export function cancelWorkout(workout: WorkoutTransition): CancelledWorkout {
-  assertWritablePlannedWorkout(workout);
-
-  return {
-    ...workout,
-    status: "CANCELLED",
-    completedAt: null,
   };
 }
 

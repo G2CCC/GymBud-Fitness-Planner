@@ -24,7 +24,7 @@ const input: CycleTrainingVolumeInput = {
       ],
     },
     {
-        id: "bodyweight-1",
+      id: "bodyweight-1",
       activityType: "STRENGTH",
       status: "COMPLETED",
       actualExercises: [
@@ -46,9 +46,9 @@ const input: CycleTrainingVolumeInput = {
       actualDetails: { actualDurationMinutes: 60 },
     },
     {
-      id: "cancelled-1",
+      id: "planned-1",
       activityType: "CARDIO",
-      status: "CANCELLED",
+      status: "PLANNED",
       actualDetails: { actualDurationMinutes: 99, distanceKm: 20 },
     },
   ],
@@ -85,7 +85,7 @@ describe("cycle training volume", () => {
       ...input,
       workouts: input.workouts.map((workout) => ({
         ...workout,
-        status: "CANCELLED" as const,
+        status: "PLANNED" as const,
       })),
     });
 

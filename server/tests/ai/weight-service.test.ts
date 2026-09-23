@@ -186,6 +186,9 @@ describe.skipIf(!hasDatabase)("AI weight recommendations", () => {
     expect(context.recentPerformance.every((record) => !("source" in record))).toBe(true);
     expect(context.recentPerformance.every((record) => !("evidence" in record))).toBe(true);
     expect(context.currentCycleSummary).toBeDefined();
+    expect(context.currentCycleSummary).not.toHaveProperty(
+      "cancelledWorkoutCount",
+    );
     expect(context.allTimeBest).toBeDefined();
     expect(context.currentGoal).toEqual({
       primaryGoal: "FAT_LOSS",

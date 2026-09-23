@@ -178,8 +178,8 @@ export async function rescheduleWorkout(
   );
 }
 
-export async function cancelWorkout(workoutId: string): Promise<ApiWorkout> {
-  return request<ApiWorkout>("/workouts/" + workoutId + "/cancel", jsonBody({}));
+export async function deletePlannedWorkout(workoutId: string): Promise<void> {
+  await request<{ id: string }>("/workouts/" + workoutId, { method: "DELETE" });
 }
 
 export type WorkoutLogInput =
@@ -247,6 +247,35 @@ export async function confirmNextCyclePlan(
   const parsed = clientPlanDraftSchema.parse(draft);
   return request(
     "/ai/plans/" + cycleId + "/confirm",
+    jsonBody(serializePlanDraft(parsed)),
+  );
+}
+
+export async function generateSingleDayPlan(
+  cycleId: string,
+  input: { scheduledDate: string; focusAreas: string[] },
+): Promise<ApiPlanDraft> {
+  const scheduledDate = new Date(input.scheduledDate);
+  if (Number.isNaN(scheduledDate.getTime())) {
+    throw new Error("Choose a valid plan date.");
+  }
+
+  return request<ApiPlanDraft>(
+    "/ai/plans/" + cycleId + "/day-generate",
+    jsonBody({
+      scheduledDate: scheduledDate.toISOString(),
+      focusAreas: input.focusAreas,
+    }),
+  );
+}
+
+export async function confirmSingleDayPlan(
+  cycleId: string,
+  draft: ApiPlanDraft,
+): Promise<ApiWorkout> {
+  const parsed = clientPlanDraftSchema.parse(draft);
+  return request<ApiWorkout>(
+    "/ai/plans/" + cycleId + "/day-confirm",
     jsonBody(serializePlanDraft(parsed)),
   );
 }

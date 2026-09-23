@@ -68,8 +68,12 @@ export class CycleReviewService {
     let cycle = await this.getCycle(userId, cycleId);
     if (cycle.status === "DRAFT") return null;
     if (cycle.status === "ACTIVE") {
-      const today = startOfLocalDate(now, cycle.timezone ?? "UTC");
-      if (today.getTime() <= cycle.endDate.getTime()) return null;
+      const reviewStatus = await this.cycleService.getReviewStatus(
+        userId,
+        cycleId,
+        now,
+      );
+      if (!reviewStatus.reviewAvailable) return null;
       await this.generateWeeklyReview(userId, cycleId, now);
       cycle = await this.getCycle(userId, cycleId);
     }
@@ -86,6 +90,23 @@ export class CycleReviewService {
     let cycle = await this.getCycle(userId, cycleId);
     if (cycle.status === "DRAFT") throw new CycleReviewServiceError("Only an active or closed cycle can be reviewed", "INVALID_STATE", 409);
     if (cycle.reviewSnapshot?.processedSummary) return this.toWeeklyReviewResult(cycle);
+
+    if (cycle.status === "ACTIVE") {
+      const reviewStatus = await this.cycleService.getReviewStatus(
+        userId,
+        cycleId,
+        now,
+      );
+      if (!reviewStatus.reviewAvailable) {
+        throw new CycleReviewServiceError(
+          reviewStatus.blockedReason === "PLANNED_WORKOUTS_REMAINING"
+            ? "Complete or delete every planned workout before reviewing the cycle"
+            : "The cycle review is not available until the cycle end date",
+          "CONFLICT",
+          409,
+        );
+      }
+    }
 
     const volume = buildCycleTrainingVolume(toTrainingVolumeInput(cycle));
     const previous = await this.getPreviousCycleContext(userId, cycle);

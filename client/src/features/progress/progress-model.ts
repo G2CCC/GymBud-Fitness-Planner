@@ -4,7 +4,6 @@ export type ProgressSummary = {
   totalSessions: number;
   completedSessions: number;
   plannedSessions: number;
-  cancelledSessions: number;
   completionRate: number;
   rescheduleCount: number;
   activityTotals: {
@@ -37,9 +36,6 @@ export function buildProgressSummary(
     completedSessions: completedWorkouts.length,
     plannedSessions: workouts.filter((workout) => workout.status === "PLANNED")
       .length,
-    cancelledSessions: workouts.filter(
-      (workout) => workout.status === "CANCELLED",
-    ).length,
     completionRate:
       workouts.length === 0 ? 0 : completedWorkouts.length / workouts.length,
     rescheduleCount: workouts.reduce(
