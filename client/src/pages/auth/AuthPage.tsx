@@ -15,7 +15,7 @@ export function AuthPage({ mode }: { mode: "login" | "signup" }) {
 
   useEffect(() => {
     if (state.status === "authenticated") {
-      navigate("/today", { replace: true });
+      navigate("/calendar", { replace: true });
     }
   }, [navigate, state.status]);
 
@@ -44,13 +44,13 @@ export function AuthPage({ mode }: { mode: "login" | "signup" }) {
     try {
       if (isLogin) {
         await signIn(normalizedEmail, password);
-        navigate("/today", { replace: true });
+        navigate("/calendar", { replace: true });
       } else {
         const result = await signUp(normalizedEmail, password);
         if (result.confirmationRequired) {
           setConfirmationRequired(true);
         } else {
-          navigate("/today", { replace: true });
+          navigate("/calendar", { replace: true });
         }
       }
     } catch (submitError) {

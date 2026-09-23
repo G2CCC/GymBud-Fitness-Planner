@@ -1,7 +1,18 @@
 import type { ActivityType, WorkoutStatus } from "@fitness/shared";
 import type { ApiWorkout } from "../../api/contracts";
 
-export type CalendarWorkout = ApiWorkout;
+export type CalendarWorkout = Pick<
+  ApiWorkout,
+  | "id"
+  | "activityType"
+  | "scheduledDate"
+  | "durationMinutes"
+  | "status"
+  | "completedAt"
+  | "rescheduleCount"
+> & {
+  cycleId?: string;
+};
 
 export type WorkoutCardProps = {
   workout: CalendarWorkout;
@@ -38,33 +49,46 @@ export function WorkoutCard({
   onSelect,
 }: WorkoutCardProps) {
   const overdue = isOverdue(workout, today);
+  const activityKey = workout.activityType.toLowerCase();
+  const statusClass =
+    workout.status === "COMPLETED"
+      ? "calendar-workout-card--completed"
+      : workout.status === "CANCELLED"
+        ? "calendar-workout-card--cancelled"
+        : "";
 
   return (
     <button
       type="button"
-      className="motion-interactive focus-ring w-full rounded-[var(--radius-control)] border border-gymbud-border bg-gymbud-surface p-4 text-left shadow-sm"
+      className={`calendar-workout-card calendar-workout-card--${activityKey} ${statusClass} motion-interactive focus-ring w-full rounded-[var(--radius-control)] border p-3 text-left shadow-sm`}
+      data-activity={activityKey}
+      data-status={workout.status.toLowerCase()}
       onClick={() => onSelect(workout)}
       aria-label={
         activityLabels[workout.activityType] +
         " workout on " +
-        dateKey(workout.scheduledDate)
+        dateKey(workout.scheduledDate) +
+        " (" +
+        statusLabels[workout.status] +
+        (overdue ? ", overdue" : "") +
+        ")"
       }
     >
       <span className="flex items-start justify-between gap-3">
         <span>
-          <span className="block text-sm font-semibold text-gymbud-ink">
+          <span className="block text-sm font-semibold">
             {activityLabels[workout.activityType]}
           </span>
-          <span className="mt-1 block text-xs text-gymbud-muted">
+          <span className="mt-1 block text-xs opacity-80">
             {workout.durationMinutes} min
           </span>
         </span>
         <span className="flex flex-wrap justify-end gap-1 text-[0.7rem] font-semibold">
-          <span className="rounded-full bg-gymbud-surface-muted px-2 py-1 text-gymbud-ink">
+          <span className="rounded-full bg-white/70 px-2 py-1">
             {statusLabels[workout.status]}
           </span>
           {overdue ? (
-            <span className="rounded-full bg-gymbud-warning/15 px-2 py-1 text-gymbud-warning">
+            <span className="rounded-full bg-white/70 px-2 py-1 text-gymbud-warning">
               Overdue
             </span>
           ) : null}

@@ -57,6 +57,17 @@ export type ApiWorkout = {
   }>;
 };
 
+export type ApiCalendarWorkout = {
+  id: string;
+  cycleId: string;
+  activityType: ActivityType;
+  scheduledDate: string;
+  durationMinutes: number;
+  status: WorkoutStatus;
+  completedAt: string | null;
+  rescheduleCount: number;
+};
+
 export type ApiCycle = {
   id: string;
   status: CycleStatus;

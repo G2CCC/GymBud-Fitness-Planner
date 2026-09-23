@@ -27,6 +27,50 @@ const features = [
   ],
 ] as const;
 
+const previewDays = [
+  { day: "", activities: [] },
+  { day: "1", activities: [] },
+  { day: "2", activities: ["Strength"] },
+  { day: "3", activities: [] },
+  { day: "4", activities: ["Cardio"] },
+  { day: "5", activities: [] },
+  { day: "6", activities: ["Sport"] },
+  { day: "7", activities: [] },
+  { day: "8", activities: [] },
+  { day: "9", activities: ["Strength"] },
+  { day: "10", activities: [] },
+  { day: "11", activities: [] },
+  { day: "12", activities: ["Cardio"] },
+  { day: "13", activities: [] },
+  { day: "14", activities: [] },
+  { day: "15", activities: ["Strength"] },
+  { day: "16", activities: [] },
+  { day: "17", activities: [] },
+  { day: "18", activities: [] },
+  { day: "19", activities: ["Sport"] },
+  { day: "20", activities: [] },
+  { day: "21", activities: [] },
+  { day: "22", activities: ["Strength"] },
+  { day: "23", activities: [] },
+  { day: "24", activities: [] },
+  { day: "25", activities: ["Cardio"] },
+  { day: "26", activities: [] },
+  { day: "27", activities: [] },
+  { day: "28", activities: [] },
+  { day: "29", activities: ["Strength"] },
+  { day: "30", activities: [] },
+  { day: "", activities: [] },
+  { day: "", activities: [] },
+  { day: "", activities: [] },
+  { day: "", activities: [] },
+] as const;
+
+const previewActivityClasses = {
+  Strength: "calendar-workout-card--strength",
+  Cardio: "calendar-workout-card--cardio",
+  Sport: "calendar-workout-card--sport",
+} as const;
+
 export function LandingPage() {
   return (
     <div className="min-h-screen overflow-hidden bg-gymbud-background text-gymbud-ink">
@@ -85,30 +129,49 @@ export function LandingPage() {
               <div className="flex items-start justify-between gap-4 border-b border-gymbud-border pb-5">
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-[0.16em] text-gymbud-muted">
-                    Today
+                    Calendar
                   </p>
-                  <p className="mt-2 text-2xl font-semibold">A useful session, not a perfect one.</p>
+                  <p className="mt-2 text-2xl font-semibold">September 2026</p>
                 </div>
-                <span className="rounded-full bg-gymbud-accent-soft px-3 py-2 text-xs font-semibold">
-                  Cycle 03
-                </span>
-              </div>
-              <div className="mt-5 grid gap-3">
-                <div className="rounded-[var(--radius-card)] bg-gymbud-background p-4">
-                  <div className="flex items-center justify-between gap-3">
-                    <p className="font-semibold">Lower-body strength</p>
-                    <span className="text-xs font-semibold text-gymbud-success">Ready</span>
-                  </div>
-                  <p className="mt-2 text-sm text-gymbud-muted">4 movements · 52 min · Gym</p>
-                </div>
-                <div className="grid grid-cols-3 gap-3">
-                  <LandingMetric label="Done" value="08" />
-                  <LandingMetric label="Rate" value="84%" />
-                  <LandingMetric label="Cycles" value="03" />
+                <div className="flex items-center gap-1 text-sm font-semibold text-gymbud-muted" aria-hidden="true">
+                  <span className="grid h-8 w-8 place-items-center rounded-full bg-gymbud-surface-muted">←</span>
+                  <span className="grid h-8 w-8 place-items-center rounded-full bg-gymbud-accent-soft text-gymbud-accent-strong">→</span>
                 </div>
               </div>
-              <p className="mt-6 text-sm leading-6 text-gymbud-muted">
-                Progress is built from what you did—not what the plan assumed.
+              <div className="mt-5">
+                <div className="grid grid-cols-7 gap-1 text-center text-[0.62rem] font-semibold uppercase tracking-[0.08em] text-gymbud-muted">
+                  {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((day) => (
+                    <span key={day}>{day}</span>
+                  ))}
+                </div>
+                <div className="mt-2 grid grid-cols-7 gap-1">
+                  {previewDays.map(({ day, activities }, index) => (
+                    <div
+                      key={`${day}-${index}`}
+                      className={`min-h-14 rounded-[0.7rem] border p-1.5 ${day ? "border-gymbud-border bg-gymbud-background" : "border-transparent bg-transparent"}`}
+                    >
+                      {day ? <span className="text-xs font-semibold text-gymbud-ink">{day}</span> : null}
+                      <div className="mt-1 grid gap-1">
+                        {activities.map((activity) => (
+                          <span
+                            key={activity}
+                            className={`calendar-workout-card ${previewActivityClasses[activity]} truncate rounded px-1 py-0.5 text-[0.58rem] font-semibold`}
+                          >
+                            {activity}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div className="mt-5 grid grid-cols-3 gap-2">
+                <LandingMetric label="Done" value="08" />
+                <LandingMetric label="Rate" value="84%" />
+                <LandingMetric label="Cycles" value="03" />
+              </div>
+              <p className="mt-5 text-sm leading-6 text-gymbud-muted">
+                Open any session to see the plan, status, and next action.
               </p>
             </div>
           </div>

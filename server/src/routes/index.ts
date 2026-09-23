@@ -9,6 +9,7 @@ import { cycleRouter } from "./cycles/route";
 import { exerciseRouter } from "./exercises/route";
 import { profileRouter } from "./profile/route";
 import { workoutRouter } from "./workouts/route";
+import { calendarRouter } from "./calendar/route";
 
 export const apiRouter = Router();
 apiRouter.use(createAuthMiddleware());
@@ -21,3 +22,4 @@ apiRouter.use("/cycles", cycleRouter);
 apiRouter.use("/exercises", exerciseRouter);
 apiRouter.use("/profile", profileRouter);
 apiRouter.use("/workouts", workoutRouter);
+apiRouter.use("/calendar", calendarRouter);

@@ -7,6 +7,7 @@ import {
   type StrengthWorkoutLogInput,
 } from "@fitness/shared";
 import type {
+  ApiCalendarWorkout,
   ApiCycle,
   ApiActiveCycle,
   ApiCycleReviewResult,
@@ -92,6 +93,17 @@ export async function saveProfile(input: ProfileInput): Promise<ApiProfile> {
 export async function getCurrentCycle(): Promise<ApiCycle | null> {
   const result = await request<{ cycle: ApiCycle | null }>("/cycles/current");
   return result.cycle;
+}
+
+export async function getCalendarWorkouts(
+  from: string,
+  to: string,
+): Promise<ApiCalendarWorkout[]> {
+  const params = new URLSearchParams({ from, to });
+  const result = await request<{ workouts: ApiCalendarWorkout[] }>(
+    "/calendar?" + params.toString(),
+  );
+  return result.workouts;
 }
 
 export async function createCycleDraft(

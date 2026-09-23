@@ -1,6 +1,6 @@
-import { render, screen } from "@testing-library/react";
+import { cleanup, render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { getCurrentCycle } from "../../src/api/client";
 import { LandingPage } from "../../src/pages/landing/LandingPage";
 
@@ -9,6 +9,10 @@ vi.mock("../../src/api/client", () => ({
 }));
 
 describe("LandingPage", () => {
+  afterEach(() => {
+    cleanup();
+  });
+
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -44,5 +48,20 @@ describe("LandingPage", () => {
     );
 
     expect(vi.mocked(getCurrentCycle)).not.toHaveBeenCalled();
+  });
+
+  it("uses the monthly Calendar as the product preview", () => {
+    render(
+      <MemoryRouter>
+        <LandingPage />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByText("Calendar")).toBeInTheDocument();
+    expect(screen.getByText("September 2026")).toBeInTheDocument();
+    expect(screen.getAllByText("Strength").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Cardio").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Sport").length).toBeGreaterThan(0);
+    expect(screen.queryByText("Today")).not.toBeInTheDocument();
   });
 });

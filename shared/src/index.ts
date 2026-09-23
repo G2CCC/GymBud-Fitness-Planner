@@ -13,3 +13,5 @@ export * from "./domain/workouts/state-machine";
 export * from "./domain/workouts/validation";
 export * from "./domain/reviews/objective-summary";
 export * from "./domain/reviews/cycle-volume";
+export * from "./domain/calendar/types";
+export * from "./domain/calendar/validation";

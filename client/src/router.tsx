@@ -11,7 +11,6 @@ import { WorkoutPage } from "./pages/workouts/WorkoutPage";
 import { ReviewPage } from "./pages/review/ReviewPage";
 import { ProgressPage } from "./pages/progress/ProgressPage";
 import { ProfilePage } from "./pages/profile/ProfilePage";
-import { TodayPage } from "./pages/today/TodayPage";
 
 export function LandingRoute() {
   const { state } = useAuth();
@@ -21,7 +20,7 @@ export function LandingRoute() {
   }
 
   if (state.status === "authenticated") {
-    return <Navigate to="/today" replace />;
+    return <Navigate to="/calendar" replace />;
   }
 
   return <LandingPage />;
@@ -38,7 +37,6 @@ export const router = createBrowserRouter([
       </RequireAuth>
     ),
     children: [
-      { path: "today", element: <TodayPage /> },
       { path: "onboarding", element: <OnboardingPage /> },
       { path: "calendar", element: <CalendarPage /> },
       { path: "workouts/:workoutId", element: <WorkoutPage /> },

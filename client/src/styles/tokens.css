@@ -1,20 +1,26 @@
 :root {
   color-scheme: light;
-  --color-background: #f3f5ef;
+  --color-background: #f7f9f8;
   --color-surface: #ffffff;
-  --color-surface-muted: #dce3dc;
-  --color-border: #e1e8dc;
-  --color-ink: #17201b;
-  --color-muted: #6a746c;
-  --color-accent: #93c465;
-  --color-accent-strong: #77a85a;
-  --color-accent-soft: #c8e88c;
-  --color-success: #4e8b62;
-  --color-warning: #b9823c;
-  --color-danger: #b85c55;
+  --color-surface-muted: #f1f4f5;
+  --color-border: #e1e7ea;
+  --color-ink: #10213f;
+  --color-muted: #5e6b80;
+  --color-accent: #119b61;
+  --color-accent-strong: #087a4a;
+  --color-accent-soft: #ddf5e9;
+  --color-activity-strength: #119b61;
+  --color-activity-strength-soft: #ddf5e9;
+  --color-activity-cardio: #2b7de9;
+  --color-activity-cardio-soft: #e1efff;
+  --color-activity-sport: #7355d8;
+  --color-activity-sport-soft: #eee9ff;
+  --color-success: #138a5b;
+  --color-warning: #b7791f;
+  --color-danger: #c05656;
   --radius-card: 1.25rem;
   --radius-control: 0.75rem;
-  --shadow-card: 0 18px 45px rgb(23 32 27 / 0.08);
+  --shadow-card: 0 18px 45px rgb(16 33 63 / 0.08);
   --motion-fast: 160ms;
   --motion-normal: 240ms;
 }

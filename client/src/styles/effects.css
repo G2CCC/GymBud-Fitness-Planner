@@ -1,33 +1,65 @@
 .hero-gradient {
   background:
-    radial-gradient(circle at 15% 20%, rgb(200 232 140 / 0.72), transparent 36%),
-    linear-gradient(135deg, #ffffff 0%, #edf5e8 100%);
+    radial-gradient(circle at 15% 20%, rgb(221 245 233 / 0.8), transparent 36%),
+    linear-gradient(135deg, #ffffff 0%, #f0faf5 100%);
 }
 
 .cycle-gradient {
-  background: linear-gradient(135deg, #dff0c1 0%, #f8fbf4 100%);
+  background: linear-gradient(135deg, #e8f8ef 0%, #fbfcfd 100%);
 }
 
 .selected-empty-gradient {
-  background: linear-gradient(135deg, #f6faef 0%, #e7f0df 100%);
+  background: linear-gradient(135deg, #f7fbf9 0%, #eaf4f0 100%);
 }
 
 .glass-surface {
-  background: rgb(255 255 255 / 0.94);
+  background: rgb(255 255 255 / 0.96);
   box-shadow: var(--shadow-card);
 }
 
 @supports ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
   .glass-surface {
-    background: rgb(255 255 255 / 0.76);
+    background: rgb(255 255 255 / 0.8);
     -webkit-backdrop-filter: blur(18px);
     backdrop-filter: blur(18px);
   }
 }
 
 .focus-ring:focus-visible {
-  outline: 3px solid rgb(119 168 90 / 0.42);
+  outline: 3px solid rgb(17 155 97 / 0.42);
   outline-offset: 3px;
+}
+
+.calendar-workout-card {
+  border-color: var(--activity-color);
+  background: var(--activity-color-soft);
+  color: var(--activity-color);
+}
+
+.calendar-workout-card--strength {
+  --activity-color: var(--color-activity-strength);
+  --activity-color-soft: var(--color-activity-strength-soft);
+}
+
+.calendar-workout-card--cardio {
+  --activity-color: var(--color-activity-cardio);
+  --activity-color-soft: var(--color-activity-cardio-soft);
+}
+
+.calendar-workout-card--sport {
+  --activity-color: var(--color-activity-sport);
+  --activity-color-soft: var(--color-activity-sport-soft);
+}
+
+.calendar-workout-card--completed {
+  opacity: 0.76;
+}
+
+.calendar-workout-card--cancelled {
+  border-color: var(--color-border);
+  background: var(--color-surface-muted);
+  color: var(--color-muted);
+  text-decoration: line-through;
 }
 
 @media (prefers-reduced-motion: no-preference) {
