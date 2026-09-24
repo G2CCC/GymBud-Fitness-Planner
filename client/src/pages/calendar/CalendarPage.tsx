@@ -313,14 +313,11 @@ export function CalendarPage() {
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.16em] text-gymbud-muted">
-            {loading ? "Loading setup" : cycle ? cycle.status + " cycle" : "Calendar"}
+           Training calendar
           </p>
           <h1 className="mt-2 text-3xl font-semibold tracking-tight text-gymbud-ink">
-            Your training calendar
+            Ready for your next workout?
           </h1>
-          <p className="mt-2 text-sm text-gymbud-muted">
-            Browse a month at a time, then open any workout for the full plan.
-          </p>
         </div>
       </header>
 

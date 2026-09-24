@@ -20,7 +20,7 @@ export function CalendarActionBar({
   return (
     <section
       aria-label="Calendar actions"
-      className="flex flex-wrap items-start gap-3 rounded-[var(--radius-card)] border border-gymbud-border bg-gymbud-surface p-4"
+      className="flex flex-wrap items-start gap-3"
     >
       <div className="flex flex-wrap gap-3">
         <button
@@ -42,7 +42,8 @@ export function CalendarActionBar({
           Generate plan
         </button>
       </div>
-      <div className="ml-auto grid justify-items-end gap-1 text-right">
+      <div className="ml-auto flex flex-wrap items-center gap-3 text-right">
+        {!reviewIsAvailable ?<ReviewHint cycle={cycle} />:null}
         {reviewIsAvailable ? (
           <Link
             className="focus-ring min-h-11 rounded-[var(--radius-control)] bg-gymbud-accent-strong px-4 py-3 text-sm font-semibold text-white"
@@ -59,7 +60,7 @@ export function CalendarActionBar({
             Review cycle
           </button>
         )}
-        <ReviewHint cycle={cycle} />
+        
       </div>
     </section>
   );
@@ -80,7 +81,7 @@ function ReviewHint({ cycle }: { cycle: ApiCycle }) {
   if (status && status.daysUntilReview > 0) {
     return (
       <p className="max-w-xs text-xs text-gymbud-muted">
-        Available in {status.daysUntilReview} {status.daysUntilReview === 1 ? "day" : "days"} · {formatShortDate(status.reviewAvailableOn)}
+        Review available in {status.daysUntilReview} {status.daysUntilReview === 1 ? "day" : "days"} · {formatShortDate(status.reviewAvailableOn)}
       </p>
     );
   }
