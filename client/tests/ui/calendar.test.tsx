@@ -174,10 +174,18 @@ describe("calendar and workout editor UI", () => {
       await screen.findByRole("button", { name: /generate plan/i }),
     );
     expect(screen.queryByTestId("add-session-panel")).not.toBeInTheDocument();
-    expect(screen.getByTestId("generate-day-plan-panel")).toHaveClass(
+    const generatePanel = screen.getByTestId("generate-day-plan-panel");
+    expect(generatePanel).toHaveClass(
       "max-w-2xl",
       "justify-self-start",
     );
+    expect(screen.getByLabelText("Chest")).toBeChecked();
+    expect(screen.getByLabelText("Shoulders")).toBeInTheDocument();
+    expect(screen.getByLabelText("Back")).toBeInTheDocument();
+    expect(screen.getByLabelText("Legs")).toBeInTheDocument();
+    expect(screen.getByLabelText("Arms")).toBeInTheDocument();
+    expect(screen.getByLabelText("Core")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Full body")).not.toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: /add a session/i }));
     expect(screen.getByTestId("add-session-panel")).toBeInTheDocument();

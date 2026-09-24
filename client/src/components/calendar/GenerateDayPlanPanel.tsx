@@ -17,11 +17,11 @@ export type GenerateDayPlanPanelProps = {
 };
 
 const focusOptions = [
-  ["FULL_BODY", "Full body"],
-  ["UPPER_BODY", "Upper body"],
-  ["LOWER_BODY", "Lower body"],
-  ["PUSH", "Push"],
-  ["PULL", "Pull"],
+  ["CHEST", "Chest"],
+  ["SHOULDERS", "Shoulders"],
+  ["BACK", "Back"],
+  ["LEGS", "Legs"],
+  ["ARMS", "Arms"],
   ["CORE", "Core"],
 ] as const;
 
@@ -54,7 +54,7 @@ export function GenerateDayPlanPanel({
   const today = systemDateKey();
   const minDate = today < dateKey(cycle.startDate) ? dateKey(cycle.startDate) : today;
   const [scheduledDate, setScheduledDate] = useState(minDate);
-  const [focusAreas, setFocusAreas] = useState<string[]>(["FULL_BODY"]);
+  const [focusAreas, setFocusAreas] = useState<string[]>(["CHEST"]);
   const [error, setError] = useState<string | null>(null);
   const [generating, setGenerating] = useState(false);
   const [confirming, setConfirming] = useState(false);

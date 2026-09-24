@@ -22,25 +22,27 @@ export function CalendarActionBar({
       aria-label="Calendar actions"
       className="flex flex-wrap items-start gap-3 rounded-[var(--radius-card)] border border-gymbud-border bg-gymbud-surface p-4"
     >
-      <button
-        className="focus-ring min-h-11 rounded-[var(--radius-control)] bg-gymbud-ink px-4 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:bg-gymbud-surface-muted disabled:text-gymbud-muted"
-        type="button"
-        disabled={!cycleIsActive}
-        aria-expanded={activePanel === "add"}
-        onClick={() => onTogglePanel("add")}
-      >
-        Add a session
-      </button>
-      <button
-        className="focus-ring min-h-11 rounded-[var(--radius-control)] border border-gymbud-ink px-4 text-sm font-semibold text-gymbud-ink disabled:cursor-not-allowed disabled:border-gymbud-border disabled:text-gymbud-muted"
-        type="button"
-        disabled={!cycleIsActive}
-        aria-expanded={activePanel === "generate"}
-        onClick={() => onTogglePanel("generate")}
-      >
-        Generate plan
-      </button>
-      <div className="grid justify-items-start gap-1">
+      <div className="flex flex-wrap gap-3">
+        <button
+          className="focus-ring min-h-11 rounded-[var(--radius-control)] bg-gymbud-ink px-4 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:bg-gymbud-surface-muted disabled:text-gymbud-muted"
+          type="button"
+          disabled={!cycleIsActive}
+          aria-expanded={activePanel === "add"}
+          onClick={() => onTogglePanel("add")}
+        >
+          Add a session
+        </button>
+        <button
+          className="focus-ring min-h-11 rounded-[var(--radius-control)] border border-gymbud-ink px-4 text-sm font-semibold text-gymbud-ink disabled:cursor-not-allowed disabled:border-gymbud-border disabled:text-gymbud-muted"
+          type="button"
+          disabled={!cycleIsActive}
+          aria-expanded={activePanel === "generate"}
+          onClick={() => onTogglePanel("generate")}
+        >
+          Generate plan
+        </button>
+      </div>
+      <div className="ml-auto grid justify-items-end gap-1 text-right">
         {reviewIsAvailable ? (
           <Link
             className="focus-ring min-h-11 rounded-[var(--radius-control)] bg-gymbud-accent-strong px-4 py-3 text-sm font-semibold text-white"
@@ -95,5 +97,6 @@ function formatShortDate(value: string): string {
     month: "short",
     day: "numeric",
     year: "numeric",
+    timeZone: "UTC",
   }).format(new Date(value));
 }
