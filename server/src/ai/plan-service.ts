@@ -1,8 +1,10 @@
 import { Prisma, PrismaClient } from "@prisma/client";
 import {
   addUtcDays,
+  activityIconKeySchema,
   startOfLocalDate,
   startOfUtcDay,
+  type ActivityOptionType,
 } from "@fitness/shared";
 import { env } from "../config/env";
 import {
@@ -56,7 +58,19 @@ const legalExerciseSelect = {
   equipment: true,
   targetMuscles: true,
   movementPattern: true,
+  focusAreas: true,
 } satisfies Prisma.ExerciseSelect;
+
+const legalActivityOptionSelect = {
+  id: true,
+  activityType: true,
+  slug: true,
+  name: true,
+  iconKey: true,
+  aiEligible: true,
+  sortOrder: true,
+  description: true,
+} satisfies Prisma.ActivityOptionSelect;
 
 const confirmedWorkoutSelect = {
   id: true,
@@ -67,6 +81,9 @@ const confirmedWorkoutSelect = {
   completedAt: true,
   rescheduleCount: true,
   plannedDetails: true,
+  activityOption: {
+    select: legalActivityOptionSelect,
+  },
   plannedExercises: {
     orderBy: { sortOrder: "asc" },
     select: {
@@ -92,6 +109,9 @@ type CycleContext = Prisma.TrainingCycleGetPayload<{
 }>;
 type LegalExercise = Prisma.ExerciseGetPayload<{
   select: typeof legalExerciseSelect;
+}>;
+type LegalActivityOption = Prisma.ActivityOptionGetPayload<{
+  select: typeof legalActivityOptionSelect;
 }>;
 
 export type ConfirmedCycle = Prisma.TrainingCycleGetPayload<{
@@ -140,6 +160,7 @@ export class PlanService {
 
     const profile = requireProfile(cycle);
     const exercises = await this.getLegalExercises(this.prisma, userId);
+    const activityOptions = await this.getLegalActivityOptions(this.prisma);
 
     const request = buildPlanRequest({
       cycleId: cycle.id,
@@ -153,6 +174,7 @@ export class PlanService {
       heightCm: profile.heightCm,
       weightKg: profile.weightKg,
       exercises: exercises.map(toPromptExercise),
+      activityOptions: activityOptions.map(toPromptActivityOption),
       reviewContext: options.reviewContext,
       model: this.model,
     });
@@ -171,6 +193,7 @@ export class PlanService {
       cycle,
       response,
       exercises,
+      activityOptions,
       request.model,
       request.promptVersion,
     );
@@ -197,48 +220,58 @@ export class PlanService {
       assertDraftCycle(cycle);
 
       const exercises = await this.getLegalExercises(tx, userId);
+      const activityOptions = await this.getLegalActivityOptions(tx);
       this.buildDraft(
         cycle,
         response,
         exercises,
+        activityOptions,
         parsed.data.model,
         parsed.data.promptVersion,
       );
 
       for (const workout of response.workouts) {
+        const workoutData: Prisma.ScheduledWorkoutCreateInput = {
+          user: { connect: { id: userId } },
+          cycle: { connect: { id: cycleId } },
+          activityType: workout.activityType,
+          scheduledDate: workout.scheduledDate,
+          durationMinutes: workout.durationMinutes,
+          status: "PLANNED",
+          ...(workout.activityOptionId
+            ? {
+                activityOption: {
+                  connect: { id: workout.activityOptionId },
+                },
+              }
+            : {}),
+          ...(workout.plannedDetails
+            ? {
+                plannedDetails: workout.plannedDetails as Prisma.InputJsonValue,
+              }
+            : {}),
+          ...(workout.activityType === "STRENGTH"
+            ? {
+                plannedExercises: {
+                  create: workout.exercises.map((exercise) => ({
+                    exerciseId: exercise.exerciseId,
+                    sortOrder: exercise.sortOrder,
+                    restSeconds: exercise.restSeconds ?? null,
+                    plannedSets: {
+                      create: exercise.sets.map((set) => ({
+                        setNumber: set.setNumber,
+                        targetReps: set.targetReps,
+                        plannedWeight: set.plannedWeight ?? null,
+                        weightUnit: set.weightUnit ?? null,
+                      })),
+                    },
+                  })),
+                },
+              }
+            : {}),
+        };
         await tx.scheduledWorkout.create({
-          data: {
-            userId,
-            cycleId,
-            activityType: workout.activityType,
-            scheduledDate: workout.scheduledDate,
-            durationMinutes: workout.durationMinutes,
-            status: "PLANNED",
-            ...(workout.plannedDetails
-              ? {
-                  plannedDetails: workout.plannedDetails as Prisma.InputJsonValue,
-                }
-              : {}),
-            ...(workout.activityType === "STRENGTH"
-              ? {
-                  plannedExercises: {
-                    create: workout.exercises.map((exercise) => ({
-                      exerciseId: exercise.exerciseId,
-                      sortOrder: exercise.sortOrder,
-                      restSeconds: exercise.restSeconds ?? null,
-                      plannedSets: {
-                        create: exercise.sets.map((set) => ({
-                          setNumber: set.setNumber,
-                          targetReps: set.targetReps,
-                          plannedWeight: set.plannedWeight ?? null,
-                          weightUnit: set.weightUnit ?? null,
-                        })),
-                      },
-                    })),
-                  },
-                }
-              : {}),
-          },
+          data: workoutData,
         });
       }
 
@@ -275,6 +308,7 @@ export class PlanService {
 
     const profile = requireProfile(cycle);
     const exercises = await this.getLegalExercises(this.prisma, userId);
+    const activityOptions = await this.getLegalActivityOptions(this.prisma);
     const request = buildSingleDayPlanRequest({
       cycleId: cycle.id,
       scheduledDate,
@@ -303,6 +337,7 @@ export class PlanService {
       cycle,
       { workouts: [response.workout] },
       exercises,
+      activityOptions,
       request.model,
       request.promptVersion,
     );
@@ -344,10 +379,12 @@ export class PlanService {
       await assertTargetDateIsEmpty(tx, userId, cycleId, validScheduledDate);
 
       const exercises = await this.getLegalExercises(tx, userId);
+      const activityOptions = await this.getLegalActivityOptions(tx);
       const draft = this.buildDraft(
         cycle,
         response,
         exercises,
+        activityOptions,
         parsed.data.model,
         parsed.data.promptVersion,
       );
@@ -423,16 +460,33 @@ export class PlanService {
     });
   }
 
+  private async getLegalActivityOptions(
+    database: DatabaseClient,
+  ): Promise<LegalActivityOption[]> {
+    return database.activityOption.findMany({
+      where: {
+        aiEligible: true,
+        activityType: { in: ["CARDIO", "SPORT"] },
+      },
+      select: legalActivityOptionSelect,
+      orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+    });
+  }
+
   private buildDraft(
     cycle: CycleContext,
     response: PlanResponse,
     exercises: LegalExercise[],
+    activityOptions: LegalActivityOption[],
     model: string,
     promptVersion: string,
   ): PlanDraft {
     requireProfile(cycle);
     const exerciseById = new Map(
       exercises.map((exercise) => [exercise.id, exercise]),
+    );
+    const activityOptionById = new Map(
+      activityOptions.map((activityOption) => [activityOption.id, activityOption]),
     );
 
     for (const workout of response.workouts) {
@@ -469,6 +523,22 @@ export class PlanService {
         );
       }
 
+      if (workout.activityType !== "STRENGTH") {
+        const activityOption = workout.activityOptionId
+          ? activityOptionById.get(workout.activityOptionId)
+          : undefined;
+        if (!activityOption) {
+          throw validationError(
+            `Activity option ${workout.activityOptionId ?? "(missing)"} is not legal for this plan`,
+          );
+        }
+        if (activityOption.activityType !== workout.activityType) {
+          throw validationError(
+            `Activity option ${activityOption.id} does not match ${workout.activityType}`,
+          );
+        }
+      }
+
       validateActivityDetails(workout);
     }
 
@@ -478,6 +548,27 @@ export class PlanService {
       promptVersion,
       workouts: response.workouts.map((workout) => ({
         ...workout,
+        ...(workout.activityType !== "STRENGTH"
+          ? (() => {
+              const activityOption = activityOptionById.get(
+                workout.activityOptionId!,
+              );
+              if (!activityOption) {
+                throw validationError(
+                  `Activity option ${workout.activityOptionId ?? "(missing)"} is not legal for this plan`,
+                );
+              }
+              const parsedIconKey = activityIconKeySchema.safeParse(
+                activityOption.iconKey,
+              );
+              return {
+                activityOptionName: activityOption.name,
+                activityOptionIconKey: parsedIconKey.success
+                  ? parsedIconKey.data
+                  : "ACTIVITY",
+              };
+            })()
+          : {}),
         exercises: workout.exercises.map((exercise) => {
           const legalExercise = exerciseById.get(exercise.exerciseId);
           if (!legalExercise) {
@@ -652,6 +743,15 @@ function toPromptExercise(exercise: LegalExercise) {
     equipment: exercise.equipment,
     targetMuscles: exercise.targetMuscles,
     movementPattern: exercise.movementPattern,
+    focusAreas: exercise.focusAreas,
+  };
+}
+
+function toPromptActivityOption(activityOption: LegalActivityOption) {
+  return {
+    id: activityOption.id,
+    activityType: activityOption.activityType as ActivityOptionType,
+    name: activityOption.name,
   };
 }
 
@@ -660,6 +760,7 @@ function toPlanResponse(draft: PlanDraft): PlanResponse {
     workouts: draft.workouts.map((workout) => ({
       scheduledDate: workout.scheduledDate,
       activityType: workout.activityType,
+      activityOptionId: workout.activityOptionId,
       durationMinutes: workout.durationMinutes,
       plannedDetails: workout.plannedDetails,
       exercises: workout.exercises.map((exercise) => ({

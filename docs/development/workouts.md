@@ -47,6 +47,19 @@ Cardio and sport logs use the existing `WorkoutLog.actualDetails` JSON field.
 Their Zod schemas are activity-specific and reject unknown fields, including
 the unsupported `rpe` field.
 
+## Catalog-backed activity identity
+
+Every new Cardio or Sport workout selects an `ActivityOption` such as
+`cardio-rowing-machine` or `sport-basketball`. The API returns the option name
+and icon with both workout and calendar records. The client displays the broad
+type plus the specific catalog activity and keeps Cardio distance, pace/speed,
+intensity, and Sport notes available while logging.
+
+Historical rows may have a null `activityOptionId`. They remain readable: the
+UI uses the old `modality` or `sportName` stored in `actualDetails` as a
+legacy label and falls back to a generic Activity icon. Custom exercises are
+not removed by catalog seeding or legacy exercise migration.
+
 ## Endpoints
 
 ```text

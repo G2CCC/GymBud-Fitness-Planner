@@ -25,7 +25,11 @@ const planDraft: ApiPlanDraft = {
     {
       scheduledDate: "2026-09-15T00:00:00.000Z",
       activityType: "CARDIO",
+      activityOptionId: "cardio-treadmill-running",
+      activityOptionName: "Treadmill Running",
+      activityOptionIconKey: "FOOTPRINTS",
       durationMinutes: 30,
+      plannedDetails: { modality: "Treadmill", intensity: "MODERATE" },
       exercises: [],
     },
   ],

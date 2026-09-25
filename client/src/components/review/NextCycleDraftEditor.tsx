@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { ApiPlanDraft } from "../../api/contracts";
+import { ActivityIdentity } from "../catalog/ActivityIdentity";
 
 export type NextCycleDraft = {
   cycleId: string;
@@ -46,7 +47,21 @@ export function NextCycleDraftEditor({
           {value.plan.workouts.map((workout, index) => (
             <fieldset key={`${workout.scheduledDate}-${index}`} className="grid gap-2 rounded-[var(--radius-control)] border border-gymbud-border p-3">
               <legend className="px-1 text-sm font-semibold text-gymbud-ink">
-                {workout.activityType} workout {index + 1}
+                <ActivityIdentity
+                  activityType={workout.activityType}
+                  activityOption={
+                    workout.activityOptionName && workout.activityOptionIconKey
+                      ? {
+                          name: workout.activityOptionName,
+                          iconKey: workout.activityOptionIconKey,
+                        }
+                      : null
+                  }
+                  size={18}
+                />
+                <span className="mt-1 block text-xs font-normal text-gymbud-muted">
+                  Workout {index + 1}
+                </span>
               </legend>
               <label className="grid gap-1 text-xs font-semibold text-gymbud-ink">
                 Date

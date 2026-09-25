@@ -9,7 +9,7 @@ describe("deterministic fake AI client", () => {
     const result = await client.generateJson(
       {
         model: "test-model",
-        promptVersion: "plan.v3",
+        promptVersion: "plan.v4",
         systemPrompt: "",
         userPrompt: JSON.stringify({
           cycle: {
@@ -31,7 +31,21 @@ describe("deterministic fake AI client", () => {
       activityType: "STRENGTH",
     });
     expect(result.workouts[0]?.exercises[0]?.exerciseId).toBe(
-      "system-push-up",
+      "free-exercise-db-Pushups",
+    );
+    expect(result.workouts).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          activityType: "CARDIO",
+          activityOptionId: "cardio-treadmill-running",
+          exercises: [],
+        }),
+        expect.objectContaining({
+          activityType: "SPORT",
+          activityOptionId: "sport-basketball",
+          exercises: [],
+        }),
+      ]),
     );
   });
 

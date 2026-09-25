@@ -1,7 +1,11 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
-import type { ActivityType, WorkoutStatus } from "@fitness/shared";
+import type { WorkoutStatus } from "@fitness/shared";
 import type { ApiWorkout } from "../../api/contracts";
+import {
+  ActivityIdentity,
+  getActivityDisplayName,
+} from "../catalog/ActivityIdentity";
 import type { CalendarWorkout } from "./WorkoutCard";
 
 export type WorkoutDetailsDrawerProps = {
@@ -13,12 +17,6 @@ export type WorkoutDetailsDrawerProps = {
   onClose: () => void;
   onReschedule: (scheduledDate: string) => void | Promise<void>;
   onDelete: () => void | Promise<void>;
-};
-
-const activityLabels: Record<ActivityType, string> = {
-  STRENGTH: "Strength",
-  CARDIO: "Cardio",
-  SPORT: "Sport",
 };
 
 const statusLabels: Record<WorkoutStatus, string> = {
@@ -140,6 +138,14 @@ export function WorkoutDetailsDrawer({
   }
 
   const activityKey = summary.activityType.toLowerCase();
+  const activityOption = summary.activityOption ?? workout?.activityOption;
+  const legacyActivityName =
+    workout?.actualDetails?.modality ?? workout?.actualDetails?.sportName;
+  const activityName = getActivityDisplayName(
+    summary.activityType,
+    activityOption,
+    legacyActivityName,
+  );
 
   return (
     <div
@@ -183,7 +189,12 @@ export function WorkoutDetailsDrawer({
             <span
               className={`calendar-workout-card calendar-workout-card--${activityKey} rounded-full border px-3 py-1 text-sm font-semibold`}
             >
-              {activityLabels[summary.activityType]}
+              <ActivityIdentity
+                activityType={summary.activityType}
+                activityOption={activityOption}
+                fallbackName={legacyActivityName}
+                size={18}
+              />
             </span>
             <span className={`rounded-full px-3 py-1 text-sm font-semibold ${statusClass(summary)}`}>
               {statusLabels[summary.status]}
@@ -215,6 +226,14 @@ export function WorkoutDetailsDrawer({
           </div>
 
           <p className="text-sm font-medium text-gymbud-muted">{statusCopy(summary)}</p>
+
+          {summary.activityType !== "STRENGTH" ? (
+            <p className="text-sm text-gymbud-muted">
+              {activityOption
+                ? `${activityName} is a catalog activity.`
+                : `Legacy activity: ${activityName}`}
+            </p>
+          ) : null}
 
           {loading ? (
             <p className="rounded-[var(--radius-control)] bg-gymbud-surface-muted p-4 text-sm text-gymbud-muted" role="status">

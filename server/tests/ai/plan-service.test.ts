@@ -3,7 +3,7 @@ import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { z } from "zod";
 import { db } from "../../src/db";
-import { seedSystemExercises } from "../../src/exercises/seed";
+import { seedCatalog } from "../../src/catalog/seed";
 import { FakeAiClient } from "../../src/ai/fake-client";
 import { planResponseSchema } from "../../src/ai/schemas";
 import { PlanService } from "../../src/ai/plan-service";
@@ -21,7 +21,7 @@ const validPlanResponse = {
       durationMinutes: 45,
       exercises: [
         {
-          exerciseId: "system-push-up",
+          exerciseId: "free-exercise-db-Pushups",
           sortOrder: 1,
           restSeconds: 60,
           sets: [{ setNumber: 1, targetReps: 10 }],
@@ -32,6 +32,34 @@ const validPlanResponse = {
 } as const;
 
 describe("AI plan client contract", () => {
+  it("accepts a Cardio plan workout with an activity option and no exercises", () => {
+    expect(
+      planResponseSchema.safeParse({
+        workouts: [{
+          scheduledDate: "2026-09-25",
+          activityType: "CARDIO",
+          activityOptionId: "cardio-rowing-machine",
+          durationMinutes: 30,
+          plannedDetails: { intensity: "MODERATE" },
+          exercises: [],
+        }],
+      }).success,
+    ).toBe(true);
+  });
+
+  it("rejects a Cardio plan workout without an activity option", () => {
+    expect(
+      planResponseSchema.safeParse({
+        workouts: [{
+          scheduledDate: "2026-09-25",
+          activityType: "CARDIO",
+          durationMinutes: 30,
+          exercises: [],
+        }],
+      }).success,
+    ).toBe(false);
+  });
+
   it("rejects malformed model JSON after the provider returns", async () => {
     const client = new FakeAiClient("{not-json");
 
@@ -54,7 +82,7 @@ describe.skipIf(!hasDatabase)("AI plan persistence", () => {
   let otherExerciseId: string;
 
   beforeAll(async () => {
-    await seedSystemExercises();
+    await seedCatalog(db);
     await db.user.create({
       data: {
         id: userId,
@@ -127,17 +155,43 @@ describe.skipIf(!hasDatabase)("AI plan persistence", () => {
   }, integrationTestTimeout);
 
   it("passes only user-available exercises to the planner", async () => {
+    const client = new FakeAiClient(validPlanResponse);
     const service = new PlanService(
       db,
-      new FakeAiClient(validPlanResponse),
+      client,
     );
 
     const result = await service.generateDraft(userId, cycleId);
 
-    expect(result.workouts[0]?.exercises[0]?.name).toBe("Push-up");
+    expect(result.workouts[0]?.exercises[0]?.name).toBe("Pushups");
     expect(result.workouts[0]?.exercises[0]).not.toHaveProperty(
       "availableLocations",
     );
+    expect(client.requests[0]?.userPrompt).toContain("legalActivityOptionPool");
+    expect(client.requests[0]?.userPrompt).toContain("focusAreas");
+  }, integrationTestTimeout);
+
+  it("rejects an unknown activity option", async () => {
+    const service = new PlanService(
+      db,
+      new FakeAiClient({
+        workouts: [{
+          scheduledDate: "2026-12-03T00:00:00Z",
+          activityType: "CARDIO",
+          activityOptionId: "cardio-not-in-catalog",
+          durationMinutes: 30,
+          plannedDetails: { modality: "Treadmill", intensity: "LOW" },
+          exercises: [],
+        }],
+      }),
+    );
+
+    await expect(service.generateDraft(userId, cycleId)).rejects.toThrow(
+      /activity option.*legal/i,
+    );
+    await expect(
+      db.scheduledWorkout.count({ where: { cycleId } }),
+    ).resolves.toBe(0);
   }, integrationTestTimeout);
 
   it("rejects an exercise owned by another user without writing calendar rows", async () => {
@@ -271,7 +325,7 @@ describe.skipIf(!hasDatabase)("AI plan persistence", () => {
           durationMinutes: 45,
           exercises: [
             {
-              exerciseId: "system-push-up",
+              exerciseId: "free-exercise-db-Pushups",
               sortOrder: 1,
               restSeconds: 60,
               sets: [{ setNumber: 1, targetReps: 10 }],
@@ -325,6 +379,7 @@ describe.skipIf(!hasDatabase)("AI plan persistence", () => {
         userId,
         cycleId: dayCycle.id,
         activityType: "CARDIO",
+        activityOptionId: "cardio-treadmill-running",
         scheduledDate: new Date("2027-02-04T00:00:00Z"),
         durationMinutes: 30,
         status: "COMPLETED",

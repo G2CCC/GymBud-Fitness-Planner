@@ -5,7 +5,7 @@ import { db } from "../../src/db";
 import { FakeAiClient } from "../../src/ai/fake-client";
 import { AiExerciseService } from "../../src/ai/exercise-service";
 import { ExerciseService } from "../../src/exercises/service";
-import { seedSystemExercises } from "../../src/exercises/seed";
+import { seedCatalog } from "../../src/catalog/seed";
 
 const hasDatabase = Boolean(process.env.DATABASE_URL);
 const integrationTestTimeout = 30_000;
@@ -16,7 +16,7 @@ describe.skipIf(!hasDatabase)("AI exercise workflows", () => {
   let strengthWorkoutId: string;
 
   beforeAll(async () => {
-    await seedSystemExercises();
+    await seedCatalog(db);
     await db.user.create({
       data: {
         id: userId,
@@ -56,7 +56,7 @@ describe.skipIf(!hasDatabase)("AI exercise workflows", () => {
         status: "PLANNED",
         plannedExercises: {
           create: {
-            exerciseId: "system-barbell-bench-press",
+            exerciseId: "free-exercise-db-Barbell_Bench_Press_-_Medium_Grip",
             sortOrder: 1,
             restSeconds: 120,
             plannedSets: {
@@ -148,7 +148,7 @@ describe.skipIf(!hasDatabase)("AI exercise workflows", () => {
       new FakeAiClient({
         replacements: [
           {
-            exerciseId: "system-push-up",
+            exerciseId: "free-exercise-db-Pushups",
             reason: "It is a bodyweight push and works at home.",
             restSeconds: 60,
             sets: [{ setNumber: 1, targetReps: 10 }],
@@ -160,12 +160,12 @@ describe.skipIf(!hasDatabase)("AI exercise workflows", () => {
     const replacements = await service.getCompatibleReplacements(
       userId,
       strengthWorkoutId,
-      "system-barbell-bench-press",
+      "free-exercise-db-Barbell_Bench_Press_-_Medium_Grip",
     );
 
     expect(replacements).toEqual([
       expect.objectContaining({
-        exerciseId: "system-push-up",
+        exerciseId: "free-exercise-db-Pushups",
       }),
     ]);
     expect(replacements[0]).not.toHaveProperty("availableLocations");
@@ -177,7 +177,7 @@ describe.skipIf(!hasDatabase)("AI exercise workflows", () => {
       new FakeAiClient({
         replacements: [
           {
-            exerciseId: "system-barbell-back-squat",
+            exerciseId: "free-exercise-db-Barbell_Squat",
             reason: "The model selected this gym exercise.",
             sets: [{ setNumber: 1, targetReps: 8 }],
           },
@@ -189,7 +189,7 @@ describe.skipIf(!hasDatabase)("AI exercise workflows", () => {
       service.getCompatibleReplacements(
         userId,
         strengthWorkoutId,
-        "system-barbell-bench-press",
+        "free-exercise-db-Barbell_Bench_Press_-_Medium_Grip",
       ),
     ).rejects.toThrow(/not legal|replacement/i);
   }, integrationTestTimeout);

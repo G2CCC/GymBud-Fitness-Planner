@@ -15,18 +15,19 @@ describe("single-day Strength plan prompt", () => {
       weightKg: 64,
       exercises: [
         {
-          id: "system-push-up",
-          name: "Push-up",
+          id: "free-exercise-db-Pushups",
+          name: "Pushups",
           equipment: "NONE",
           targetMuscles: ["CHEST"],
           movementPattern: "PUSH",
+          focusAreas: ["CHEST"],
         },
       ],
       model: "test-model",
     });
 
     const context = JSON.parse(request.userPrompt) as Record<string, any>;
-    expect(request.promptVersion).toBe("day-plan.v1");
+    expect(request.promptVersion).toBe("day-plan.v2");
     expect(request.metadata).toEqual({
       feature: "single-day-strength-plan",
       cycleId: "cycle-1",

@@ -13,6 +13,7 @@ import {
 import type { ApiExercise, ApiWorkout } from "../../api/contracts";
 import { CardioLogForm } from "../../components/workouts/CardioLogForm";
 import { SportLogForm } from "../../components/workouts/SportLogForm";
+import { ActivityIdentity } from "../../components/catalog/ActivityIdentity";
 import { StrengthLogForm } from "../../components/workouts/StrengthLogForm";
 import {
   WorkoutEditor,
@@ -109,6 +110,8 @@ export function WorkoutPage() {
         id: exercise.id,
         name: exercise.name,
         equipment: exercise.equipment,
+        focusAreas: exercise.focusAreas,
+        imageUrl: exercise.imageUrls?.[0] ?? null,
       })),
     [exercises],
   );
@@ -162,7 +165,15 @@ export function WorkoutPage() {
             ← Back to calendar
           </Link>
           <p className="mt-5 text-xs font-semibold uppercase tracking-[0.16em] text-gymbud-muted">
-            {workout.activityType}
+            <ActivityIdentity
+              activityType={workout.activityType}
+              activityOption={workout.activityOption}
+              fallbackName={
+                workout.actualDetails?.modality ??
+                workout.actualDetails?.sportName
+              }
+              size={18}
+            />
           </p>
           <h1 className="mt-2 text-3xl font-semibold tracking-tight text-gymbud-ink">
             Log your workout
@@ -213,11 +224,15 @@ export function WorkoutPage() {
           ) : workout.activityType === "CARDIO" ? (
             <CardioLogForm
               value={log as CardioWorkoutLogInput}
+              activityOption={loadedWorkout.activityOption}
+              legacyModality={loadedWorkout.actualDetails?.modality}
               onChange={(value) => setLog(value)}
             />
           ) : (
             <SportLogForm
               value={log as SportWorkoutLogInput}
+              activityOption={loadedWorkout.activityOption}
+              legacySportName={loadedWorkout.actualDetails?.sportName}
               onChange={(value) => setLog(value)}
             />
           )}

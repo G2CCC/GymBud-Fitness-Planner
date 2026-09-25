@@ -1,7 +1,7 @@
 import type { Gender } from "@fitness/shared";
 import type { AiRequest } from "../client";
 
-export const SINGLE_DAY_PLAN_PROMPT_VERSION = "day-plan.v1";
+export const SINGLE_DAY_PLAN_PROMPT_VERSION = "day-plan.v2";
 
 export type SingleDayPlanPromptInput = {
   cycleId: string;
@@ -19,6 +19,7 @@ export type SingleDayPlanPromptInput = {
     equipment: string | null;
     targetMuscles: string[];
     movementPattern: string | null;
+    focusAreas: string[];
   }>;
   model: string;
 };
@@ -32,6 +33,7 @@ export function buildSingleDayPlanRequest(
     systemPrompt: [
       "Generate exactly one Strength workout as JSON only for the selected date.",
       "Use only exercise IDs from the supplied legal exercise pool.",
+      "The legal exercise pool includes focusAreas; select exercises that match the requested focus areas.",
       "The workout must include at least one exercise and one planned set per exercise.",
       "Do not return Cardio, Sport, RPE, subjective feedback, or unknown fields.",
       "Respect the requested focus areas and session duration without inventing exercises.",

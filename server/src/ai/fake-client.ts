@@ -76,12 +76,35 @@ export function createDeterministicFakeAiClient(): AiClient {
             durationMinutes: profile.sessionDurationMinutes ?? 60,
             exercises: [
               {
-                exerciseId: "system-push-up",
+                exerciseId: "free-exercise-db-Pushups",
                 sortOrder: 1,
                 restSeconds: 60,
                 sets: [{ setNumber: 1, targetReps: 10 }],
               },
             ],
+          },
+          {
+            scheduledDate: cycle.startDate,
+            activityType: "CARDIO",
+            activityOptionId: "cardio-treadmill-running",
+            durationMinutes: profile.sessionDurationMinutes ?? 30,
+            plannedDetails: {
+              modality: "Treadmill",
+              intensity: "MODERATE",
+            },
+            exercises: [],
+          },
+          {
+            scheduledDate: cycle.startDate,
+            activityType: "SPORT",
+            activityOptionId: "sport-basketball",
+            durationMinutes: profile.sessionDurationMinutes ?? 45,
+            plannedDetails: {
+              sportName: "Basketball",
+              trainingFocus: "Skill work",
+              intensity: "MODERATE",
+            },
+            exercises: [],
           },
         ],
       };
@@ -98,7 +121,7 @@ export function createDeterministicFakeAiClient(): AiClient {
           durationMinutes: profile.sessionDurationMinutes ?? 60,
           exercises: [
             {
-              exerciseId: "system-push-up",
+                exerciseId: "free-exercise-db-Pushups",
               sortOrder: 1,
               restSeconds: 60,
               sets: [{ setNumber: 1, targetReps: 10 }],

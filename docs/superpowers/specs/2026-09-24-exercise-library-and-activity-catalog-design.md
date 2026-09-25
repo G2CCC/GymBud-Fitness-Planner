@@ -108,7 +108,6 @@ The API may expose Strength exercises and ActivityOptions through separate endpo
 - plannedDetails continues to hold planned metrics.
 - WorkoutLog.actualDetails continues to hold recorded Cardio/Sport metrics.
 - Existing free-text modality/sportName fields remain readable for legacy records during migration but are no longer the primary input for new standard activities.
-- An Other option is available for manual entry. It is not included in the AI candidate pool and stores a custom display name in the activity details.
 
 ## 6. Images and Supabase Storage
 
@@ -172,7 +171,6 @@ Initial Sport options:
 - Skiing
 - Surfing
 
-Each list also contains a manual-only Other option.
 
 ## 8. Icons
 

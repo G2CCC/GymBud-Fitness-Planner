@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import type { ApiPlanDraft } from "../../api/contracts";
+import { ActivityIdentity } from "../catalog/ActivityIdentity";
 
 export type InitialPlanDraftEditorProps = {
   plan: ApiPlanDraft;
@@ -59,7 +60,21 @@ export function InitialPlanDraftEditor({
           >
             <div className="flex items-center justify-between gap-3">
               <h2 className="font-semibold text-gymbud-ink">
-                Session {index + 1}: {workout.activityType}
+                <span className="mb-1 block text-xs font-normal text-gymbud-muted">
+                  Session {index + 1}
+                </span>
+                <ActivityIdentity
+                  activityType={workout.activityType}
+                  activityOption={
+                    workout.activityOptionName && workout.activityOptionIconKey
+                      ? {
+                          name: workout.activityOptionName,
+                          iconKey: workout.activityOptionIconKey,
+                        }
+                      : null
+                  }
+                  size={18}
+                />
               </h2>
               <span className="text-xs text-gymbud-muted">
                 {workout.exercises.length} exercises

@@ -1,7 +1,7 @@
 import "dotenv/config";
 import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { seedSystemExercises } from "../../src/exercises/seed";
+import { seedCatalog } from "../../src/catalog/seed";
 import { db } from "../../src/db";
 import { WorkoutService } from "../../src/workouts/service";
 
@@ -16,7 +16,7 @@ describe.skipIf(!hasDatabase)("workout persistence", () => {
   let strengthWorkoutId: string;
 
   beforeAll(async () => {
-    await seedSystemExercises();
+    await seedCatalog(db);
     await Promise.all(
       [userId, otherUserId].map((id) =>
         db.user.create({
@@ -59,7 +59,7 @@ describe.skipIf(!hasDatabase)("workout persistence", () => {
         durationMinutes: 60,
         plannedExercises: {
           create: {
-            exerciseId: "system-push-up",
+            exerciseId: "free-exercise-db-Pushups",
             sortOrder: 1,
             restSeconds: 90,
             plannedSets: {
@@ -116,7 +116,7 @@ describe.skipIf(!hasDatabase)("workout persistence", () => {
         log: {
           exercises: [
             {
-              exerciseId: "system-push-up",
+              exerciseId: "free-exercise-db-Pushups",
               sortOrder: 1,
               sets: [{ setNumber: 1, reps: 12 }],
             },
@@ -136,7 +136,7 @@ describe.skipIf(!hasDatabase)("workout persistence", () => {
     const first = await service.saveWorkoutLog(userId, strengthWorkoutId, {
       exercises: [
         {
-          exerciseId: "system-push-up",
+          exerciseId: "free-exercise-db-Pushups",
           sortOrder: 1,
           sets: [
             { setNumber: 1, reps: 10, weight: 0, weightUnit: "KG" },
@@ -147,7 +147,7 @@ describe.skipIf(!hasDatabase)("workout persistence", () => {
     const second = await service.saveWorkoutLog(userId, strengthWorkoutId, {
       exercises: [
         {
-          exerciseId: "system-push-up",
+          exerciseId: "free-exercise-db-Pushups",
           sortOrder: 1,
           sets: [
             { setNumber: 1, reps: 8, weight: 0, weightUnit: "KG" },
@@ -175,6 +175,7 @@ describe.skipIf(!hasDatabase)("workout persistence", () => {
   it("creates a workout in the active cycle", async () => {
     const workout = await service.createWorkout(userId, {
       activityType: "CARDIO",
+      activityOptionId: "cardio-treadmill-running",
       scheduledDate: new Date("2026-11-06T00:00:00Z"),
       durationMinutes: 30,
     });
@@ -184,6 +185,30 @@ describe.skipIf(!hasDatabase)("workout persistence", () => {
       userId,
       status: "PLANNED",
     });
+    expect(workout.activityOption).toMatchObject({
+      id: "cardio-treadmill-running",
+      activityType: "CARDIO",
+    });
+  }, integrationTestTimeout);
+
+  it("rejects unknown and mismatched activity options", async () => {
+    await expect(
+      service.createWorkout(userId, {
+        activityType: "CARDIO",
+        activityOptionId: "sport-basketball",
+        scheduledDate: new Date("2026-11-06T12:00:00Z"),
+        durationMinutes: 30,
+      }),
+    ).rejects.toThrow(/match the workout type/i);
+
+    await expect(
+      service.createWorkout(userId, {
+        activityType: "SPORT",
+        activityOptionId: "sport-not-in-catalog",
+        scheduledDate: new Date("2026-11-06T13:00:00Z"),
+        durationMinutes: 30,
+      }),
+    ).rejects.toThrow(/not available/i);
   }, integrationTestTimeout);
 
   it("persists a manual strength plan without location restrictions", async () => {
@@ -193,7 +218,7 @@ describe.skipIf(!hasDatabase)("workout persistence", () => {
       durationMinutes: 60,
       plannedExercises: [
         {
-          exerciseId: "system-barbell-bench-press",
+          exerciseId: "free-exercise-db-Barbell_Bench_Press_-_Medium_Grip",
           sortOrder: 1,
           restSeconds: 120,
           sets: [
@@ -214,6 +239,7 @@ describe.skipIf(!hasDatabase)("workout persistence", () => {
         userId,
         cycleId,
         activityType: "CARDIO",
+        activityOptionId: "cardio-treadmill-running",
         scheduledDate: new Date("2026-11-07T00:00:00Z"),
         durationMinutes: 30,
       },
@@ -241,6 +267,7 @@ describe.skipIf(!hasDatabase)("workout persistence", () => {
         userId,
         cycleId,
         activityType: "CARDIO",
+        activityOptionId: "cardio-treadmill-running",
         scheduledDate: new Date("2026-11-10T00:00:00Z"),
         durationMinutes: 30,
       },
@@ -262,7 +289,7 @@ describe.skipIf(!hasDatabase)("workout persistence", () => {
       service.saveWorkoutLog(userId, strengthWorkoutId, {
         exercises: [
           {
-            exerciseId: "system-push-up",
+            exerciseId: "free-exercise-db-Pushups",
             sortOrder: 1,
             sets: [{ setNumber: 1, reps: 8, rpe: 7 }],
           },
@@ -290,7 +317,7 @@ describe.skipIf(!hasDatabase)("workout persistence", () => {
       service.saveWorkoutLog(userId, strengthWorkoutId, {
         exercises: [
           {
-            exerciseId: "system-push-up",
+            exerciseId: "free-exercise-db-Pushups",
             sortOrder: 1,
             sets: [{ setNumber: 1, reps: 8 }],
           },

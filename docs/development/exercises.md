@@ -15,18 +15,58 @@ equipment is normalized to `NONE`, which represents bodyweight training.
 - Future AI plan generation must query the system pool plus the current user's
   eligible custom pool. It must never accept an exercise ID from another user.
 
-## Seed data
+## Curated catalog
 
-`seedSystemExercises()` is called by the normal seed command and is idempotent:
+The curated Strength catalog contains 66 records from the pinned
+`free-exercise-db` source commit. Each record has a stable ID, source metadata,
+normalized equipment, primary/secondary muscles, instructions, image paths, and
+one or more of these six focus areas: `CHEST`, `SHOULDERS`, `BACK`, `LEGS`,
+`ARMS`, and `CORE`.
+
+Selection is deterministic: each focus area has 11 primary actions, duplicate
+source actions are removed, every selected source record has two images and
+instructions, and body-only equipment is normalized to `NONE`. The generated
+manifest is committed at `server/src/catalog/data/strength-exercises.ts`.
+
+The normal seed command calls `seedCatalog()` and is idempotent:
 
 ```bash
 npm run db:seed
 ```
 
-The seed contains bodyweight examples (`Push-up`, `Bodyweight Squat`, and
-`Plank`) and equipment examples (`Barbell Bench Press`, `Barbell Back Squat`,
-and `Lat Pulldown`). All exercises use the same pool regardless of workout
-venue.
+To regenerate the manifest after changing the pinned source or selection rules:
+
+```bash
+npm run catalog:build-manifest
+```
+
+Exercise images are uploaded separately to the server-only Supabase Storage
+bucket configured by `EXERCISE_IMAGE_BUCKET` (default `exercise-images`):
+
+```bash
+npm run catalog:sync-images
+```
+
+The image command requires `SUPABASE_URL` and
+`SUPABASE_SERVICE_ROLE_KEY`. The service-role key is never exposed to the
+browser or required by normal API startup.
+
+## Activity catalog
+
+Cardio and Sport use `ActivityOption` records instead of free-text identity.
+The seed includes standard options such as `cardio-rowing-machine`,
+`cardio-stationary-bike`, `sport-basketball`, and `sport-tennis`. Each option
+stores an explicit icon key (`BIKE`, `WAVES`, `CIRCLE_DOT`, `SWORDS`, and so
+on) that the client maps to a fixed Lucide icon.
+
+Strength uses exercises and planned sets; Cardio/Sport use an
+`activityOptionId` and never create `PlannedExercise` rows. The server checks
+that the option exists and matches the broad workout type.
+
+The seed also runs the legacy migration. It rewrites references from the six
+old `system-*` rows to their canonical catalog IDs, deletes only ownerless
+legacy rows after all references are gone, and preserves user-owned custom
+exercises.
 
 ## API
 

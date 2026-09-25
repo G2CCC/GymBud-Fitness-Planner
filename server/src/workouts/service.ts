@@ -24,6 +24,18 @@ const workoutSelect = {
   rescheduleCount: true,
   completedAt: true,
   plannedDetails: true,
+  activityOption: {
+    select: {
+      id: true,
+      activityType: true,
+      slug: true,
+      name: true,
+      iconKey: true,
+      aiEligible: true,
+      sortOrder: true,
+      description: true,
+    },
+  },
   plannedExercises: {
     orderBy: { sortOrder: "asc" },
     select: {
@@ -62,9 +74,59 @@ const workoutLogInclude = {
   },
 } satisfies Prisma.WorkoutLogInclude;
 
-export type WorkoutRecord = Prisma.ScheduledWorkoutGetPayload<{
+type WorkoutBaseRecord = Prisma.ScheduledWorkoutGetPayload<{
   select: typeof workoutSelect;
 }>;
+
+export type WorkoutRecord = WorkoutBaseRecord & {
+  actualDetails: WorkoutActualDetails | null;
+  actualExercises: WorkoutActualExercise[];
+};
+
+type WorkoutActualDetails = {
+  actualDurationMinutes?: number;
+  distanceKm?: number;
+  paceSecondsPerKm?: number;
+  speedKph?: number;
+  intensity?: "LOW" | "MODERATE" | "HIGH";
+  modality?: string;
+  sportName?: string;
+  trainingFocus?: string;
+  notes?: string;
+};
+
+type WorkoutActualExercise = {
+  exerciseId: string;
+  sortOrder: number;
+  sets: Array<{
+    setNumber: number;
+    actualReps: number;
+    actualWeight: number;
+    weightUnit: "KG" | "LB";
+  }>;
+};
+
+const workoutDetailLogSelect = {
+  actualDetails: true,
+  exerciseLogs: {
+    orderBy: { sortOrder: "asc" },
+    select: {
+      exerciseId: true,
+      sortOrder: true,
+      setLogs: {
+        orderBy: { setNumber: "asc" },
+        select: {
+          setNumber: true,
+          actualReps: true,
+          actualWeight: true,
+          weightUnit: true,
+        },
+      },
+    },
+  },
+} satisfies Prisma.WorkoutLogSelect;
+
+type WorkoutDatabaseClient = PrismaClient | Prisma.TransactionClient;
 
 export type WorkoutLogRecord = Prisma.WorkoutLogGetPayload<{
   include: typeof workoutLogInclude;
@@ -103,7 +165,7 @@ export class WorkoutService {
       throw new WorkoutServiceError("Workout not found", "NOT_FOUND", 404);
     }
 
-    return workout;
+    return this.enrichWorkoutRecord(this.prisma, workout);
   }
 
   async completeWorkout(
@@ -273,6 +335,28 @@ export class WorkoutService {
       }
 
       const plannedExercises = parsed.data.plannedExercises ?? [];
+      if (parsed.data.activityType !== "STRENGTH") {
+        const activityOption = await tx.activityOption.findUnique({
+          where: { id: parsed.data.activityOptionId },
+          select: { id: true, activityType: true },
+        });
+
+        if (!activityOption) {
+          throw new WorkoutServiceError(
+            "Activity option is not available",
+            "VALIDATION_ERROR",
+            400,
+          );
+        }
+        if (activityOption.activityType !== parsed.data.activityType) {
+          throw new WorkoutServiceError(
+            "Activity option does not match the workout type",
+            "VALIDATION_ERROR",
+            400,
+          );
+        }
+      }
+
       if (plannedExercises.length > 0) {
         const legalExercises = await tx.exercise.findMany({
           where: {
@@ -297,14 +381,16 @@ export class WorkoutService {
         }
       }
 
-      return tx.scheduledWorkout.create({
-        data: {
-          userId,
-          cycleId: cycle.id,
+      const workoutData: Prisma.ScheduledWorkoutCreateInput = {
+          user: { connect: { id: userId } },
+          cycle: { connect: { id: cycle.id } },
           activityType: parsed.data.activityType,
           scheduledDate: parsed.data.scheduledDate,
           durationMinutes: parsed.data.durationMinutes,
           status: "PLANNED",
+          ...(parsed.data.activityOptionId
+            ? { activityOption: { connect: { id: parsed.data.activityOptionId } } }
+            : {}),
           ...(parsed.data.plannedDetails
             ? {
                 plannedDetails: parsed.data.plannedDetails as Prisma.InputJsonValue,
@@ -329,9 +415,13 @@ export class WorkoutService {
                 },
               }
             : {}),
-        },
+      };
+
+      const created = await tx.scheduledWorkout.create({
+        data: workoutData,
         select: workoutSelect,
       });
+      return this.enrichWorkoutRecord(tx, created);
     });
   }
 
@@ -536,7 +626,32 @@ export class WorkoutService {
       throw new WorkoutServiceError("Workout not found", "NOT_FOUND", 404);
     }
 
-    return workout;
+    return this.enrichWorkoutRecord(tx, workout);
+  }
+
+  private async enrichWorkoutRecord(
+    database: WorkoutDatabaseClient,
+    workout: WorkoutBaseRecord,
+  ): Promise<WorkoutRecord> {
+    const log = await database.workoutLog.findUnique({
+      where: { workoutId: workout.id },
+      select: workoutDetailLogSelect,
+    });
+
+    return {
+      ...workout,
+      actualDetails: toActualDetails(log?.actualDetails),
+      actualExercises: (log?.exerciseLogs ?? []).map((exercise) => ({
+        exerciseId: exercise.exerciseId,
+        sortOrder: exercise.sortOrder,
+        sets: exercise.setLogs.map((set) => ({
+          setNumber: set.setNumber,
+          actualReps: set.actualReps,
+          actualWeight: set.actualWeight,
+          weightUnit: set.weightUnit,
+        })),
+      })),
+    };
   }
 
   private runTransition<T>(transition: () => T): T {
@@ -555,6 +670,40 @@ export class WorkoutService {
 type WritableWorkout = Prisma.ScheduledWorkoutGetPayload<{
   select: typeof writableWorkoutSelect;
 }>;
+
+function toActualDetails(
+  value: Prisma.JsonValue | null | undefined,
+): WorkoutActualDetails | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return null;
+  }
+
+  const record = value as Prisma.JsonObject;
+  const details: WorkoutActualDetails = {};
+  if (typeof record.actualDurationMinutes === "number") {
+    details.actualDurationMinutes = record.actualDurationMinutes;
+  }
+  if (typeof record.distanceKm === "number") details.distanceKm = record.distanceKm;
+  if (typeof record.paceSecondsPerKm === "number") {
+    details.paceSecondsPerKm = record.paceSecondsPerKm;
+  }
+  if (typeof record.speedKph === "number") details.speedKph = record.speedKph;
+  if (
+    record.intensity === "LOW" ||
+    record.intensity === "MODERATE" ||
+    record.intensity === "HIGH"
+  ) {
+    details.intensity = record.intensity;
+  }
+  if (typeof record.modality === "string") details.modality = record.modality;
+  if (typeof record.sportName === "string") details.sportName = record.sportName;
+  if (typeof record.trainingFocus === "string") {
+    details.trainingFocus = record.trainingFocus;
+  }
+  if (typeof record.notes === "string") details.notes = record.notes;
+
+  return Object.keys(details).length > 0 ? details : null;
+}
 
 function toTransition(
   workout: WritableWorkout,

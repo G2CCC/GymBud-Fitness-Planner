@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from "react";
 import {
+  type StrengthFocusArea,
   type ActivityType,
   type WorkoutStatus,
 } from "@fitness/shared";
@@ -11,6 +12,8 @@ export type EditorExerciseOption = {
   id: string;
   name: string;
   equipment: string | null;
+  focusAreas: StrengthFocusArea[];
+  imageUrl: string | null;
 };
 
 export type WorkoutEditorSubmitPayload = {

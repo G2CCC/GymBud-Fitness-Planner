@@ -12,7 +12,7 @@ describe("workout log validation", () => {
       strengthWorkoutLogInputSchema.parse({
         exercises: [
           {
-            exerciseId: "system-push-up",
+            exerciseId: "free-exercise-db-Pushups",
             sortOrder: 1,
             sets: [{ setNumber: 1, reps: 10, weight: 0, weightUnit: "KG" }],
           },
@@ -26,7 +26,7 @@ describe("workout log validation", () => {
       strengthWorkoutLogInputSchema.parse({
         exercises: [
           {
-            exerciseId: "system-push-up",
+            exerciseId: "free-exercise-db-Pushups",
             sortOrder: 1,
             sets: [{ setNumber: 1, reps: 10, rpe: 7 }],
           },
@@ -70,6 +70,7 @@ describe("workout log validation", () => {
     expect(
       createWorkoutInputSchema.parse({
         activityType: "CARDIO",
+        activityOptionId: "cardio-treadmill-running",
         scheduledDate: "2026-11-06T00:00:00Z",
         durationMinutes: 30,
       }),
@@ -84,7 +85,7 @@ describe("workout log validation", () => {
         durationMinutes: 45,
         plannedExercises: [
           {
-            exerciseId: "system-barbell-bench-press",
+            exerciseId: "free-exercise-db-Barbell_Bench_Press_-_Medium_Grip",
             sortOrder: 1,
             restSeconds: 120,
             sets: [
@@ -102,12 +103,33 @@ describe("workout log validation", () => {
         durationMinutes: 30,
         plannedExercises: [
           {
-            exerciseId: "system-push-up",
+            exerciseId: "free-exercise-db-Pushups",
             sortOrder: 1,
             sets: [{ setNumber: 1, targetReps: 10 }],
           },
         ],
       }),
     ).toThrow();
+  });
+
+  it("requires a Cardio activity option", () => {
+    expect(
+      createWorkoutInputSchema.safeParse({
+        activityType: "CARDIO",
+        scheduledDate: "2026-09-25",
+        durationMinutes: 30,
+      }).success,
+    ).toBe(false);
+  });
+
+  it("rejects a Sport option on a Cardio workout", () => {
+    expect(
+      createWorkoutInputSchema.safeParse({
+        activityType: "CARDIO",
+        activityOptionId: "sport-basketball",
+        scheduledDate: "2026-09-25",
+        durationMinutes: 30,
+      }).success,
+    ).toBe(false);
   });
 });

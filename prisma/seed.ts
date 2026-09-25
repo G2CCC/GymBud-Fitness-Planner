@@ -1,9 +1,11 @@
 import { db } from "../server/src/db";
-import { seedSystemExercises } from "../server/src/exercises/seed";
+import { migrateLegacySystemExercises } from "../server/src/catalog/legacy-migration";
+import { seedCatalog } from "../server/src/catalog/seed";
 
 async function main() {
-  await seedSystemExercises();
-  console.log("Seeded system exercises");
+  await seedCatalog(db);
+  await migrateLegacySystemExercises(db);
+  console.log("Seeded catalog and migrated legacy system exercises");
 }
 
 main()

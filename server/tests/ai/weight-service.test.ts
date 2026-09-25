@@ -4,7 +4,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { db } from "../../src/db";
 import { FakeAiClient } from "../../src/ai/fake-client";
 import { WeightService } from "../../src/ai/weight-service";
-import { seedSystemExercises } from "../../src/exercises/seed";
+import { seedCatalog } from "../../src/catalog/seed";
 
 const hasDatabase = Boolean(process.env.DATABASE_URL);
 const integrationTestTimeout = 30_000;
@@ -14,10 +14,10 @@ describe.skipIf(!hasDatabase)("AI weight recommendations", () => {
   let cycleId: string;
   let nextWorkoutId: string;
   let laterWorkoutId: string;
-  const exerciseId = "system-barbell-bench-press";
+  const exerciseId = "free-exercise-db-Barbell_Bench_Press_-_Medium_Grip";
 
   beforeAll(async () => {
-    await seedSystemExercises();
+    await seedCatalog(db);
     await db.user.create({
       data: {
         id: userId,

@@ -1,12 +1,22 @@
 import type { SportWorkoutLogInput } from "@fitness/shared";
+import type { ApiActivityOption } from "../../api/contracts";
+import { ActivityIdentity } from "../catalog/ActivityIdentity";
 
 export type SportLogFormProps = {
   value: SportWorkoutLogInput;
   onChange: (value: SportWorkoutLogInput) => void;
+  activityOption?: ApiActivityOption | null;
+  legacySportName?: string | null;
   onSubmit?: () => void;
 };
 
-export function SportLogForm({ value, onChange, onSubmit }: SportLogFormProps) {
+export function SportLogForm({
+  value,
+  onChange,
+  activityOption = null,
+  legacySportName = null,
+  onSubmit,
+}: SportLogFormProps) {
   return (
     <form
       onSubmit={(event) => {
@@ -14,15 +24,18 @@ export function SportLogForm({ value, onChange, onSubmit }: SportLogFormProps) {
         onSubmit?.();
       }}
     >
-      <label>
-        Sport
-        <input
-          value={value.sportName ?? ""}
-          onChange={(event) =>
-            onChange({ ...value, sportName: event.target.value || undefined })
-          }
-        />
-      </label>
+      <div aria-label="Selected sport activity">
+        {activityOption ? (
+          <ActivityIdentity activityType="SPORT" activityOption={activityOption} />
+        ) : (
+          <p>Legacy activity: {legacySportName ?? value.sportName ?? "Sport"}</p>
+        )}
+      </div>
+      {!activityOption ? (
+        <p aria-label="Legacy sport name">
+          Existing sport name is kept as read-only legacy context.
+        </p>
+      ) : null}
       <label>
         Actual duration (minutes)
         <input

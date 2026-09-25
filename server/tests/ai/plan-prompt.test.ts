@@ -13,6 +13,13 @@ const baseInput = {
   heightCm: 178,
   weightKg: 82,
   exercises: [],
+  activityOptions: [
+    {
+      id: "cardio-rowing-machine",
+      activityType: "CARDIO" as const,
+      name: "Rowing Machine",
+    },
+  ],
   model: "test-model",
 };
 
@@ -34,5 +41,7 @@ describe("plan prompt", () => {
     expect(context.profile).not.toHaveProperty("location");
     expect(request.userPrompt).not.toContain("availableLocations");
     expect(request.systemPrompt).not.toContain("location");
+    expect(request.userPrompt).toContain("legalActivityOptionPool");
+    expect(request.systemPrompt).toMatch(/activityOptionId/i);
   });
 });

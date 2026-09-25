@@ -1,9 +1,11 @@
 import type {
+  ActivityIconKey,
   ActivityType,
   CycleStatus,
   Gender,
   WorkoutStatus,
   WeightUnit,
+  StrengthFocusArea,
 } from "@fitness/shared";
 
 export type ApiProfile = {
@@ -38,12 +40,10 @@ export type ApiWorkout = {
   status: WorkoutStatus;
   completedAt: string | null;
   rescheduleCount: number;
+  activityOption: ApiActivityOption | null;
   plannedDetails?: unknown;
   plannedExercises?: ApiPlannedExercise[];
-  actualDetails?: {
-    actualDurationMinutes?: number | null;
-    distanceKm?: number | null;
-  } | null;
+  actualDetails?: ApiActualWorkoutDetails | null;
   actualExercises?: Array<{
     exerciseId: string;
     sortOrder: number;
@@ -65,6 +65,19 @@ export type ApiCalendarWorkout = {
   status: WorkoutStatus;
   completedAt: string | null;
   rescheduleCount: number;
+  activityOption: ApiActivityOption | null;
+};
+
+export type ApiActualWorkoutDetails = {
+  actualDurationMinutes?: number | null;
+  distanceKm?: number | null;
+  paceSecondsPerKm?: number | null;
+  speedKph?: number | null;
+  intensity?: "LOW" | "MODERATE" | "HIGH" | null;
+  modality?: string | null;
+  sportName?: string | null;
+  trainingFocus?: string | null;
+  notes?: string | null;
 };
 
 export type ApiCycleReviewStatus = {
@@ -115,7 +128,25 @@ export type ApiActiveCycle = {
 export type ApiExercise = {
   id: string;
   name: string;
+  description: string | null;
   equipment: string | null;
+  targetMuscles: string[];
+  primaryMuscles: string[];
+  secondaryMuscles: string[];
+  focusAreas: StrengthFocusArea[];
+  instructions: string[];
+  imageUrls: string[];
+  aiEligible: boolean;
+};
+
+export type ApiActivityOption = {
+  id: string;
+  activityType: "CARDIO" | "SPORT";
+  name: string;
+  iconKey: ActivityIconKey;
+  aiEligible: boolean;
+  sortOrder: number;
+  description: string | null;
 };
 
 export type ApiPlanDraftExercise = {
@@ -135,6 +166,9 @@ export type ApiPlanDraftExercise = {
 export type ApiPlanDraftWorkout = {
   scheduledDate: string;
   activityType: ActivityType;
+  activityOptionId?: string;
+  activityOptionName?: string;
+  activityOptionIconKey?: ActivityIconKey;
   durationMinutes: number;
   plannedDetails?: Record<string, unknown>;
   exercises: ApiPlanDraftExercise[];

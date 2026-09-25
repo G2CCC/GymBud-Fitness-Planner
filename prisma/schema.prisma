@@ -96,15 +96,18 @@ model ScheduledWorkout {
   rescheduleCount  Int                @default(0)
   completedAt      DateTime?
   plannedDetails   Json?
+  activityOptionId String?
   createdAt        DateTime           @default(now())
   updatedAt        DateTime           @updatedAt
   plannedExercises PlannedExercise[]
   workoutLog       WorkoutLog?
   recommendations  AIRecommendation[]
+  activityOption   ActivityOption?    @relation(fields: [activityOptionId], references: [id], onDelete: Restrict)
 
   @@index([userId, scheduledDate])
   @@index([cycleId, status])
   @@index([userId, status])
+  @@index([activityOptionId])
 }
 
 model PlannedExercise {
@@ -177,6 +180,16 @@ model Exercise {
   equipment        String?
   targetMuscles    String[]
   movementPattern  String?
+  sourceProvider   String?
+  sourceId         String?
+  sourceCommit     String?
+  sourceCategory   String?
+  level            String?
+  primaryMuscles   String[]           @default([])
+  secondaryMuscles String[]           @default([])
+  focusAreas       String[]           @default([])
+  instructions     String[]           @default([])
+  imagePaths       String[]           @default([])
   aiEligible       Boolean            @default(false)
   createdAt        DateTime           @default(now())
   updatedAt        DateTime           @updatedAt
@@ -185,6 +198,23 @@ model Exercise {
   recommendations  AIRecommendation[]
 
   @@index([ownerId, name])
+  @@unique([sourceProvider, sourceId])
+}
+
+model ActivityOption {
+  id                String             @id
+  activityType      ActivityType
+  slug              String             @unique
+  name              String
+  iconKey           String
+  aiEligible        Boolean            @default(true)
+  sortOrder         Int
+  description       String?
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  scheduledWorkouts ScheduledWorkout[]
+
+  @@index([activityType, aiEligible, sortOrder])
 }
 
 model AIRecommendation {

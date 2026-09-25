@@ -1,5 +1,6 @@
 import { z } from "zod";
 import {
+  activityIconKeySchema,
   activityTypes,
   customExerciseInputSchema,
   plannedSetSchema,
@@ -91,13 +92,49 @@ export const sportDetailsSchema = z.object({
   intensity: z.enum(["LOW", "MODERATE", "HIGH"]).optional(),
 }).strict();
 
-const planWorkoutSchema = z.object({
+const planWorkoutBaseSchema = z.object({
   scheduledDate: z.coerce.date(),
   activityType: z.enum(activityTypes),
+  activityOptionId: z.string().trim().min(1).optional(),
   durationMinutes: z.number().int().min(1).max(600),
   plannedDetails: z.record(z.unknown()).optional(),
   exercises: z.array(planExerciseSchema),
 }).strict();
+
+const planWorkoutSchema = planWorkoutBaseSchema.superRefine((workout, context) => {
+  if (workout.activityType === "STRENGTH") {
+    if (workout.activityOptionId) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["activityOptionId"],
+        message: "Strength workouts cannot use an activity option",
+      });
+    }
+    if (workout.exercises.length === 0) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["exercises"],
+        message: "Strength workouts require at least one exercise",
+      });
+    }
+    return;
+  }
+
+  if (!workout.activityOptionId) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["activityOptionId"],
+      message: "Cardio and Sport workouts require an activity option",
+    });
+  }
+  if (workout.exercises.length > 0) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["exercises"],
+      message: "Cardio and Sport workouts cannot contain strength exercises",
+    });
+  }
+});
 
 export const planResponseSchema = z.object({
   workouts: z.array(planWorkoutSchema).min(1).max(7),
@@ -112,9 +149,52 @@ export const planDraftExerciseSchema = planExerciseSchema.extend({
   equipment: z.string().nullable(),
 }).strict();
 
-export const planDraftWorkoutSchema = planWorkoutSchema.extend({
+const planDraftWorkoutBaseSchema = planWorkoutBaseSchema.extend({
+  activityOptionName: z.string().trim().min(1).optional(),
+  activityOptionIconKey: activityIconKeySchema.optional(),
   exercises: z.array(planDraftExerciseSchema),
 }).strict();
+
+export const planDraftWorkoutSchema = planDraftWorkoutBaseSchema.superRefine(
+  (workout, context) => {
+    const displayFields = [
+      workout.activityOptionName,
+      workout.activityOptionIconKey,
+    ];
+    if (workout.activityType === "STRENGTH") {
+      if (displayFields.some(Boolean)) {
+        context.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["activityOptionName"],
+          message: "Strength workouts cannot include activity option display fields",
+        });
+      }
+      return;
+    }
+
+    if (!workout.activityOptionId) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["activityOptionId"],
+        message: "Cardio and Sport workouts require an activity option",
+      });
+    }
+    if (!workout.activityOptionName) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["activityOptionName"],
+        message: "Activity option name is required for display",
+      });
+    }
+    if (!workout.activityOptionIconKey) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["activityOptionIconKey"],
+        message: "Activity option icon is required for display",
+      });
+    }
+  },
+);
 
 export const planDraftSchema = z.object({
   cycleId: z.string().trim().min(1),

@@ -15,6 +15,8 @@ export type AppEnv = {
   authProvider: AuthProvider;
   supabaseUrl: string;
   supabaseAnonKey: string;
+  supabaseServiceRoleKey: string;
+  exerciseImageBucket: string;
   corsOrigins: string[];
   e2eAuthEnabled: boolean;
   aiApiKey: string;
@@ -49,6 +51,7 @@ export function loadEnv(source: NodeJS.ProcessEnv = process.env): AppEnv {
 
   const supabaseUrl = source.SUPABASE_URL?.trim() ?? "";
   const supabaseAnonKey = source.SUPABASE_ANON_KEY?.trim() ?? "";
+  const supabaseServiceRoleKey = source.SUPABASE_SERVICE_ROLE_KEY?.trim() ?? "";
 
   if (authProvider === "supabase" && (!supabaseUrl || !supabaseAnonKey)) {
     throw new Error(
@@ -74,6 +77,8 @@ export function loadEnv(source: NodeJS.ProcessEnv = process.env): AppEnv {
     authProvider,
     supabaseUrl,
     supabaseAnonKey,
+    supabaseServiceRoleKey,
+    exerciseImageBucket: source.EXERCISE_IMAGE_BUCKET?.trim() || "exercise-images",
     corsOrigins,
     e2eAuthEnabled,
     aiApiKey: source.AI_API_KEY ?? "",

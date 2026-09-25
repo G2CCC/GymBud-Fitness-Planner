@@ -6,6 +6,7 @@ import type {
   EventContentArg,
 } from "@fullcalendar/core";
 import { WorkoutCard, type CalendarWorkout } from "./WorkoutCard";
+import { getActivityDisplayName } from "../catalog/ActivityIdentity";
 
 export type CalendarGridProps = {
   workouts: readonly CalendarWorkout[];
@@ -41,7 +42,7 @@ export function CalendarGrid({
   const workoutsById = new Map(workouts.map((workout) => [workout.id, workout]));
   const events = workouts.map((workout) => ({
     id: workout.id,
-    title: workout.activityType,
+    title: getActivityDisplayName(workout.activityType, workout.activityOption),
     date: dateKey(workout.scheduledDate),
     allDay: true,
     extendedProps: { workout },

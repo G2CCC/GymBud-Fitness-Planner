@@ -15,3 +15,5 @@ export * from "./domain/reviews/objective-summary";
 export * from "./domain/reviews/cycle-volume";
 export * from "./domain/calendar/types";
 export * from "./domain/calendar/validation";
+export * from "./domain/catalog/types";
+export * from "./domain/catalog/validation";

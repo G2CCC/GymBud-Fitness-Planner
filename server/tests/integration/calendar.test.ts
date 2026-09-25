@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { calendarDateRangeToUtcBounds, calendarRangeQuerySchema } from "@fitness/shared";
 import { CalendarService } from "../../src/calendar/service";
+import { seedCatalog } from "../../src/catalog/seed";
 import { db } from "../../src/db";
 
 const hasDatabase = Boolean(process.env.DATABASE_URL);
@@ -15,6 +16,7 @@ describe.skipIf(!hasDatabase)("calendar persistence", () => {
   let otherCycleId: string;
 
   beforeAll(async () => {
+    await seedCatalog(db);
     await Promise.all(
       [
         [userId, "calendar@example.com"],
@@ -81,6 +83,7 @@ describe.skipIf(!hasDatabase)("calendar persistence", () => {
           userId,
           cycleId: userCycleId,
           activityType: "CARDIO",
+          activityOptionId: "cardio-treadmill-running",
           scheduledDate: new Date("2026-09-15T00:00:00.000Z"),
           durationMinutes: 30,
           status: "PLANNED",
@@ -89,6 +92,7 @@ describe.skipIf(!hasDatabase)("calendar persistence", () => {
           userId,
           cycleId: userCycleId,
           activityType: "SPORT",
+          activityOptionId: "sport-basketball",
           scheduledDate: new Date("2026-10-01T00:00:00.000Z"),
           durationMinutes: 45,
           status: "PLANNED",

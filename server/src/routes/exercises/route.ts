@@ -1,11 +1,11 @@
 import { Router, type Response } from "express";
-import {
-  customExerciseInputSchema,
-} from "@fitness/shared/domain/validation";
+import { customExerciseInputSchema, strengthFocusAreaSchema } from "@fitness/shared";
 import {
   ExerciseService,
   ExerciseServiceError,
 } from "../../exercises/service";
+import { serializeExercise } from "../../catalog/service";
+import { env } from "../../config/env";
 import { getAuthenticatedUserId } from "../../current-user";
 import { db } from "../../db";
 
@@ -16,8 +16,30 @@ export const exerciseRouter = Router();
 exerciseRouter.get("/", async (request, response) => {
   try {
     const userId = getAuthenticatedUserId(request);
-    const exercises = await exerciseService.listAvailableExercises(userId);
-    return response.json({ data: exercises });
+    const rawFocusArea = request.query.focusArea;
+    const parsedFocusArea = rawFocusArea
+      ? strengthFocusAreaSchema.safeParse(rawFocusArea)
+      : { success: true as const, data: undefined };
+    if (!parsedFocusArea.success) {
+      return response.status(400).json({
+        error: {
+          code: "VALIDATION_ERROR",
+          message: parsedFocusArea.error.message,
+        },
+      });
+    }
+
+    const exercises = await exerciseService.listAvailableExercises(userId, {
+      focusArea: parsedFocusArea.data,
+    });
+    return response.json({
+      data: exercises.map((exercise) =>
+        serializeExercise(exercise, {
+          supabaseUrl: env.supabaseUrl,
+          bucket: env.exerciseImageBucket,
+        }),
+      ),
+    });
   } catch (error) {
     return sendRouteError(response, error);
   }
@@ -54,7 +76,12 @@ exerciseRouter.get("/:exerciseId", async (request, response) => {
       userId,
       request.params.exerciseId,
     );
-    return response.json({ data: exercise });
+    return response.json({
+      data: serializeExercise(exercise, {
+        supabaseUrl: env.supabaseUrl,
+        bucket: env.exerciseImageBucket,
+      }),
+    });
   } catch (error) {
     return sendRouteError(response, error);
   }

@@ -21,7 +21,6 @@
 - Image synchronization is an explicit command and must not make the normal application seed depend on an external network request.
 - Store semantic icon keys in the database, map them through an explicit client-side component map, and render Activity as the unknown-key fallback.
 - AI may return only server-provided exercise IDs and ActivityOption IDs.
-- Other is available for manual Cardio/Sport entry but is excluded from the AI candidate pool.
 - Supabase Service Role credentials are server-side/import-script credentials only and must never enter client Vite variables.
 
 ## Review Focus
@@ -482,12 +481,12 @@ expect(
   await db.activityOption.count({
     where: { activityType: "CARDIO" },
   }),
-).toBeGreaterThanOrEqual(12);
+).toBe(12);
 expect(
   await db.activityOption.count({
     where: { activityType: "SPORT" },
   }),
-).toBeGreaterThanOrEqual(18);
+).toBe(18);
 ~~~
 
 - [ ] **Step 2: Run the seed test and verify it fails**
@@ -530,10 +529,7 @@ Create activity-options.ts with stable IDs and icon keys. Use the names from the
 - sport-martial-arts
 - sport-skiing
 - sport-surfing
-- cardio-other
-- sport-other
-
-Use aiEligible = false for cardio-other and sport-other, and true for all standard options. Use an explicit icon key for each standard option and ACTIVITY as the fallback.
+Use an explicit icon key for each standard option and ACTIVITY as the fallback.
 
 - [ ] **Step 4: Implement seedCatalog**
 
@@ -1346,7 +1342,7 @@ FROM "ActivityOption"
 GROUP BY "activityType";
 ~~~
 
-Expected: the first query returns zero rows, the Strength count is between 60 and 70, and Cardio/Sport counts match the seeded catalog including their manual-only Other options.
+Expected: the first query returns zero rows, the Strength count is between 60 and 70, and Cardio/Sport counts match the 12-cardio and 18-sport seeded catalog.
 
 - [ ] **Step 5: Commit documentation and verification updates**
 

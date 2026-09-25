@@ -1,7 +1,15 @@
 import { useEffect, useState, type FormEvent } from "react";
 import type { ActivityType } from "@fitness/shared";
-import { createWorkout, listExercises } from "../../api/client";
-import type { ApiExercise } from "../../api/contracts";
+import {
+  createWorkout,
+  listActivityOptions,
+  listExercises,
+} from "../../api/client";
+import type { ApiActivityOption, ApiExercise } from "../../api/contracts";
+import {
+  ActivityOptionPicker,
+} from "../catalog/ActivityOptionPicker";
+import type { ExercisePickerOption } from "../exercises/ExercisePicker";
 import {
   StrengthPlanBuilder,
   type ManualPlannedExercise,
@@ -27,6 +35,16 @@ function systemDateKey(): string {
   return values.year + "-" + values.month + "-" + values.day;
 }
 
+function toExercisePickerOption(exercise: ApiExercise): ExercisePickerOption {
+  return {
+    id: exercise.id,
+    name: exercise.name,
+    equipment: exercise.equipment,
+    focusAreas: exercise.focusAreas ?? [],
+    imageUrl: exercise.imageUrls?.[0] ?? null,
+  };
+}
+
 export function AddSessionPanel({
   onClose,
   onCreated,
@@ -36,30 +54,47 @@ export function AddSessionPanel({
   const [addDate, setAddDate] = useState(systemDateKey());
   const [addDuration, setAddDuration] = useState(60);
   const [addExercises, setAddExercises] = useState<ApiExercise[]>([]);
+  const [addActivityOptions, setAddActivityOptions] = useState<ApiActivityOption[]>([]);
+  const [addActivityOptionId, setAddActivityOptionId] = useState("");
   const [addPlannedExercises, setAddPlannedExercises] = useState<ManualPlannedExercise[]>([]);
   const [adding, setAdding] = useState(false);
 
   useEffect(() => {
-    if (addActivity !== "STRENGTH") {
+    let active = true;
+    setAddActivityOptionId("");
+
+    if (addActivity === "STRENGTH") {
+      setAddActivityOptions([]);
+      void listExercises()
+        .then((exercises) => {
+          if (active) setAddExercises(exercises);
+        })
+        .catch((loadError) => {
+          if (active) {
+            onMessage(
+              loadError instanceof Error
+                ? loadError.message
+                : "The exercise list could not be loaded.",
+            );
+          }
+        });
+    } else {
       setAddExercises([]);
       setAddPlannedExercises([]);
-      return;
+      void listActivityOptions(addActivity)
+        .then((options) => {
+          if (active) setAddActivityOptions(options);
+        })
+        .catch((loadError) => {
+          if (active) {
+            onMessage(
+              loadError instanceof Error
+                ? loadError.message
+                : "The activity list could not be loaded.",
+            );
+          }
+        });
     }
-
-    let active = true;
-    void listExercises()
-      .then((exercises) => {
-        if (active) setAddExercises(exercises);
-      })
-      .catch((loadError) => {
-        if (active) {
-          onMessage(
-            loadError instanceof Error
-              ? loadError.message
-              : "The exercise list could not be loaded.",
-          );
-        }
-      });
 
     return () => {
       active = false;
@@ -76,6 +111,10 @@ export function AddSessionPanel({
       onMessage("Add a valid exercise plan before creating a strength workout.");
       return;
     }
+    if (addActivity !== "STRENGTH" && !addActivityOptionId) {
+      onMessage("Choose a catalog activity before creating this workout.");
+      return;
+    }
 
     setAdding(true);
     try {
@@ -85,7 +124,7 @@ export function AddSessionPanel({
         durationMinutes: addDuration,
         ...(addActivity === "STRENGTH"
           ? { plannedExercises: addPlannedExercises }
-          : {}),
+          : { activityOptionId: addActivityOptionId }),
       });
       await onCreated();
       setAddPlannedExercises([]);
@@ -131,6 +170,7 @@ export function AddSessionPanel({
             onChange={(event) => {
               const activity = event.target.value as ActivityType;
               setAddActivity(activity);
+              setAddActivityOptionId("");
               if (activity !== "STRENGTH") setAddPlannedExercises([]);
             }}
           >
@@ -162,12 +202,19 @@ export function AddSessionPanel({
         {addActivity === "STRENGTH" ? (
           <div className="sm:col-span-3">
             <StrengthPlanBuilder
-              exercises={addExercises}
+              exercises={addExercises.map(toExercisePickerOption)}
               value={addPlannedExercises}
               onChange={setAddPlannedExercises}
             />
           </div>
-        ) : null}
+        ) : (
+          <ActivityOptionPicker
+            options={addActivityOptions}
+            value={addActivityOptionId}
+            onChange={setAddActivityOptionId}
+            label={addActivity === "CARDIO" ? "Cardio activity" : "Sport"}
+          />
+        )}
         <button
           className="focus-ring min-h-11 rounded-[var(--radius-control)] bg-gymbud-ink px-4 text-sm font-semibold text-white sm:col-span-3"
           disabled={adding}

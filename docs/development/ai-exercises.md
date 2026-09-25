@@ -37,7 +37,7 @@ Request:
 
 ```json
 {
-  "exerciseId": "system-barbell-bench-press"
+  "exerciseId": "free-exercise-db-Barbell_Bench_Press_-_Medium_Grip"
 }
 ```
 

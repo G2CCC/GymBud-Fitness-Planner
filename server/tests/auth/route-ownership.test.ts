@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import request from "supertest";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { app } from "../../src/index";
+import { seedCatalog } from "../../src/catalog/seed";
 import { seedTestUser } from "../../src/current-user";
 import { db } from "../../src/db";
 
@@ -14,6 +15,7 @@ let workoutId: string;
 
 describe.skipIf(!hasDatabase)("authenticated route ownership", () => {
   beforeAll(async () => {
+    await seedCatalog(db);
     await seedTestUser(userAId);
   });
 
@@ -53,6 +55,7 @@ describe.skipIf(!hasDatabase)("authenticated route ownership", () => {
         userId: userAId,
         cycleId: cycle.id,
         activityType: "CARDIO",
+        activityOptionId: "cardio-treadmill-running",
         scheduledDate: new Date("2026-10-02T00:00:00Z"),
         durationMinutes: 30,
       },

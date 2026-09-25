@@ -1,7 +1,7 @@
 import "dotenv/config";
 import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { seedSystemExercises } from "../../src/exercises/seed";
+import { seedCatalog } from "../../src/catalog/seed";
 import { ExerciseService } from "../../src/exercises/service";
 import { db } from "../../src/db";
 
@@ -14,7 +14,7 @@ describe.skipIf(!hasDatabase)("exercise persistence", () => {
   const service = new ExerciseService(db);
 
   beforeAll(async () => {
-    await seedSystemExercises();
+    await seedCatalog(db);
     await Promise.all(
       [userId, otherUserId].map((id) =>
         db.user.create({
@@ -59,10 +59,19 @@ describe.skipIf(!hasDatabase)("exercise persistence", () => {
     const exercises = await service.listAvailableExercises(userId);
     const names = exercises.map((exercise) => exercise.name);
 
-    expect(names).toContain("Push-up");
-    expect(names).toContain("Barbell Bench Press");
+    expect(names).toContain("Pushups");
+    expect(names).toContain("Barbell Bench Press - Medium Grip");
     expect(names).toContain(ownExercise.name);
     expect(names).not.toContain(otherExercise.name);
+  }, integrationTestTimeout);
+
+  it("filters imported exercises by focus area", async () => {
+    const exercises = await service.listAvailableExercises(userId, {
+      focusArea: "CHEST",
+    });
+
+    expect(exercises.length).toBeGreaterThan(0);
+    expect(exercises.every((exercise) => exercise.focusAreas.includes("CHEST"))).toBe(true);
   }, integrationTestTimeout);
 
   it("keeps equipment availability independent of location", async () => {

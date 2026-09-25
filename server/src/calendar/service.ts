@@ -3,6 +3,7 @@ import type {
   CalendarDateRangeBounds,
   CalendarWorkoutSummary,
 } from "@fitness/shared";
+import { serializeActivityOption } from "../catalog/service";
 
 const calendarWorkoutSelect = {
   id: true,
@@ -13,6 +14,18 @@ const calendarWorkoutSelect = {
   status: true,
   completedAt: true,
   rescheduleCount: true,
+  activityOption: {
+    select: {
+      id: true,
+      activityType: true,
+      slug: true,
+      name: true,
+      iconKey: true,
+      aiEligible: true,
+      sortOrder: true,
+      description: true,
+    },
+  },
 } satisfies Prisma.ScheduledWorkoutSelect;
 
 type CalendarWorkoutRecord = Prisma.ScheduledWorkoutGetPayload<{
@@ -39,6 +52,9 @@ export class CalendarService {
         select: calendarWorkoutSelect,
       });
 
-    return workouts;
+    return workouts.map((workout) => ({
+      ...workout,
+      activityOption: serializeActivityOption(workout.activityOption),
+    }));
   }
 }

@@ -13,12 +13,16 @@ The server remains authoritative for:
 - cycle ownership and `DRAFT` status;
 - the seven-day date range;
 - exercise ownership and AI eligibility;
+- the AI-eligible Strength exercise pool and standard Cardio/Sport option pool;
 - strength exercise and set uniqueness;
+- matching Cardio/Sport `activityOptionId` values;
 - activation and calendar writes.
 
-The model receives only the legal exercise pool. Its exercise names and
-metadata claims are not trusted; the server reloads the exercise records and
-adds authoritative metadata to the returned draft.
+The model receives only the legal exercise pool and legal ActivityOption pool.
+Strength workouts contain at least one exercise; Cardio and Sport workouts
+contain an empty exercise array and a matching catalog option. Its exercise or
+activity names are not trusted; the server reloads catalog records and adds
+authoritative names and icon keys to the returned draft.
 
 The profile context sent to the plan prompt includes the required training
 preferences and required body fields: gender, age, height in centimeters, and
@@ -75,6 +79,12 @@ POST /api/ai/plans/:cycleId/confirm
 The confirm request body is the complete `PlanDraft` returned by the generate
 endpoint, with user edits applied. This keeps the server stateless between
 review steps and lets a future web or iOS client use the same contract.
+
+`PlanDraft` Cardio/Sport records include `activityOptionId`,
+`activityOptionName`, and `activityOptionIconKey`. Strength records omit these
+fields. The single-day generator is Strength-only. Confirmation revalidates
+all exercise and ActivityOption IDs inside the transaction before activating a
+cycle.
 
 The related exercise extraction, replacement, and next-weight recommendation
 contracts are documented in `docs/development/ai-exercises.md`.

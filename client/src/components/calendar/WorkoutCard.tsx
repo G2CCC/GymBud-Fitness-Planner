@@ -1,5 +1,9 @@
-import type { ActivityType, WorkoutStatus } from "@fitness/shared";
+import type { WorkoutStatus } from "@fitness/shared";
 import type { ApiWorkout } from "../../api/contracts";
+import {
+  ActivityIdentity,
+  getActivityDisplayName,
+} from "../catalog/ActivityIdentity";
 
 export type CalendarWorkout = Pick<
   ApiWorkout,
@@ -10,6 +14,7 @@ export type CalendarWorkout = Pick<
   | "status"
   | "completedAt"
   | "rescheduleCount"
+  | "activityOption"
 > & {
   cycleId?: string;
 };
@@ -18,12 +23,6 @@ export type WorkoutCardProps = {
   workout: CalendarWorkout;
   today?: string;
   onSelect: (workout: CalendarWorkout) => void;
-};
-
-const activityLabels: Record<ActivityType, string> = {
-  STRENGTH: "Strength",
-  CARDIO: "Cardio",
-  SPORT: "Sport",
 };
 
 const statusLabels: Record<WorkoutStatus, string> = {
@@ -53,6 +52,10 @@ export function WorkoutCard({
     workout.status === "COMPLETED"
       ? "calendar-workout-card--completed"
       : "";
+  const activityName = getActivityDisplayName(
+    workout.activityType,
+    workout.activityOption,
+  );
 
   return (
     <button
@@ -62,7 +65,7 @@ export function WorkoutCard({
       data-status={workout.status.toLowerCase()}
       onClick={() => onSelect(workout)}
       aria-label={
-        activityLabels[workout.activityType] +
+        activityName +
         " workout on " +
         dateKey(workout.scheduledDate) +
         " (" +
@@ -73,9 +76,11 @@ export function WorkoutCard({
     >
       <span className="flex items-start justify-between gap-3">
         <span>
-          <span className="block text-sm font-semibold">
-            {activityLabels[workout.activityType]}
-          </span>
+          <ActivityIdentity
+            activityType={workout.activityType}
+            activityOption={workout.activityOption}
+            size={18}
+          />
           <span className="mt-1 block text-xs opacity-80">
             {workout.durationMinutes} min
           </span>

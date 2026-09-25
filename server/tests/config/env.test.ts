@@ -6,6 +6,8 @@ const originalDirectUrl = process.env.DIRECT_URL;
 const originalAuthProvider = process.env.AUTH_PROVIDER;
 const originalSupabaseUrl = process.env.SUPABASE_URL;
 const originalSupabaseAnonKey = process.env.SUPABASE_ANON_KEY;
+const originalSupabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const originalExerciseImageBucket = process.env.EXERCISE_IMAGE_BUCKET;
 const originalCorsOrigins = process.env.CORS_ORIGINS;
 
 afterEach(() => {
@@ -37,6 +39,18 @@ afterEach(() => {
     delete process.env.SUPABASE_ANON_KEY;
   } else {
     process.env.SUPABASE_ANON_KEY = originalSupabaseAnonKey;
+  }
+
+  if (originalSupabaseServiceRoleKey === undefined) {
+    delete process.env.SUPABASE_SERVICE_ROLE_KEY;
+  } else {
+    process.env.SUPABASE_SERVICE_ROLE_KEY = originalSupabaseServiceRoleKey;
+  }
+
+  if (originalExerciseImageBucket === undefined) {
+    delete process.env.EXERCISE_IMAGE_BUCKET;
+  } else {
+    process.env.EXERCISE_IMAGE_BUCKET = originalExerciseImageBucket;
   }
 
   if (originalCorsOrigins === undefined) {
@@ -83,5 +97,21 @@ describe("application environment", () => {
     expect(() =>
       loadEnv({ NODE_ENV: "production", AUTH_PROVIDER: "fake" }),
     ).toThrow(/fake.*production/i);
+  });
+
+  it("loads the server-only storage settings without requiring them for auth", async () => {
+    const { loadEnv } = await import("../../src/config/env");
+
+    expect(
+      loadEnv({
+        NODE_ENV: "development",
+        AUTH_PROVIDER: "fake",
+        E2E_AUTH_ENABLED: "true",
+        SUPABASE_SERVICE_ROLE_KEY: "service-role-key",
+      }),
+    ).toMatchObject({
+      supabaseServiceRoleKey: "service-role-key",
+      exerciseImageBucket: "exercise-images",
+    });
   });
 });

@@ -9,6 +9,7 @@ import { cycleReviewRouter } from "./[cycleId]/review/route";
 import { nextCycleDraftRouter } from "./[cycleId]/next-draft/route";
 import { createConfiguredAiClient } from "../../ai/client";
 import { CycleReviewService } from "../../reviews/service";
+import { serializeActivityOption } from "../../catalog/service";
 
 const activateCycleInputSchema = z.object({
   timezone: timeZoneSchema,
@@ -65,6 +66,7 @@ cycleRouter.get("/current", async (request, response) => {
           ...cycleData,
           workouts: cycleData.workouts.map(({ workoutLog, ...workout }) => ({
             ...workout,
+            activityOption: serializeActivityOption(workout.activityOption),
             actualDetails: toActualDetails(workoutLog?.actualDetails),
             actualExercises: workoutLog?.exerciseLogs.map((exercise) => ({
               exerciseId: exercise.exerciseId,
@@ -203,6 +205,18 @@ const currentCycleSelect = {
       completedAt: true,
       rescheduleCount: true,
       plannedDetails: true,
+      activityOption: {
+        select: {
+          id: true,
+          activityType: true,
+          slug: true,
+          name: true,
+          iconKey: true,
+          aiEligible: true,
+          sortOrder: true,
+          description: true,
+        },
+      },
       workoutLog: {
         select: {
           actualDetails: true,
@@ -233,5 +247,34 @@ function toActualDetails(value: Prisma.JsonValue | null | undefined) {
     return null;
   }
 
-  return value;
+  const record = value as Prisma.JsonObject;
+  return {
+    ...(typeof record.actualDurationMinutes === "number"
+      ? { actualDurationMinutes: record.actualDurationMinutes }
+      : {}),
+    ...(typeof record.distanceKm === "number"
+      ? { distanceKm: record.distanceKm }
+      : {}),
+    ...(typeof record.paceSecondsPerKm === "number"
+      ? { paceSecondsPerKm: record.paceSecondsPerKm }
+      : {}),
+    ...(typeof record.speedKph === "number"
+      ? { speedKph: record.speedKph }
+      : {}),
+    ...(record.intensity === "LOW" ||
+    record.intensity === "MODERATE" ||
+    record.intensity === "HIGH"
+      ? { intensity: record.intensity }
+      : {}),
+    ...(typeof record.modality === "string"
+      ? { modality: record.modality }
+      : {}),
+    ...(typeof record.sportName === "string"
+      ? { sportName: record.sportName }
+      : {}),
+    ...(typeof record.trainingFocus === "string"
+      ? { trainingFocus: record.trainingFocus }
+      : {}),
+    ...(typeof record.notes === "string" ? { notes: record.notes } : {}),
+  };
 }

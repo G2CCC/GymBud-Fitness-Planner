@@ -46,6 +46,20 @@ npx prisma migrate deploy --schema prisma/schema.prisma
 npm run db:seed
 ```
 
+The seed is idempotent and loads the curated Strength catalog plus the
+Cardio/Sport ActivityOption catalog, then migrates references from the six old
+ownerless `system-*` exercises. To rebuild or upload the Strength metadata and
+images:
+
+```bash
+npm run catalog:build-manifest
+npm run catalog:sync-images
+```
+
+`catalog:sync-images` requires the server-only `SUPABASE_SERVICE_ROLE_KEY`
+and uploads to `EXERCISE_IMAGE_BUCKET` (default `exercise-images`). The
+service-role key must never be placed in client/Vite environment variables.
+
 `migrate deploy` applies migrations already committed to the repository. Use
 `npm run db:migrate -- --name <name>` only when developing a new schema change
 locally and committing the generated migration afterwards.
@@ -121,8 +135,9 @@ isolated `E2E_USER_ID` only for deterministic tests; it never enables fake Auth
 in production and never makes a paid AI request. Playwright starts both the
 API and Vite client automatically.
 
-The normal Prisma seed creates system exercises only. Test setup explicitly
-calls `seedTestUser()` for its isolated identity.
+The normal Prisma seed creates the curated Strength and ActivityOption catalog
+records, then migrates the six legacy system-exercise references. Test setup
+explicitly calls `seedTestUser()` for its isolated identity.
 
 Additional checks used before a release:
 

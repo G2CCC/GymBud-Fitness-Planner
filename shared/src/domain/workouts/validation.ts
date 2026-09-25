@@ -41,11 +41,40 @@ export const plannedExerciseInputSchema = z.object({
 
 export const createWorkoutInputSchema = z.object({
   activityType: z.enum(activityTypes),
+  activityOptionId: z.string().trim().min(1).optional(),
   scheduledDate: z.coerce.date(),
   durationMinutes: z.number().int().min(1).max(600),
   plannedDetails: z.record(z.unknown()).optional(),
   plannedExercises: z.array(plannedExerciseInputSchema).min(1).max(100).optional(),
 }).strict().superRefine((input, context) => {
+  if (input.activityType === "STRENGTH" && input.activityOptionId) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["activityOptionId"],
+      message: "Strength workouts cannot use an activity option",
+    });
+  }
+
+  if (input.activityType !== "STRENGTH" && !input.activityOptionId) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["activityOptionId"],
+      message: "Cardio and Sport workouts require an activity option",
+    });
+  }
+
+  if (
+    input.activityType !== "STRENGTH" &&
+    input.activityOptionId &&
+    !input.activityOptionId.startsWith(input.activityType.toLowerCase() + "-")
+  ) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["activityOptionId"],
+      message: "Activity option does not match the workout type",
+    });
+  }
+
   if (input.plannedExercises && input.activityType !== "STRENGTH") {
     context.addIssue({
       code: z.ZodIssueCode.custom,

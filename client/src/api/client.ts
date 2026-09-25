@@ -1,10 +1,12 @@
 import {
   validateCompletionTimestamp,
   type CardioWorkoutLogInput,
+  type ActivityOptionType,
   type PlannedExerciseInput,
   type ProfileInput,
   type SportWorkoutLogInput,
   type StrengthWorkoutLogInput,
+  type StrengthFocusArea,
 } from "@fitness/shared";
 import type {
   ApiCalendarWorkout,
@@ -13,6 +15,7 @@ import type {
   ApiCycleReviewResult,
   ApiCycleDraft,
   ApiExercise,
+  ApiActivityOption,
   ApiNextCycleDraft,
   ApiPlanDraft,
   ApiProfile,
@@ -144,12 +147,27 @@ export async function getWorkout(workoutId: string): Promise<ApiWorkout> {
   return request<ApiWorkout>("/workouts/" + workoutId);
 }
 
-export async function listExercises(): Promise<ApiExercise[]> {
-  return request<ApiExercise[]>("/exercises");
+export async function listExercises(
+  focusArea?: StrengthFocusArea,
+): Promise<ApiExercise[]> {
+  const query = focusArea
+    ? "?" + new URLSearchParams({ focusArea }).toString()
+    : "";
+  return request<ApiExercise[]>("/exercises" + query);
+}
+
+export async function listActivityOptions(
+  activityType?: ActivityOptionType,
+): Promise<ApiActivityOption[]> {
+  const query = activityType
+    ? "?" + new URLSearchParams({ activityType }).toString()
+    : "";
+  return request<ApiActivityOption[]>("/activity-options" + query);
 }
 
 export async function createWorkout(input: {
   activityType: "STRENGTH" | "CARDIO" | "SPORT";
+  activityOptionId?: string;
   scheduledDate: string;
   durationMinutes: number;
   plannedDetails?: Record<string, unknown>;

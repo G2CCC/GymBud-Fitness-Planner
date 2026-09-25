@@ -42,6 +42,7 @@ const plannedWorkout: ApiWorkout = {
   status: "PLANNED",
   completedAt: null,
   rescheduleCount: 0,
+  activityOption: null,
   plannedExercises,
 };
 

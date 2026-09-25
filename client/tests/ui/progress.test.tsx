@@ -58,6 +58,7 @@ describe("progress page", () => {
             status: "COMPLETED",
             completedAt: "2026-09-03T18:00:00.000Z",
             rescheduleCount: 1,
+            activityOption: null,
             actualDetails: { actualDurationMinutes: 35, distanceKm: 5.2 },
           },
         ],

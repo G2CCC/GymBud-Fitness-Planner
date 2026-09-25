@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import type { ApiPlanDraft } from "../../api/contracts";
+import { ActivityIdentity } from "../catalog/ActivityIdentity";
 
 export type SingleDayPlanDraftEditorProps = {
   plan: ApiPlanDraft;
@@ -47,9 +48,7 @@ export function SingleDayPlanDraftEditor({
         <article className="grid gap-3 rounded-[var(--radius-control)] border border-gymbud-border p-3">
           <div className="flex items-center justify-between gap-3">
             <div>
-              <p className="text-sm font-semibold text-gymbud-ink">
-                Strength workout
-              </p>
+              <ActivityIdentity activityType="STRENGTH" size={18} />
               <p className="mt-1 text-xs text-gymbud-muted">
                 {workout.scheduledDate.slice(0, 10)} · {workout.exercises.length} exercises
               </p>

@@ -2,6 +2,7 @@ import "dotenv/config";
 import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { CycleService } from "../../src/cycles/service";
+import { seedCatalog } from "../../src/catalog/seed";
 import { db } from "../../src/db";
 
 const hasDatabase = Boolean(process.env.DATABASE_URL);
@@ -13,6 +14,7 @@ describe.skipIf(!hasDatabase)("cycle persistence", () => {
   const service = new CycleService(db);
 
   beforeAll(async () => {
+    await seedCatalog(db);
     await Promise.all(
       [userId, lifecycleUserId].map((id) =>
         db.user.create({
@@ -99,6 +101,7 @@ describe.skipIf(!hasDatabase)("cycle persistence", () => {
             {
               userId: lifecycleUserId,
               activityType: "CARDIO",
+              activityOptionId: "cardio-treadmill-running",
               scheduledDate: new Date("2026-10-06T00:00:00Z"),
               durationMinutes: 30,
               status: "COMPLETED",
@@ -107,6 +110,7 @@ describe.skipIf(!hasDatabase)("cycle persistence", () => {
             {
               userId: lifecycleUserId,
               activityType: "SPORT",
+              activityOptionId: "sport-basketball",
               scheduledDate: new Date("2026-10-04T00:00:00Z"),
               durationMinutes: 45,
               status: "PLANNED",

@@ -6,6 +6,7 @@ import { useState } from "react";
 import * as api from "../../src/api/client";
 import type { ApiCycle, ApiWorkout } from "../../src/api/contracts";
 import { WorkoutCard } from "../../src/components/calendar/WorkoutCard";
+import { WorkoutDetailsDrawer } from "../../src/components/calendar/WorkoutDetailsDrawer";
 import { CalendarPage } from "../../src/pages/calendar/CalendarPage";
 import {
   StrengthPlanBuilder,
@@ -38,6 +39,7 @@ const plannedWorkout: EditorWorkout = {
   status: "PLANNED",
   completedAt: null,
   rescheduleCount: 0,
+  activityOption: null,
 };
 
 const exerciseOptions: EditorExerciseOption[] = [
@@ -45,11 +47,15 @@ const exerciseOptions: EditorExerciseOption[] = [
     id: "bench",
     name: "Bench Press",
     equipment: "BARBELL",
+    focusAreas: ["CHEST"],
+    imageUrl: "https://example.com/bench.jpg",
   },
   {
     id: "push-up",
     name: "Push Up",
     equipment: "NONE",
+    focusAreas: ["CHEST", "CORE"],
+    imageUrl: null,
   },
 ];
 
@@ -87,6 +93,7 @@ const calendarWorkout = {
 
 const detailedWorkout: ApiWorkout = {
   ...calendarWorkout,
+  activityOption: null,
   plannedExercises: [
     {
       exerciseId: "bench",
@@ -107,7 +114,7 @@ const detailedWorkout: ApiWorkout = {
 const singleDayDraft = {
   cycleId: "cycle-1",
   model: "test-model",
-  promptVersion: "day-plan.v1",
+  promptVersion: "day-plan.v2",
   workouts: [
     {
       scheduledDate: "2026-09-23T00:00:00.000Z",
@@ -252,6 +259,62 @@ describe("calendar and workout editor UI", () => {
       "data-activity",
       "sport",
     );
+  });
+
+  it("shows a catalog activity name and icon on a calendar card", () => {
+    render(
+      <WorkoutCard
+        workout={{
+          ...plannedWorkout,
+          id: "rowing-1",
+          activityType: "CARDIO",
+          activityOption: {
+            id: "cardio-rowing-machine",
+            activityType: "CARDIO",
+            name: "Rowing Machine",
+            iconKey: "ACTIVITY",
+            aiEligible: true,
+            sortOrder: 60,
+            description: null,
+          },
+        }}
+        onSelect={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText("Rowing Machine")).toBeInTheDocument();
+    expect(screen.getByLabelText("Rowing Machine")).toBeInTheDocument();
+  });
+
+  it("keeps legacy cardio details readable when no catalog option exists", () => {
+    render(
+      <MemoryRouter>
+        <WorkoutDetailsDrawer
+          summary={{
+            ...plannedWorkout,
+            id: "legacy-cardio",
+            activityType: "CARDIO",
+            activityOption: null,
+          }}
+          workout={{
+            ...detailedWorkout,
+            id: "legacy-cardio",
+            activityType: "CARDIO",
+            activityOption: null,
+            actualDetails: { modality: "Legacy Cardio" },
+          }}
+          loading={false}
+          error={null}
+          exerciseNames={{}}
+          onClose={vi.fn()}
+          onReschedule={vi.fn()}
+          onDelete={vi.fn()}
+        />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByText("Legacy Cardio")).toBeInTheDocument();
+    expect(screen.getByLabelText("Legacy Cardio")).toBeInTheDocument();
   });
 
   it("shows all legal exercises without location filtering", () => {

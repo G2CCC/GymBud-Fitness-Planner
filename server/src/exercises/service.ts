@@ -3,6 +3,7 @@ import {
   customExerciseInputSchema,
   normalizeEquipment,
 } from "@fitness/shared";
+import type { StrengthFocusArea } from "@fitness/shared";
 import type { z } from "zod";
 
 const exerciseSelect = {
@@ -13,6 +14,16 @@ const exerciseSelect = {
   equipment: true,
   targetMuscles: true,
   movementPattern: true,
+  sourceProvider: true,
+  sourceId: true,
+  sourceCommit: true,
+  sourceCategory: true,
+  level: true,
+  primaryMuscles: true,
+  secondaryMuscles: true,
+  focusAreas: true,
+  instructions: true,
+  imagePaths: true,
   aiEligible: true,
   createdAt: true,
   updatedAt: true,
@@ -40,12 +51,13 @@ export class ExerciseService {
 
   async listAvailableExercises(
     userId: string,
-    options: { aiEligibleOnly?: boolean } = {},
+    options: { aiEligibleOnly?: boolean; focusArea?: StrengthFocusArea } = {},
   ): Promise<ExerciseRecord[]> {
     return this.prisma.exercise.findMany({
       where: {
         OR: [{ ownerId: null }, { ownerId: userId }],
         ...(options.aiEligibleOnly ? { aiEligible: true } : {}),
+        ...(options.focusArea ? { focusAreas: { has: options.focusArea } } : {}),
       },
       select: exerciseSelect,
       orderBy: { name: "asc" },

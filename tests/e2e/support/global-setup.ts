@@ -7,13 +7,11 @@ export default async function globalSetup(_config: FullConfig) {
 
   const { db } = await import("../../../server/src/db");
   const { seedTestUser } = await import("../../../server/src/current-user");
-  const { seedSystemExercises } = await import(
-    "../../../server/src/exercises/seed"
-  );
+  const { seedCatalog } = await import("../../../server/src/catalog/seed");
 
   const userId = process.env.E2E_USER_ID ?? "e2e-demo-user";
   await seedTestUser(userId);
-  await seedSystemExercises(db);
+  await seedCatalog(db);
   await resetDatabase(db);
 
   return async () => {

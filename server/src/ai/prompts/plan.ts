@@ -2,9 +2,9 @@ import type { AiRequest } from "../client";
 import type {
   CycleTrainingVolume,
 } from "@fitness/shared/domain/reviews/cycle-volume";
-import type { Gender } from "@fitness/shared";
+import type { ActivityOptionType, Gender } from "@fitness/shared";
 
-export const PLAN_PROMPT_VERSION = "plan.v3";
+export const PLAN_PROMPT_VERSION = "plan.v4";
 
 export type PlanPromptInput = {
   cycleId: string;
@@ -23,6 +23,12 @@ export type PlanPromptInput = {
     equipment: string | null;
     targetMuscles: string[];
     movementPattern: string | null;
+    focusAreas: string[];
+  }>;
+  activityOptions: Array<{
+    id: string;
+    activityType: ActivityOptionType;
+    name: string;
   }>;
   reviewContext?: {
     processedSummary: string | null;
@@ -49,11 +55,13 @@ export function buildPlanRequest(input: PlanPromptInput): AiRequest {
       weightKg: input.weightKg,
     },
     legalExercisePool: input.exercises,
+    legalActivityOptionPool: input.activityOptions,
     outputShape: {
       workouts: [
         {
           scheduledDate: "ISO date",
           activityType: "STRENGTH | CARDIO | SPORT",
+          activityOptionId: "required catalog option ID for Cardio/Sport; omit for Strength",
           durationMinutes: input.sessionDurationMinutes,
           plannedDetails: "activity-specific object when needed",
           exercises: [
@@ -79,7 +87,10 @@ export function buildPlanRequest(input: PlanPromptInput): AiRequest {
     systemPrompt: [
       "You generate a seven-day weekly fitness plan as JSON only.",
       "Use only exercise IDs from the supplied legal exercise pool.",
+      "Use only activityOptionId values from the supplied legal activity option pool.",
       "Strength workouts must contain at least one exercise and one planned set per exercise.",
+      "Cardio and Sport workouts must select a matching activityOptionId and must use an empty exercises array.",
+      "For example, a Cardio workout uses {\"activityType\":\"CARDIO\",\"activityOptionId\":\"cardio-rowing-machine\",\"durationMinutes\":30,\"plannedDetails\":{\"intensity\":\"MODERATE\"},\"exercises\":[]}.",
       "Do not return RPE, subjective feedback, or unknown fields.",
       "Keep every scheduled date within the inclusive seven-day cycle dates.",
       "Use the supplied body context as planning context; never invent or reinterpret values.",
