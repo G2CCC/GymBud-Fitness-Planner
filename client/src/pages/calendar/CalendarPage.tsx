@@ -249,7 +249,7 @@ export function CalendarPage() {
     setActionMessage(null);
     setDayPlanDraft(null);
     const draft = await generateSingleDayPlan(cycle.id, {
-      scheduledDate: new Date(input.scheduledDate + "T12:00:00").toISOString(),
+      scheduledDate: `${input.scheduledDate}T00:00:00.000Z`,
       focusAreas: input.focusAreas,
     });
     setDayPlanDraft(draft);
@@ -275,7 +275,7 @@ export function CalendarPage() {
     try {
       await rescheduleWorkout(
         selectedSummary.id,
-        new Date(nextDate + "T12:00:00").toISOString(),
+        `${nextDate}T00:00:00.000Z`,
       );
       await Promise.all([loadCycle(), reloadCalendar()]);
       setActionMessage("Only this workout was moved.");
