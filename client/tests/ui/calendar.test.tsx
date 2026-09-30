@@ -14,8 +14,8 @@ import {
 } from "../../src/components/workouts/StrengthPlanBuilder";
 import { WorkoutEditor } from "../../src/components/workouts/WorkoutEditor";
 import { getMondayDateKey } from "../../src/components/calendar/CalendarGrid";
+import type { ExercisePickerOption } from "../../src/components/exercises/ExercisePicker";
 import type {
-  EditorExerciseOption,
   EditorWorkout,
 } from "../../src/components/workouts/WorkoutEditor";
 
@@ -42,7 +42,7 @@ const plannedWorkout: EditorWorkout = {
   activityOption: null,
 };
 
-const exerciseOptions: EditorExerciseOption[] = [
+const exerciseOptions: ExercisePickerOption[] = [
   {
     id: "bench",
     name: "Bench Press",
@@ -337,17 +337,18 @@ describe("calendar and workout editor UI", () => {
     expect(screen.getByLabelText("Legacy Cardio")).toBeInTheDocument();
   });
 
-  it("shows all legal exercises without location filtering", () => {
+  it("keeps exercise selection out of workout completion controls", () => {
     render(
       <WorkoutEditor
         workout={plannedWorkout}
-        legalExerciseOptions={exerciseOptions}
         onSubmit={vi.fn()}
       />,
     );
 
-    expect(screen.getByRole("option", { name: /bench press/i })).toBeInTheDocument();
-    expect(screen.getByRole("option", { name: /push up/i })).toBeInTheDocument();
+    expect(screen.queryByLabelText("Exercise options")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /save workout/i })).toHaveClass(
+      "button-primary",
+    );
   });
 
   it("keeps a generated day plan as a draft until explicit confirmation", async () => {
@@ -404,7 +405,6 @@ describe("calendar and workout editor UI", () => {
     render(
       <WorkoutEditor
         workout={plannedWorkout}
-        legalExerciseOptions={exerciseOptions}
         mode="backfill"
         onSubmit={onSubmit}
       />,
@@ -471,6 +471,9 @@ describe("calendar and workout editor UI", () => {
     expect(
       screen.getByRole("link", { name: /start workout/i }),
     ).toHaveAttribute("href", "/workouts/workout-1");
+    expect(screen.getByRole("link", { name: /start workout/i })).toHaveClass(
+      "button-primary",
+    );
     expect(api.getWorkout).toHaveBeenCalledWith("workout-1");
     expect(screen.getByText("Bench Press")).toBeInTheDocument();
   });
@@ -533,17 +536,32 @@ describe("calendar and workout editor UI", () => {
     confirmSpy.mockRestore();
   });
 
-  it.each([
-    ["COMPLETED" as const, "Completed workout history"],
-  ])("shows %s status copy in the details drawer", async (status, copy) => {
+  it("shows completed workout details as a read-only summary", async () => {
     const user = userEvent.setup();
     vi.mocked(api.getCalendarWorkouts).mockImplementation(async () => [
-      { ...calendarWorkout, status },
+      { ...calendarWorkout, status: "COMPLETED" },
     ]);
     vi.mocked(api.getWorkout).mockResolvedValueOnce({
       ...detailedWorkout,
-      status,
-      completedAt: status === "COMPLETED" ? "2026-09-15T10:00:00.000Z" : null,
+      status: "COMPLETED",
+      completedAt: "2026-09-15T10:00:00.000Z",
+      workoutLog: {
+        actualDetails: null,
+        exerciseLogs: [
+          {
+            exerciseId: "bench",
+            sortOrder: 1,
+            setLogs: [
+              {
+                setNumber: 1,
+                actualReps: 7,
+                actualWeight: 60,
+                weightUnit: "KG",
+              },
+            ],
+          },
+        ],
+      },
     });
     renderCalendar();
 
@@ -551,7 +569,13 @@ describe("calendar and workout editor UI", () => {
       await screen.findByRole("button", { name: /strength workout/i }),
     );
 
-    expect(await screen.findByText(copy)).toBeInTheDocument();
+    const dialog = await screen.findByRole("dialog");
+    expect(within(dialog).getByText("Completed")).toBeInTheDocument();
+    expect(within(dialog).getByText("7 reps · 60 kg")).toBeInTheDocument();
+    expect(within(dialog).queryByText("Planned set targets")).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /view workout summary/i })).toHaveClass(
+      "button-primary",
+    );
   });
 
   it("shows a recoverable detail error when the selected workout cannot be loaded", async () => {

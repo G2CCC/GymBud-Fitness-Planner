@@ -50,6 +50,23 @@ const completedWorkout: ApiWorkout = {
   ...plannedWorkout,
   status: "COMPLETED",
   completedAt: "2026-09-15T10:00:00.000Z",
+  workoutLog: {
+    actualDetails: null,
+    exerciseLogs: [
+      {
+        exerciseId: "bench",
+        sortOrder: 1,
+        setLogs: [
+          {
+            setNumber: 1,
+            actualReps: 7,
+            actualWeight: 60,
+            weightUnit: "KG",
+          },
+        ],
+      },
+    ],
+  },
 };
 
 function renderWorkoutPage() {
@@ -129,13 +146,78 @@ describe("strength log form", () => {
 });
 
 describe("workout detail and logging", () => {
+  it("does not show the disconnected exercise options selector", async () => {
+    renderWorkoutPage();
+
+    await screen.findByRole("heading", { name: /log your workout/i });
+
+    expect(screen.queryByLabelText("Exercise options")).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("heading", { name: /log your actual session/i }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("shows completed strength values as a read-only workout summary", async () => {
+    vi.mocked(api.getWorkout).mockResolvedValue(completedWorkout);
+    renderWorkoutPage();
+
+    expect(
+      await screen.findByRole("heading", { name: /workout summary/i }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Bench Press")).toBeInTheDocument();
+    expect(screen.getByText("7 reps · 60 kg")).toBeInTheDocument();
+    expect(screen.queryByRole("spinbutton")).not.toBeInTheDocument();
+  });
+
+  it.each([
+    {
+      activityType: "CARDIO" as const,
+      actualDetails: {
+        actualDurationMinutes: 35,
+        distanceKm: 5.2,
+        modality: "Outdoor run",
+        intensity: "MODERATE" as const,
+      },
+      expected: ["35 min", "5.2 km", "Outdoor run", "Moderate"],
+    },
+    {
+      activityType: "SPORT" as const,
+      actualDetails: {
+        actualDurationMinutes: 80,
+        sportName: "Football",
+        intensity: "HIGH" as const,
+        notes: "Friendly match",
+      },
+      expected: ["80 min", "Football", "High", "Friendly match"],
+    },
+  ])(
+    "shows the saved $activityType details without edit controls",
+    async ({ activityType, actualDetails, expected }) => {
+      vi.mocked(api.getWorkout).mockResolvedValue({
+        ...plannedWorkout,
+        activityType,
+        status: "COMPLETED",
+        completedAt: "2026-09-15T10:00:00.000Z",
+        plannedExercises: [],
+        workoutLog: { actualDetails, exerciseLogs: [] },
+      });
+      renderWorkoutPage();
+
+      await screen.findByRole("heading", { name: /workout summary/i });
+      for (const detail of expected) {
+        expect(screen.getByText(detail)).toBeInTheDocument();
+      }
+      expect(screen.queryByRole("button", { name: /save workout/i })).not.toBeInTheDocument();
+    },
+  );
+
   it("requires a real completion date and time in the backfill flow", async () => {
     const user = userEvent.setup();
     renderWorkoutPage();
 
     await screen.findByRole("heading", { name: /log your workout/i });
     await user.click(
-      screen.getByRole("button", { name: /backfill a completed session/i }),
+      screen.getByRole("button", { name: /log a past workout/i }),
     );
     await user.click(screen.getByRole("button", { name: /save completion/i }));
 
@@ -170,6 +252,7 @@ describe("workout detail and logging", () => {
     expect(
       await screen.findByText("Workout completed and log saved."),
     ).toBeInTheDocument();
+    expect(screen.getByText("7 reps · 60 kg")).toBeInTheDocument();
     expect(
       screen.queryByRole("button", { name: /save workout/i }),
     ).not.toBeInTheDocument();

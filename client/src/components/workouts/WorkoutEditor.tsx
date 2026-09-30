@@ -1,20 +1,8 @@
 import { useState, type FormEvent } from "react";
-import {
-  type StrengthFocusArea,
-  type ActivityType,
-  type WorkoutStatus,
-} from "@fitness/shared";
+import type { WorkoutStatus } from "@fitness/shared";
 import type { CalendarWorkout } from "../calendar/WorkoutCard";
 
 export type EditorWorkout = CalendarWorkout;
-
-export type EditorExerciseOption = {
-  id: string;
-  name: string;
-  equipment: string | null;
-  focusAreas: StrengthFocusArea[];
-  imageUrl: string | null;
-};
 
 export type WorkoutEditorSubmitPayload = {
   completedAt?: string;
@@ -22,19 +10,10 @@ export type WorkoutEditorSubmitPayload = {
 
 export type WorkoutEditorProps = {
   workout: EditorWorkout;
-  legalExerciseOptions: EditorExerciseOption[];
   mode?: "complete" | "backfill";
   saving?: boolean;
   onSubmit: (payload: WorkoutEditorSubmitPayload) => void;
 };
-
-function formatActivity(activityType: ActivityType): string {
-  return activityType === "STRENGTH"
-    ? "Strength"
-    : activityType === "CARDIO"
-      ? "Cardio"
-      : "Sport";
-}
 
 function toLocalDateTime(date: Date): string {
   const offset = date.getTimezoneOffset() * 60_000;
@@ -43,15 +22,12 @@ function toLocalDateTime(date: Date): string {
 
 export function WorkoutEditor({
   workout,
-  legalExerciseOptions,
   mode = "complete",
   saving = false,
   onSubmit,
 }: WorkoutEditorProps) {
   const [completedAt, setCompletedAt] = useState("");
   const [error, setError] = useState<string | null>(null);
-
-  const availableExercises = legalExerciseOptions;
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -69,9 +45,7 @@ export function WorkoutEditor({
         return;
       }
 
-      onSubmit({
-        completedAt: parsed.toISOString(),
-      });
+      onSubmit({ completedAt: parsed.toISOString() });
       return;
     }
 
@@ -80,41 +54,15 @@ export function WorkoutEditor({
 
   return (
     <form
-      className="grid gap-5 rounded-[var(--radius-card)] border border-gymbud-border bg-gymbud-surface p-5 shadow-sm"
+      aria-label={`${workout.activityType.toLowerCase()} workout completion`}
+      className="grid gap-3 rounded-[var(--radius-card)] border border-gymbud-border bg-gymbud-surface p-4 shadow-sm sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end sm:p-5"
       onSubmit={handleSubmit}
     >
-      <div>
-        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-gymbud-muted">
-          {formatActivity(workout.activityType)} workout
-        </p>
-        <h2 className="mt-1 text-xl font-semibold text-gymbud-ink">
-          Log your actual session
-        </h2>
-      </div>
-
-      {workout.activityType === "STRENGTH" ? (
-        <label className="grid gap-2 text-sm font-medium text-gymbud-ink">
-          Exercise options
-          <select
-            className="focus-ring min-h-11 rounded-[var(--radius-control)] border border-gymbud-border bg-gymbud-surface px-3 text-gymbud-ink"
-            aria-label="Exercise options"
-            defaultValue=""
-          >
-            <option value="">Select an exercise</option>
-            {availableExercises.map((exercise) => (
-              <option key={exercise.id} value={exercise.id}>
-                {exercise.name}
-              </option>
-            ))}
-          </select>
-        </label>
-      ) : null}
-
       {mode === "backfill" ? (
-        <label className="grid gap-2 text-sm font-medium text-gymbud-ink">
+        <label className="grid min-w-0 gap-2 text-sm font-medium text-gymbud-ink">
           Completion date and time
           <input
-            className="focus-ring min-h-11 rounded-[var(--radius-control)] border border-gymbud-border bg-gymbud-surface px-3 text-gymbud-ink"
+            className="focus-ring min-h-11 w-full rounded-[var(--radius-control)] border border-gymbud-border bg-gymbud-surface px-3 text-gymbud-ink"
             type="datetime-local"
             value={completedAt}
             max={toLocalDateTime(new Date())}
@@ -122,10 +70,17 @@ export function WorkoutEditor({
             aria-label="Completion date and time"
           />
         </label>
-      ) : null}
+      ) : (
+        <p className="text-sm text-gymbud-muted">
+          Save the results you entered above to your workout history.
+        </p>
+      )}
 
       {error ? (
-        <p role="alert" className="text-sm font-medium text-gymbud-danger">
+        <p
+          role="alert"
+          className="text-sm font-medium text-gymbud-danger sm:col-span-2"
+        >
           {error}
         </p>
       ) : null}
@@ -133,7 +88,7 @@ export function WorkoutEditor({
       <button
         type="submit"
         disabled={saving}
-        className="focus-ring min-h-11 rounded-[var(--radius-control)] bg-gymbud-accent-strong px-4 font-semibold text-white"
+        className="button-primary focus-ring w-full disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
       >
         {saving
           ? "Saving…"
@@ -145,4 +100,4 @@ export function WorkoutEditor({
   );
 }
 
-export type { ActivityType, WorkoutStatus };
+export type { WorkoutStatus };

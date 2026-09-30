@@ -53,6 +53,27 @@ const workoutSelect = {
       },
     },
   },
+  workoutLog: {
+    select: {
+      actualDetails: true,
+      exerciseLogs: {
+        orderBy: { sortOrder: "asc" },
+        select: {
+          exerciseId: true,
+          sortOrder: true,
+          setLogs: {
+            orderBy: { setNumber: "asc" },
+            select: {
+              setNumber: true,
+              actualReps: true,
+              actualWeight: true,
+              weightUnit: true,
+            },
+          },
+        },
+      },
+    },
+  },
   createdAt: true,
   updatedAt: true,
 } satisfies Prisma.ScheduledWorkoutSelect;

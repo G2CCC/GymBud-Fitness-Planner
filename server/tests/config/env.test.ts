@@ -111,7 +111,7 @@ describe("application environment", () => {
       }),
     ).toMatchObject({
       supabaseServiceRoleKey: "service-role-key",
-      exerciseImageBucket: "exercise-images",
+      exerciseImageBucket: "strength-image",
     });
   });
 });

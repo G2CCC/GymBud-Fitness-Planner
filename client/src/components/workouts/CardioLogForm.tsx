@@ -10,6 +10,9 @@ export type CardioLogFormProps = {
   onSubmit?: () => void;
 };
 
+const fieldClassName =
+  "focus-ring mt-1 min-h-11 w-full rounded-[var(--radius-control)] border border-gymbud-border bg-gymbud-surface px-3 text-sm text-gymbud-ink";
+
 export function CardioLogForm({
   value,
   onChange,
@@ -19,26 +22,31 @@ export function CardioLogForm({
 }: CardioLogFormProps) {
   return (
     <form
+      className="grid gap-4 rounded-[var(--radius-card)] border border-gymbud-border bg-gymbud-surface p-4 shadow-sm sm:grid-cols-2 sm:p-5"
       onSubmit={(event) => {
         event.preventDefault();
         onSubmit?.();
       }}
     >
-      <div aria-label="Selected cardio activity">
+      <div
+        aria-label="Selected cardio activity"
+        className="sm:col-span-2"
+      >
         {activityOption ? (
           <ActivityIdentity
             activityType="CARDIO"
             activityOption={activityOption}
           />
         ) : (
-          <p>
-            Legacy activity: {legacyModality ?? value.modality ?? "Cardio"}
+          <p className="text-sm font-semibold text-gymbud-ink">
+            {legacyModality ?? value.modality ?? "Cardio"}
           </p>
         )}
       </div>
-      <label>
+      <label className="grid gap-1 text-sm font-semibold text-gymbud-ink">
         Actual duration (minutes)
         <input
+          className={fieldClassName}
           type="number"
           min={1}
           value={value.actualDurationMinutes}
@@ -50,14 +58,10 @@ export function CardioLogForm({
           }
         />
       </label>
-      {activityOption ? null : (
-        <p aria-label="Legacy cardio modality">
-          Existing modality is kept as read-only legacy context.
-        </p>
-      )}
-      <label>
+      <label className="grid gap-1 text-sm font-semibold text-gymbud-ink">
         Distance (km)
         <input
+          className={fieldClassName}
           type="number"
           min={0}
           step="any"
@@ -73,9 +77,10 @@ export function CardioLogForm({
           }
         />
       </label>
-      <label>
+      <label className="grid gap-1 text-sm font-semibold text-gymbud-ink">
         Pace (seconds per km)
         <input
+          className={fieldClassName}
           type="number"
           min={1}
           value={value.paceSecondsPerKm ?? ""}
@@ -90,9 +95,10 @@ export function CardioLogForm({
           }
         />
       </label>
-      <label>
+      <label className="grid gap-1 text-sm font-semibold text-gymbud-ink">
         Speed (km/h)
         <input
+          className={fieldClassName}
           type="number"
           min={0}
           step="any"
@@ -108,9 +114,10 @@ export function CardioLogForm({
           }
         />
       </label>
-      <label>
+      <label className="grid gap-1 text-sm font-semibold text-gymbud-ink">
         Intensity
         <select
+          className={fieldClassName}
           value={value.intensity ?? ""}
           onChange={(event) =>
             onChange({
@@ -127,7 +134,11 @@ export function CardioLogForm({
           <option value="HIGH">High</option>
         </select>
       </label>
-      {onSubmit ? <button type="submit">Save cardio log</button> : null}
+      {onSubmit ? (
+        <button className="button-primary focus-ring sm:col-span-2" type="submit">
+          Save cardio log
+        </button>
+      ) : null}
     </form>
   );
 }

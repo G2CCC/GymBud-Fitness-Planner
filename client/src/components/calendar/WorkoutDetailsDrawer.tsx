@@ -2,11 +2,9 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import type { WorkoutStatus } from "@fitness/shared";
 import type { ApiWorkout } from "../../api/contracts";
-import {
-  ActivityIdentity,
-  getActivityDisplayName,
-} from "../catalog/ActivityIdentity";
 import type { CalendarWorkout } from "./WorkoutCard";
+import { WorkoutLogSummary } from "../workouts/WorkoutLogSummary";
+import { ActivityIdentity } from "../catalog/ActivityIdentity";
 
 export type WorkoutDetailsDrawerProps = {
   summary: CalendarWorkout;
@@ -51,13 +49,6 @@ function isOverdue(summary: CalendarWorkout): boolean {
     }, {});
   const todayKey = `${today.year}-${today.month}-${today.day}`;
   return summary.status === "PLANNED" && dateKey(summary.scheduledDate) < todayKey;
-}
-
-function statusCopy(summary: CalendarWorkout): string {
-  if (summary.status === "COMPLETED") {
-    return "Completed workout history";
-  }
-  return isOverdue(summary) ? "Overdue planned workout" : "Planned workout";
 }
 
 function statusClass(summary: CalendarWorkout): string {
@@ -139,13 +130,36 @@ export function WorkoutDetailsDrawer({
 
   const activityKey = summary.activityType.toLowerCase();
   const activityOption = summary.activityOption ?? workout?.activityOption;
-  const legacyActivityName =
-    workout?.actualDetails?.modality ?? workout?.actualDetails?.sportName;
-  const activityName = getActivityDisplayName(
-    summary.activityType,
-    activityOption,
-    legacyActivityName,
-  );
+  const actualDetails = workout?.workoutLog?.actualDetails ?? workout?.actualDetails;
+  const legacyActivityName = actualDetails?.modality ?? actualDetails?.sportName;
+  const actualDuration = actualDetails?.actualDurationMinutes;
+  const facts: Array<{ label: string; value: string }> = [
+    {
+      label: actualDuration != null ? "Actual duration" : "Planned duration",
+      value: (actualDuration ?? summary.durationMinutes) + " min",
+    },
+  ];
+
+  if (summary.activityType === "STRENGTH" && workout) {
+    const exerciseCount =
+      summary.status === "COMPLETED"
+        ? workout.workoutLog?.exerciseLogs.length ?? 0
+        : workout.plannedExercises?.length ?? 0;
+    facts.push({
+      label: summary.status === "COMPLETED" ? "Exercises logged" : "Exercises",
+      value: String(exerciseCount),
+    });
+  } else if (summary.activityType === "CARDIO" && actualDetails?.distanceKm != null) {
+    facts.push({
+      label: "Distance",
+      value: actualDetails.distanceKm + " km",
+    });
+  } else if (summary.activityType === "SPORT" && actualDetails?.intensity) {
+    facts.push({
+      label: "Intensity",
+      value: actualDetails.intensity.toLowerCase(),
+    });
+  }
 
   return (
     <div
@@ -206,34 +220,21 @@ export function WorkoutDetailsDrawer({
             ) : null}
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div className="rounded-[var(--radius-control)] bg-gymbud-surface-muted p-3">
-              <p className="text-xs font-semibold uppercase tracking-[0.12em] text-gymbud-muted">
-                Duration
-              </p>
-              <p className="mt-1 text-lg font-semibold text-gymbud-ink">
-                {summary.durationMinutes} min
-              </p>
-            </div>
-            <div className="rounded-[var(--radius-control)] bg-gymbud-surface-muted p-3">
-              <p className="text-xs font-semibold uppercase tracking-[0.12em] text-gymbud-muted">
-                Status
-              </p>
-              <p className="mt-1 text-lg font-semibold text-gymbud-ink">
-                {statusLabels[summary.status]}
-              </p>
-            </div>
+          <div className={"grid gap-3 " + (facts.length > 1 ? "sm:grid-cols-2" : "")}>
+            {facts.map((fact) => (
+              <div
+                className="rounded-[var(--radius-control)] bg-gymbud-surface-muted p-3"
+                key={fact.label}
+              >
+                <p className="text-xs font-semibold uppercase tracking-[0.12em] text-gymbud-muted">
+                  {fact.label}
+                </p>
+                <p className="mt-1 text-lg font-semibold text-gymbud-ink">
+                  {fact.value}
+                </p>
+              </div>
+            ))}
           </div>
-
-          <p className="text-sm font-medium text-gymbud-muted">{statusCopy(summary)}</p>
-
-          {summary.activityType !== "STRENGTH" ? (
-            <p className="text-sm text-gymbud-muted">
-              {activityOption
-                ? `${activityName} is a catalog activity.`
-                : `Legacy activity: ${activityName}`}
-            </p>
-          ) : null}
 
           {loading ? (
             <p className="rounded-[var(--radius-control)] bg-gymbud-surface-muted p-4 text-sm text-gymbud-muted" role="status">
@@ -247,12 +248,18 @@ export function WorkoutDetailsDrawer({
             </p>
           ) : null}
 
-          {workout?.activityType === "STRENGTH" ? (
+          {workout?.status === "COMPLETED" ? (
+            <WorkoutLogSummary
+              workout={workout}
+              exerciseNames={exerciseNames}
+              compact
+            />
+          ) : workout?.activityType === "STRENGTH" ? (
             <section className="grid gap-3">
               <div>
                 <h3 className="text-sm font-semibold text-gymbud-ink">Planned exercises</h3>
                 <p className="mt-1 text-xs text-gymbud-muted">
-                  Review the targets before you start.
+                  Planned set targets
                 </p>
               </div>
               {workout.plannedExercises && workout.plannedExercises.length > 0 ? (
@@ -262,13 +269,21 @@ export function WorkoutDetailsDrawer({
                       key={`${exercise.exerciseId}-${exercise.sortOrder}`}
                       className="rounded-[var(--radius-control)] border border-gymbud-border bg-gymbud-surface p-3"
                     >
-                      <p className="font-semibold text-gymbud-ink">
-                        {exerciseNames[exercise.exerciseId] ?? "Planned exercise"}
-                      </p>
-                      <div className="mt-2 grid gap-1 text-sm text-gymbud-muted">
+                      <div className="flex items-baseline justify-between gap-2">
+                        <p className="font-semibold text-gymbud-ink">
+                          {exerciseNames[exercise.exerciseId] ?? "Planned exercise"}
+                        </p>
+                        <span className="shrink-0 text-xs text-gymbud-muted">
+                          {exercise.plannedSets.length} sets
+                        </span>
+                      </div>
+                      <div className="mt-2 flex flex-wrap gap-2">
                         {exercise.plannedSets.map((set) => (
-                          <span key={set.setNumber}>
-                            Set {set.setNumber}: {plannedSetLabel(set.targetReps, set.plannedWeight, set.weightUnit)}
+                          <span
+                            key={set.setNumber}
+                            className="rounded-full bg-gymbud-surface-muted px-2.5 py-1 text-xs font-medium text-gymbud-muted"
+                          >
+                            {plannedSetLabel(set.targetReps, set.plannedWeight, set.weightUnit)}
                           </span>
                         ))}
                       </div>
@@ -314,10 +329,10 @@ export function WorkoutDetailsDrawer({
           ) : null}
 
           <Link
-            className="focus-ring flex min-h-11 items-center justify-center rounded-[var(--radius-control)] bg-gymbud-ink px-4 text-sm font-semibold text-white"
+            className="button-primary focus-ring w-full"
             to={`/workouts/${summary.id}`}
           >
-            {summary.status === "PLANNED" ? "Start workout" : "View workout history"}
+            {summary.status === "PLANNED" ? "Start workout" : "View workout summary"}
           </Link>
         </div>
       </aside>

@@ -44,6 +44,7 @@ export type ApiWorkout = {
   plannedDetails?: unknown;
   plannedExercises?: ApiPlannedExercise[];
   actualDetails?: ApiActualWorkoutDetails | null;
+  workoutLog?: ApiWorkoutLog | null;
   actualExercises?: Array<{
     exerciseId: string;
     sortOrder: number;
@@ -78,6 +79,20 @@ export type ApiActualWorkoutDetails = {
   sportName?: string | null;
   trainingFocus?: string | null;
   notes?: string | null;
+};
+
+export type ApiWorkoutLog = {
+  actualDetails: ApiActualWorkoutDetails | null;
+  exerciseLogs: Array<{
+    exerciseId: string;
+    sortOrder: number;
+    setLogs: Array<{
+      setNumber: number;
+      actualReps: number;
+      actualWeight: number;
+      weightUnit: WeightUnit;
+    }>;
+  }>;
 };
 
 export type ApiCycleReviewStatus = {

@@ -127,6 +127,20 @@ describe.skipIf(!hasDatabase)("workout persistence", () => {
     );
 
     expect(completed.status).toBe("COMPLETED");
+    expect(completed.workoutLog?.exerciseLogs).toMatchObject([
+      {
+        exerciseId: "system-push-up",
+        sortOrder: 1,
+        setLogs: [
+          {
+            setNumber: 1,
+            actualReps: 12,
+            actualWeight: 0,
+            weightUnit: "KG",
+          },
+        ],
+      },
+    ]);
     await expect(
       db.workoutLog.findUnique({ where: { workoutId: workout.id } }),
     ).resolves.toEqual(expect.objectContaining({ workoutId: workout.id }));

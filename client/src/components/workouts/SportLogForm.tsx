@@ -10,6 +10,9 @@ export type SportLogFormProps = {
   onSubmit?: () => void;
 };
 
+const fieldClassName =
+  "focus-ring mt-1 min-h-11 w-full rounded-[var(--radius-control)] border border-gymbud-border bg-gymbud-surface px-3 text-sm text-gymbud-ink";
+
 export function SportLogForm({
   value,
   onChange,
@@ -19,26 +22,28 @@ export function SportLogForm({
 }: SportLogFormProps) {
   return (
     <form
+      className="grid gap-4 rounded-[var(--radius-card)] border border-gymbud-border bg-gymbud-surface p-4 shadow-sm sm:grid-cols-2 sm:p-5"
       onSubmit={(event) => {
         event.preventDefault();
         onSubmit?.();
       }}
     >
-      <div aria-label="Selected sport activity">
+      <div
+        aria-label="Selected sport activity"
+        className="sm:col-span-2"
+      >
         {activityOption ? (
           <ActivityIdentity activityType="SPORT" activityOption={activityOption} />
         ) : (
-          <p>Legacy activity: {legacySportName ?? value.sportName ?? "Sport"}</p>
+          <p className="text-sm font-semibold text-gymbud-ink">
+            {legacySportName ?? value.sportName ?? "Sport"}
+          </p>
         )}
       </div>
-      {!activityOption ? (
-        <p aria-label="Legacy sport name">
-          Existing sport name is kept as read-only legacy context.
-        </p>
-      ) : null}
-      <label>
+      <label className="grid gap-1 text-sm font-semibold text-gymbud-ink">
         Actual duration (minutes)
         <input
+          className={fieldClassName}
           type="number"
           min={1}
           value={value.actualDurationMinutes}
@@ -50,9 +55,10 @@ export function SportLogForm({
           }
         />
       </label>
-      <label>
+      <label className="grid gap-1 text-sm font-semibold text-gymbud-ink">
         Intensity
         <select
+          className={fieldClassName}
           value={value.intensity ?? ""}
           onChange={(event) =>
             onChange({
@@ -69,16 +75,21 @@ export function SportLogForm({
           <option value="HIGH">High</option>
         </select>
       </label>
-      <label>
+      <label className="grid gap-1 text-sm font-semibold text-gymbud-ink sm:col-span-2">
         Notes
         <textarea
+          className="focus-ring mt-1 min-h-24 w-full resize-y rounded-[var(--radius-control)] border border-gymbud-border bg-gymbud-surface px-3 py-2 text-sm text-gymbud-ink"
           value={value.notes ?? ""}
           onChange={(event) =>
             onChange({ ...value, notes: event.target.value || undefined })
           }
         />
       </label>
-      {onSubmit ? <button type="submit">Save sport log</button> : null}
+      {onSubmit ? (
+        <button className="button-primary focus-ring sm:col-span-2" type="submit">
+          Save sport log
+        </button>
+      ) : null}
     </form>
   );
 }
