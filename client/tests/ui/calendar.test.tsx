@@ -223,6 +223,7 @@ describe("calendar and workout editor UI", () => {
     await user.click(
       await screen.findByRole("button", { name: /strength workout/i }),
     );
+    await user.click(screen.getByRole("button", { name: /^reschedule$/i }));
     fireEvent.change(screen.getByLabelText("Move this workout to"), {
       target: { value: "2026-09-30" },
     });
@@ -476,6 +477,40 @@ describe("calendar and workout editor UI", () => {
     );
     expect(api.getWorkout).toHaveBeenCalledWith("workout-1");
     expect(screen.getByText("Bench Press")).toBeInTheDocument();
+  });
+
+  it("shows Start, Reschedule, and Delete in order and reveals the date field on demand", async () => {
+    const user = userEvent.setup();
+    renderCalendar();
+
+    await user.click(
+      await screen.findByRole("button", { name: /strength workout/i }),
+    );
+
+    const dialog = screen.getByRole("dialog");
+    const start = within(dialog).getByRole("link", { name: /start workout/i });
+    const reschedule = within(dialog).getByRole("button", { name: /^reschedule$/i });
+    const deleteWorkout = within(dialog).getByRole("button", {
+      name: /delete planned workout/i,
+    });
+
+    expect(start.compareDocumentPosition(reschedule) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(reschedule.compareDocumentPosition(deleteWorkout) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(reschedule).toHaveClass("bg-gymbud-activity-cardio-soft");
+    expect(reschedule).toHaveAttribute("aria-expanded", "false");
+    expect(within(dialog).queryByLabelText("Move this workout to")).not.toBeInTheDocument();
+
+    await user.click(reschedule);
+
+    const dateInput = within(dialog).getByLabelText("Move this workout to");
+    expect(reschedule).toHaveAttribute("aria-expanded", "true");
+    expect(dateInput).toBeVisible();
+    expect(reschedule.compareDocumentPosition(dateInput) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(within(dialog).getByRole("button", { name: /save new date/i })).toBeVisible();
+
+    await user.click(reschedule);
+    expect(reschedule).toHaveAttribute("aria-expanded", "false");
+    expect(within(dialog).queryByLabelText("Move this workout to")).not.toBeInTheDocument();
   });
 
   it("closes the workout details drawer without changing the calendar selection", async () => {

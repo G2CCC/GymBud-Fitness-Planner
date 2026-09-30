@@ -88,6 +88,7 @@ export function WorkoutDetailsDrawer({
     dateKey(summary.scheduledDate),
   );
   const [rescheduling, setRescheduling] = useState(false);
+  const [showReschedule, setShowReschedule] = useState(false);
 
   useEffect(() => {
     onCloseRef.current = onClose;
@@ -95,6 +96,7 @@ export function WorkoutDetailsDrawer({
 
   useEffect(() => {
     setScheduledDate(dateKey(summary.scheduledDate));
+    setShowReschedule(false);
   }, [summary.id, summary.scheduledDate]);
 
   useEffect(() => {
@@ -299,41 +301,68 @@ export function WorkoutDetailsDrawer({
           ) : null}
 
           {summary.status === "PLANNED" ? (
-            <div className="grid gap-4 border-t border-gymbud-border pt-5">
-              <form className="grid gap-2" onSubmit={(event) => void handleReschedule(event)}>
-                <label className="grid gap-2 text-sm font-medium text-gymbud-ink">
-                  Move this workout to
-                  <input
-                    className="min-h-11 rounded-[var(--radius-control)] border border-gymbud-border bg-gymbud-surface px-3"
-                    type="date"
-                    value={scheduledDate}
-                    onChange={(event) => setScheduledDate(event.target.value)}
-                  />
-                </label>
-                <button
-                  className="focus-ring min-h-11 rounded-[var(--radius-control)] bg-gymbud-accent-strong px-4 text-sm font-semibold text-white"
-                  type="submit"
-                  disabled={rescheduling}
-                >
-                  {rescheduling ? "Saving…" : "Save new date"}
-                </button>
-              </form>
+            <div
+              role="group"
+              aria-label="Workout actions"
+              className="grid gap-3 border-t border-gymbud-border pt-5"
+            >
+              <Link
+                className="button-primary focus-ring w-full"
+                to={`/workouts/${summary.id}`}
+              >
+                Start workout
+              </Link>
+
               <button
-                className="focus-ring min-h-11 rounded-[var(--radius-control)] border border-gymbud-danger px-4 text-sm font-semibold text-gymbud-danger"
+                className="focus-ring min-h-11 w-full rounded-[var(--radius-control)] border border-gymbud-activity-cardio bg-gymbud-activity-cardio-soft px-4 text-sm font-semibold text-gymbud-ink hover:brightness-95"
+                type="button"
+                aria-expanded={showReschedule}
+                onClick={() => setShowReschedule((current) => !current)}
+              >
+                Reschedule
+              </button>
+
+              {showReschedule ? (
+                <form
+                  id="reschedule-workout-form"
+                  className="grid gap-3 rounded-[var(--radius-control)] border border-gymbud-border bg-gymbud-background p-3"
+                  onSubmit={(event) => void handleReschedule(event)}
+                >
+                  <label className="grid gap-2 text-sm font-medium text-gymbud-ink">
+                    Move this workout to
+                    <input
+                      className="min-h-11 w-full rounded-[var(--radius-control)] border border-gymbud-border bg-gymbud-surface px-3"
+                      type="date"
+                      value={scheduledDate}
+                      onChange={(event) => setScheduledDate(event.target.value)}
+                    />
+                  </label>
+                  <button
+                    className="button-primary focus-ring w-full"
+                    type="submit"
+                    disabled={rescheduling}
+                  >
+                    {rescheduling ? "Saving…" : "Save new date"}
+                  </button>
+                </form>
+              ) : null}
+
+              <button
+                className="focus-ring min-h-11 w-full rounded-[var(--radius-control)] border border-gymbud-danger px-4 text-sm font-semibold text-gymbud-danger hover:bg-gymbud-danger/5"
                 type="button"
                 onClick={() => void onDelete()}
               >
                 Delete planned workout
               </button>
             </div>
-          ) : null}
-
-          <Link
-            className="button-primary focus-ring w-full"
-            to={`/workouts/${summary.id}`}
-          >
-            {summary.status === "PLANNED" ? "Start workout" : "View workout summary"}
-          </Link>
+          ) : (
+            <Link
+              className="button-primary focus-ring w-full"
+              to={`/workouts/${summary.id}`}
+            >
+              View workout summary
+            </Link>
+          )}
         </div>
       </aside>
     </div>
