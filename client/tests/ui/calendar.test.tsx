@@ -1,4 +1,4 @@
-import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -216,6 +216,26 @@ describe("calendar and workout editor UI", () => {
     expect(getMondayDateKey("2026-09-27")).toBe("2026-09-21");
   });
 
+  it("reschedules a workout with the selected date at UTC midnight", async () => {
+    const user = userEvent.setup();
+    renderCalendar();
+
+    await user.click(
+      await screen.findByRole("button", { name: /strength workout/i }),
+    );
+    fireEvent.change(screen.getByLabelText("Move this workout to"), {
+      target: { value: "2026-09-30" },
+    });
+    await user.click(screen.getByRole("button", { name: /save new date/i }));
+
+    await waitFor(() => {
+      expect(api.rescheduleWorkout).toHaveBeenCalledWith(
+        "workout-1",
+        "2026-09-30T00:00:00.000Z",
+      );
+    });
+  });
+
   it("shows an overdue label for a planned workout whose date has passed", () => {
     render(
       <WorkoutCard
@@ -334,15 +354,29 @@ describe("calendar and workout editor UI", () => {
     const user = userEvent.setup();
     vi.mocked(api.generateSingleDayPlan).mockResolvedValue(singleDayDraft);
     vi.mocked(api.confirmSingleDayPlan).mockResolvedValue(detailedWorkout);
+    vi.mocked(api.getCurrentCycle).mockResolvedValue({
+      ...activeCycle,
+      endDate: "2099-12-31T00:00:00.000Z",
+    });
     renderCalendar();
 
     await user.click(
       await screen.findByRole("button", { name: /generate plan/i }),
     );
+    const dateInput = screen.getByLabelText("Plan date") as HTMLInputElement;
+    const selectedDate = dateInput.value;
     await user.click(
       screen.getByRole("button", { name: /generate day plan/i }),
     );
 
+    await waitFor(() => {
+      expect(api.generateSingleDayPlan).toHaveBeenCalledWith(
+        "cycle-1",
+        expect.objectContaining({
+          scheduledDate: `${selectedDate}T00:00:00.000Z`,
+        }),
+      );
+    });
     expect(
       await screen.findByTestId("single-day-plan-draft"),
     ).toBeInTheDocument();

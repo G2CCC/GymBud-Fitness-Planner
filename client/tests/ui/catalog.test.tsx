@@ -1,4 +1,4 @@
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ActivityIconKey } from "@fitness/shared";
@@ -155,12 +155,16 @@ describe("catalog UI", () => {
       ).toBeInTheDocument();
     });
     await user.click(screen.getByRole("button", { name: /stationary bike/i }));
+    fireEvent.change(screen.getByLabelText("Date"), {
+      target: { value: "2026-09-30" },
+    });
     await user.click(screen.getByRole("button", { name: /add workout/i }));
 
     await waitFor(() => {
       expect(api.createWorkout).toHaveBeenCalledWith(
         expect.objectContaining({
           activityType: "CARDIO",
+          scheduledDate: "2026-09-30T00:00:00.000Z",
           activityOptionId: "cardio-stationary-bike",
         }),
       );

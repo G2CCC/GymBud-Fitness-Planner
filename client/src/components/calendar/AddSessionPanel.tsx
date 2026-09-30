@@ -120,7 +120,7 @@ export function AddSessionPanel({
     try {
       await createWorkout({
         activityType: addActivity,
-        scheduledDate: new Date(addDate + "T12:00:00").toISOString(),
+        scheduledDate: `${addDate}T00:00:00.000Z`,
         durationMinutes: addDuration,
         ...(addActivity === "STRENGTH"
           ? { plannedExercises: addPlannedExercises }
