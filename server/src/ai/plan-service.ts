@@ -7,10 +7,7 @@ import {
   type ActivityOptionType,
 } from "@fitness/shared";
 import { env } from "../config/env";
-import {
-  AiClientError,
-  type AiClient,
-} from "./client";
+import { AiClientError, type AiClient } from "./client";
 import {
   cardioDetailsSchema,
   planDraftSchema,
@@ -23,9 +20,7 @@ import {
 } from "./schemas";
 import { buildSingleDayPlanRequest } from "./prompts/day-plan";
 import { buildPlanRequest } from "./prompts/plan";
-import type {
-  CycleTrainingVolume,
-} from "@fitness/shared/domain/reviews/cycle-volume";
+import type { CycleTrainingVolume } from "@fitness/shared/domain/reviews/cycle-volume";
 
 const cycleContextSelect = {
   id: true,
@@ -125,11 +120,7 @@ export type ConfirmedWorkout = Prisma.ScheduledWorkoutGetPayload<{
 export class PlanServiceError extends Error {
   constructor(
     message: string,
-    readonly code:
-      | "NOT_FOUND"
-      | "CONFLICT"
-      | "VALIDATION_ERROR"
-      | "AI_ERROR",
+    readonly code: "NOT_FOUND" | "CONFLICT" | "VALIDATION_ERROR" | "AI_ERROR",
     readonly statusCode: 400 | 404 | 409 | 502,
   ) {
     super(message);
@@ -181,10 +172,7 @@ export class PlanService {
 
     let response: PlanResponse;
     try {
-      response = await this.aiClient.generateJson(
-        request,
-        planResponseSchema,
-      );
+      response = await this.aiClient.generateJson(request, planResponseSchema);
     } catch (error) {
       throw mapAiError(error);
     }
@@ -303,7 +291,11 @@ export class PlanService {
 
     const cycle = await this.getCycleContext(this.prisma, userId, cycleId);
     assertActiveCycle(cycle);
-    const scheduledDate = validateSingleDayDate(cycle, parsed.data.scheduledDate, now);
+    const scheduledDate = validateSingleDayDate(
+      cycle,
+      parsed.data.scheduledDate,
+      now,
+    );
     await assertTargetDateIsEmpty(this.prisma, userId, cycleId, scheduledDate);
 
     const profile = requireProfile(cycle);
@@ -436,11 +428,7 @@ export class PlanService {
     });
 
     if (!cycle) {
-      throw new PlanServiceError(
-        "Training cycle not found",
-        "NOT_FOUND",
-        404,
-      );
+      throw new PlanServiceError("Training cycle not found", "NOT_FOUND", 404);
     }
 
     return cycle;
@@ -486,7 +474,10 @@ export class PlanService {
       exercises.map((exercise) => [exercise.id, exercise]),
     );
     const activityOptionById = new Map(
-      activityOptions.map((activityOption) => [activityOption.id, activityOption]),
+      activityOptions.map((activityOption) => [
+        activityOption.id,
+        activityOption,
+      ]),
     );
 
     for (const workout of response.workouts) {
@@ -644,15 +635,16 @@ function validateSingleDayDate(
     );
   }
 
-  const scheduledDate = startOfUtcDay(date);
+  const scheduledDate = startOfLocalDate(date, timezone);
   const today = startOfLocalDate(now, timezone);
-  const cycleEnd = startOfUtcDay(cycle.endDate);
+  const cycleEnd = startOfLocalDate(cycle.endDate, timezone);
 
-  if (scheduledDate.getTime() < today.getTime()) {
+  if (scheduledDate < today) {
+    console.log(today, scheduledDate, cycleEnd);
     throw validationError("A single-day plan must be scheduled today or later");
   }
 
-  if (scheduledDate.getTime() > cycleEnd.getTime()) {
+  if (scheduledDate > cycleEnd) {
     throw validationError("A single-day plan must be inside the active cycle");
   }
 
@@ -786,9 +778,5 @@ function mapAiError(error: unknown): PlanServiceError {
     );
   }
 
-  return new PlanServiceError(
-    "AI plan generation failed",
-    "AI_ERROR",
-    502,
-  );
+  return new PlanServiceError("AI plan generation failed", "AI_ERROR", 502);
 }

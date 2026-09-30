@@ -78,7 +78,8 @@ export function loadEnv(source: NodeJS.ProcessEnv = process.env): AppEnv {
     supabaseUrl,
     supabaseAnonKey,
     supabaseServiceRoleKey,
-    exerciseImageBucket: source.EXERCISE_IMAGE_BUCKET?.trim() || "exercise-images",
+    exerciseImageBucket:
+      source.EXERCISE_IMAGE_BUCKET?.trim() || "strength-image",
     corsOrigins,
     e2eAuthEnabled,
     aiApiKey: source.AI_API_KEY ?? "",

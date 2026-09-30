@@ -54,14 +54,14 @@ The first curated release targets 10–12 action slots per focus area and approx
 
 The six current seed records have explicit migration mappings rather than name-based automatic matching:
 
-| Legacy ID | Imported source record |
-| --- | --- |
-| system-push-up | Pushups |
-| system-bodyweight-squat | Bodyweight_Squat |
-| system-plank | Plank |
-| system-barbell-bench-press | Barbell_Bench_Press_-_Medium_Grip |
-| system-barbell-back-squat | Barbell_Squat |
-| system-lat-pulldown | Full_Range-Of-Motion_Lat_Pulldown |
+| Legacy ID                  | Imported source record             |
+| -------------------------- | ---------------------------------- |
+| system-push-up             | Pushups                            |
+| system-bodyweight-squat    | Bodyweight_Squat                   |
+| system-plank               | Plank                              |
+| system-barbell-bench-press | Barbell*Bench_Press*-\_Medium_Grip |
+| system-barbell-back-squat  | Barbell_Squat                      |
+| system-lat-pulldown        | Full_Range-Of-Motion_Lat_Pulldown  |
 
 If an existing legacy record is found to have references that cannot be safely mapped, the migration must stop and report the IDs instead of deleting them.
 
@@ -113,7 +113,7 @@ The API may expose Strength exercises and ActivityOptions through separate endpo
 
 Use one public-read bucket for non-sensitive exercise imagery:
 
-- Bucket: exercise-images
+- Bucket: strength-image
 - Path pattern: free-exercise-db/{sourceId}/0.jpg
 - Path pattern: free-exercise-db/{sourceId}/1.jpg
 
@@ -171,7 +171,6 @@ Initial Sport options:
 - Skiing
 - Surfing
 
-
 ## 8. Icons
 
 Add lucide-react as the client icon dependency. The database stores stable semantic keys such as BIKE, ROWING_MACHINE, STAIR_CLIMBER, BASKETBALL, BOXING, SWIMMING, and MOUNTAIN. The client owns the key-to-component mapping and provides a generic Activity fallback for unknown keys.
@@ -226,7 +225,7 @@ The migration must run in this order:
 4. Verify no PlannedExercise or ExerciseLog rows still reference a legacy ID.
 5. Delete only the six legacy system rows.
 6. Remove the old six-item seed list and replace it with the new catalog seed/import.
-7. Update fake AI fixtures, tests, docs, and examples that hard-code system-* IDs.
+7. Update fake AI fixtures, tests, docs, and examples that hard-code system-\* IDs.
 8. Re-run referential-integrity and history tests.
 
 User-owned exercises are not deleted. Existing completed workout logs remain attached to their migrated exercise IDs and keep their original sets, weights, and timestamps.

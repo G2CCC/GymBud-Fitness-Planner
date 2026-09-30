@@ -148,9 +148,6 @@ export function AddSessionPanel({
       <div className="flex items-start justify-between gap-4">
         <div>
           <h2 className="text-lg font-semibold text-gymbud-ink">Add a session</h2>
-          <p className="mt-1 text-sm text-gymbud-muted">
-            Add a plan without changing any other workout.
-          </p>
         </div>
         <button
           className="focus-ring min-h-11 min-w-11 rounded-full border border-gymbud-border text-xl text-gymbud-muted"
