@@ -10,6 +10,7 @@
   --color-gymbud-accent: var(--color-accent);
   --color-gymbud-accent-strong: var(--color-accent-strong);
   --color-gymbud-accent-soft: var(--color-accent-soft);
+  --color-gymbud-accent-contrast: var(--color-accent-contrast);
   --color-gymbud-activity-strength: var(--color-activity-strength);
   --color-gymbud-activity-strength-soft: var(--color-activity-strength-soft);
   --color-gymbud-activity-cardio: var(--color-activity-cardio);
@@ -17,6 +18,7 @@
   --color-gymbud-activity-sport: var(--color-activity-sport);
   --color-gymbud-activity-sport-soft: var(--color-activity-sport-soft);
   --color-gymbud-success: var(--color-success);
+  --color-gymbud-success-soft: var(--color-success-soft);
   --color-gymbud-warning: var(--color-warning);
   --color-gymbud-danger: var(--color-danger);
 }

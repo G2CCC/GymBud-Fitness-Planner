@@ -27,7 +27,7 @@ export function ActivityOptionPicker({
               <button
                 className={`focus-ring flex min-h-14 items-center gap-3 rounded-[var(--radius-control)] border p-3 text-left transition ${
                   selected
-                    ? "border-gymbud-ink bg-gymbud-ink text-white"
+                    ? "border-gymbud-accent-strong bg-gymbud-accent-strong text-gymbud-accent-contrast"
                     : "border-gymbud-border bg-gymbud-surface text-gymbud-ink"
                 }`}
                 type="button"

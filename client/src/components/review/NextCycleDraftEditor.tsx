@@ -123,7 +123,7 @@ export function NextCycleDraftEditor({
       <button
         type="submit"
         disabled={submitting}
-        className="focus-ring min-h-11 rounded-[var(--radius-control)] bg-gymbud-accent-strong px-4 font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
+        className="focus-ring min-h-11 rounded-[var(--radius-control)] bg-gymbud-accent-strong px-4 font-semibold text-gymbud-accent-contrast disabled:cursor-not-allowed disabled:opacity-60"
       >
         {submitting ? "Adding to calendar…" : "Confirm and add to calendar"}
       </button>

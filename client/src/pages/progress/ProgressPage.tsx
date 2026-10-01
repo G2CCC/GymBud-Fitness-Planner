@@ -47,7 +47,7 @@ export function ProgressPage() {
         action={
           <button
             type="button"
-            className="focus-ring rounded-[var(--radius-control)] bg-gymbud-accent-strong px-4 py-3 text-sm font-semibold text-white"
+            className="focus-ring rounded-[var(--radius-control)] bg-gymbud-accent-strong px-4 py-3 text-sm font-semibold text-gymbud-accent-contrast"
             onClick={() => void loadProgress()}
           >
             Try again
@@ -63,7 +63,7 @@ export function ProgressPage() {
         message="Your progress will appear after you create a training cycle."
         action={
           <Link
-            className="focus-ring rounded-[var(--radius-control)] bg-gymbud-accent-strong px-4 py-3 text-sm font-semibold text-white"
+            className="focus-ring rounded-[var(--radius-control)] bg-gymbud-accent-strong px-4 py-3 text-sm font-semibold text-gymbud-accent-contrast"
             to="/onboarding"
           >
             Open setup
@@ -95,7 +95,7 @@ export function ProgressPage() {
         </div>
         {reviewRequired ? (
           <Link
-            className="focus-ring rounded-[var(--radius-control)] bg-gymbud-accent-strong px-4 py-3 text-sm font-semibold text-white"
+            className="focus-ring rounded-[var(--radius-control)] bg-gymbud-accent-strong px-4 py-3 text-sm font-semibold text-gymbud-accent-contrast"
             to={`/review/${cycle.id}`}
           >
             Review cycle

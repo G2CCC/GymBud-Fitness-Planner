@@ -63,7 +63,7 @@ export function ProfilePage() {
         action={
           <button
             type="button"
-            className="focus-ring rounded-[var(--radius-control)] bg-gymbud-accent-strong px-4 py-3 text-sm font-semibold text-white"
+            className="focus-ring rounded-[var(--radius-control)] bg-gymbud-accent-strong px-4 py-3 text-sm font-semibold text-gymbud-accent-contrast"
             onClick={() => void loadProfile()}
           >
             Try again

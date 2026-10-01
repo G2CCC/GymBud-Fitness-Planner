@@ -211,7 +211,7 @@ export function WorkoutPage() {
               {backfill ? "Use current time" : "Log a past workout"}
             </button>
           ) : (
-            <span className="rounded-full bg-gymbud-accent-soft px-3 py-1.5 text-sm font-semibold text-gymbud-accent-strong">
+            <span className="rounded-full bg-gymbud-success-soft px-3 py-1.5 text-sm font-semibold text-gymbud-success">
               Saved
             </span>
           )}

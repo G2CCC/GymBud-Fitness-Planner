@@ -69,7 +69,7 @@ export function ReviewPage() {
         <div className="grid gap-3 sm:grid-cols-2">{review.conclusions.keyFindings.map((finding) => <p key={finding} className="rounded-[var(--radius-control)] bg-gymbud-surface-muted p-3 text-sm text-gymbud-ink">{finding}</p>)}</div>
       </section> : null}
       {review?.nextCycleEligibility === "RESET_REQUIRED" ? <p className="rounded-[var(--radius-card)] bg-gymbud-surface-muted p-4 text-sm text-gymbud-muted">No completed training was recorded this week, so GymBud will wait for a new reset before generating another plan.</p> : null}
-      {review && review.nextCycleEligibility === "READY" && !draft ? <button type="button" onClick={() => void handleGenerateDraft()} disabled={submitting} className="focus-ring min-h-11 rounded-[var(--radius-control)] bg-gymbud-accent-strong px-4 font-semibold text-white disabled:opacity-60">{submitting ? "Generating next week…" : "Generate next week"}</button> : null}
+      {review && review.nextCycleEligibility === "READY" && !draft ? <button type="button" onClick={() => void handleGenerateDraft()} disabled={submitting} className="focus-ring min-h-11 rounded-[var(--radius-control)] bg-gymbud-accent-strong px-4 font-semibold text-gymbud-accent-contrast disabled:opacity-60">{submitting ? "Generating next week…" : "Generate next week"}</button> : null}
       {draft ? <NextCycleDraftEditor draft={{ cycleId: draft.cycle.id, title: "Next weekly plan", focus: review?.conclusions.recommendations[0] ?? "Continue building consistent training habits.", weeks: 1, plan: draft.plan }} submitting={submitting} onConfirm={(value) => void handleConfirm(value)} /> : null}
     </main>
   );

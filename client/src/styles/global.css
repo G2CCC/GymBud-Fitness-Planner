@@ -13,6 +13,11 @@
   text-rendering: optimizeLegibility;
 }
 
+::selection {
+  background: rgb(155 123 255 / 0.32);
+  color: var(--color-ink);
+}
+
 * {
   box-sizing: border-box;
 }
@@ -61,7 +66,7 @@ a {
   border-radius: var(--radius-control);
   background: var(--color-accent-strong);
   padding: 0.75rem 1rem;
-  color: white;
+  color: var(--color-accent-contrast);
   font-size: 0.875rem;
   font-weight: 700;
 }

@@ -92,7 +92,7 @@ export function SingleDayPlanDraftEditor({
 
       <div className="flex flex-wrap gap-3">
         <button
-          className="focus-ring min-h-11 rounded-[var(--radius-control)] bg-gymbud-accent-strong px-4 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
+          className="focus-ring min-h-11 rounded-[var(--radius-control)] bg-gymbud-accent-strong px-4 text-sm font-semibold text-gymbud-accent-contrast disabled:cursor-not-allowed disabled:opacity-60"
           type="submit"
           disabled={submitting}
         >

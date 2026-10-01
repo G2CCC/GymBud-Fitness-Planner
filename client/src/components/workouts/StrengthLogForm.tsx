@@ -149,7 +149,7 @@ export function StrengthLogForm({
       ))}
       {onSubmit ? (
         <button
-          className="focus-ring min-h-11 rounded-[var(--radius-control)] bg-gymbud-accent-strong px-4 font-semibold text-white"
+          className="focus-ring min-h-11 rounded-[var(--radius-control)] bg-gymbud-accent-strong px-4 font-semibold text-gymbud-accent-contrast"
           type="submit"
         >
           Save strength log

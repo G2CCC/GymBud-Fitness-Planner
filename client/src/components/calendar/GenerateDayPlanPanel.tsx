@@ -162,7 +162,7 @@ export function GenerateDayPlanPanel({
           </p>
         ) : null}
         <button
-          className="focus-ring min-h-11 justify-self-start rounded-[var(--radius-control)] bg-gymbud-ink px-4 text-sm font-semibold text-white"
+          className="focus-ring min-h-11 justify-self-start rounded-[var(--radius-control)] bg-gymbud-accent-strong px-4 text-sm font-semibold text-gymbud-accent-contrast"
           type="submit"
           disabled={generating}
         >

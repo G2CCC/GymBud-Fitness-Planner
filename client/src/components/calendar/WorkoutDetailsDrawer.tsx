@@ -53,7 +53,7 @@ function isOverdue(summary: CalendarWorkout): boolean {
 
 function statusClass(summary: CalendarWorkout): string {
   if (summary.status === "COMPLETED") {
-    return "bg-gymbud-accent-soft text-gymbud-accent-strong";
+    return "bg-gymbud-success-soft text-gymbud-success";
   }
   return isOverdue(summary)
     ? "bg-gymbud-warning/10 text-gymbud-warning"
@@ -166,7 +166,7 @@ export function WorkoutDetailsDrawer({
   return (
     <div
       aria-label="Workout details overlay"
-      className="fixed inset-0 z-40 bg-gymbud-ink/20"
+      className="fixed inset-0 z-40 bg-black/50"
       onClick={onClose}
     >
       <aside

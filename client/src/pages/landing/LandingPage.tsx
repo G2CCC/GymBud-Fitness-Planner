@@ -219,7 +219,7 @@ export function LandingPage() {
         </section>
 
         <section className="mx-auto max-w-6xl px-4 pb-16 sm:px-8 lg:px-10" aria-labelledby="boundary-heading">
-          <div className="rounded-[2rem] bg-gymbud-ink px-6 py-10 text-white sm:px-10 sm:py-12 lg:flex lg:items-center lg:justify-between lg:gap-12">
+          <div className="rounded-[2rem] border border-gymbud-border bg-gymbud-surface-muted px-6 py-10 text-gymbud-ink shadow-[var(--shadow-card)] sm:px-10 sm:py-12 lg:flex lg:items-center lg:justify-between lg:gap-12">
             <div className="max-w-2xl">
               <p className="text-xs font-semibold uppercase tracking-[0.16em] text-gymbud-accent-soft">
                 Your calendar stays yours
@@ -227,12 +227,12 @@ export function LandingPage() {
               <h2 id="boundary-heading" className="mt-3 text-3xl font-semibold tracking-tight">
                 AI can suggest. You decide.
               </h2>
-              <p className="mt-4 text-sm leading-7 text-white/70">
+              <p className="mt-4 text-sm leading-7 text-gymbud-muted">
                 Any AI-generated plan is presented as a draft for your review.
                 Nothing changes your calendar until you confirm it.
               </p>
             </div>
-            <Link className="focus-ring mt-8 inline-flex min-h-11 items-center justify-center rounded-[var(--radius-control)] bg-gymbud-accent px-5 py-3 text-sm font-semibold text-gymbud-ink lg:mt-0" to="/signup">
+            <Link className="focus-ring mt-8 inline-flex min-h-11 items-center justify-center rounded-[var(--radius-control)] bg-gymbud-accent-strong px-5 py-3 text-sm font-semibold text-gymbud-accent-contrast lg:mt-0" to="/signup">
               Build your rhythm
             </Link>
           </div>

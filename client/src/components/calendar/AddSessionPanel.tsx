@@ -213,7 +213,7 @@ export function AddSessionPanel({
           />
         )}
         <button
-          className="focus-ring min-h-11 rounded-[var(--radius-control)] bg-gymbud-ink px-4 text-sm font-semibold text-white sm:col-span-3"
+          className="focus-ring min-h-11 rounded-[var(--radius-control)] bg-gymbud-accent-strong px-4 text-sm font-semibold text-gymbud-accent-contrast sm:col-span-3"
           disabled={adding}
           type="submit"
         >

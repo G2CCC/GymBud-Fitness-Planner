@@ -1,32 +1,32 @@
 .hero-gradient {
   background:
-    radial-gradient(circle at 15% 20%, rgb(221 245 233 / 0.8), transparent 36%),
-    linear-gradient(135deg, #ffffff 0%, #f0faf5 100%);
+    radial-gradient(circle at 15% 20%, rgb(155 123 255 / 0.2), transparent 36%),
+    linear-gradient(135deg, #111328 0%, #1a1b3d 100%);
 }
 
 .cycle-gradient {
-  background: linear-gradient(135deg, #e8f8ef 0%, #fbfcfd 100%);
+  background: linear-gradient(135deg, #252044 0%, #171a37 100%);
 }
 
 .selected-empty-gradient {
-  background: linear-gradient(135deg, #f7fbf9 0%, #eaf4f0 100%);
+  background: linear-gradient(135deg, #191b39 0%, #222044 100%);
 }
 
 .glass-surface {
-  background: rgb(255 255 255 / 0.96);
+  background: rgb(27 29 61 / 0.96);
   box-shadow: var(--shadow-card);
 }
 
 @supports ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
   .glass-surface {
-    background: rgb(255 255 255 / 0.8);
+    background: rgb(27 29 61 / 0.88);
     -webkit-backdrop-filter: blur(18px);
     backdrop-filter: blur(18px);
   }
 }
 
 .focus-ring:focus-visible {
-  outline: 3px solid rgb(17 155 97 / 0.42);
+  outline: 3px solid rgb(180 154 255 / 0.58);
   outline-offset: 3px;
 }
 
