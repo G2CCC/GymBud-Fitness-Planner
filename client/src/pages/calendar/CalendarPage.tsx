@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
+import { CalendarDays } from "lucide-react";
 import {
   deletePlannedWorkout,
   confirmSingleDayPlan,
@@ -41,6 +42,14 @@ export function CalendarPage() {
   const [monthKey, setMonthKey] = useState(() => {
     const requestedMonth = searchParams.get("month");
     return isMonthKey(requestedMonth) ? requestedMonth : currentMonthKey();
+  });
+  const [selectedDate, setSelectedDate] = useState(() => {
+    const requestedMonth = searchParams.get("month");
+    const initialMonth = isMonthKey(requestedMonth)
+      ? requestedMonth
+      : currentMonthKey();
+    const today = systemDateKey();
+    return today.startsWith(initialMonth) ? today : `${initialMonth}-01`;
   });
   const [visibleRange, setVisibleRange] =
     useState<CalendarVisibleRange | null>(null);
@@ -90,6 +99,12 @@ export function CalendarPage() {
       setMonthKey(nextMonth);
     }
   }, [monthKey, searchParams]);
+
+  useEffect(() => {
+    setSelectedDate((currentDate) =>
+      currentDate.startsWith(`${monthKey}-`) ? currentDate : `${monthKey}-01`,
+    );
+  }, [monthKey]);
 
   useEffect(() => {
     if (!visibleRange) {
@@ -225,6 +240,7 @@ export function CalendarPage() {
     const nextMonth = monthKeyFromDate(currentStart);
     if (nextMonth !== monthKey) {
       setMonthKey(nextMonth);
+      setSelectedDate(`${nextMonth}-01`);
       setSearchParams({ month: nextMonth }, { replace: true });
     }
   }
@@ -309,21 +325,22 @@ export function CalendarPage() {
   }
 
   return (
-    <main className="mx-auto grid max-w-7xl gap-6 px-4 py-6 sm:px-8">
-      <header className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-gymbud-muted">
-           Training calendar
-          </p>
-          <h1 className="mt-2 text-3xl font-semibold tracking-tight text-gymbud-ink">
-            Ready for your next workout?
-          </h1>
+    <main className="calendar-page mx-auto grid w-full max-w-7xl gap-6 px-4 py-6 sm:px-8">
+      <header className="calendar-hero">
+        <span className="calendar-hero__icon" aria-hidden="true">
+          <CalendarDays size={25} strokeWidth={1.8} />
+        </span>
+        <div className="calendar-hero__copy">
+          <p className="calendar-hero__eyebrow">Training calendar</p>
+          <h1>Plan your next session</h1>
+          <p>See your training at a glance and keep your momentum going.</p>
         </div>
+        <span className="calendar-hero__stamp">STAY IN MOTION</span>
       </header>
 
       {error ? (
         <div
-          className="flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius-control)] border border-gymbud-danger/30 bg-gymbud-surface p-3 text-sm text-gymbud-danger"
+          className="calendar-feedback calendar-feedback--error"
           role="alert"
         >
           <span>{error}</span>
@@ -334,7 +351,7 @@ export function CalendarPage() {
       ) : null}
 
       {actionMessage ? (
-        <p role="status" className="rounded-[var(--radius-control)] bg-gymbud-surface-muted p-3 text-sm text-gymbud-ink">
+        <p role="status" className="calendar-feedback">
           {actionMessage}
         </p>
       ) : null}
@@ -368,7 +385,7 @@ export function CalendarPage() {
           ) : null}
         </>
       ) : !loading && !cycle ? (
-        <section className="selected-empty-gradient flex flex-wrap items-center justify-between gap-4 rounded-[var(--radius-card)] border border-gymbud-border p-5">
+        <section className="selected-empty-gradient calendar-empty-cycle">
           <div>
             <p className="text-sm font-semibold text-gymbud-ink">Set up your training plan</p>
             <p className="mt-1 text-sm text-gymbud-muted">
@@ -383,7 +400,7 @@ export function CalendarPage() {
 
       {calendarError ? (
         <div
-          className="flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius-control)] border border-gymbud-danger/30 bg-gymbud-surface p-3 text-sm text-gymbud-danger"
+          className="calendar-feedback calendar-feedback--error"
           role="alert"
         >
           <span>{calendarError}</span>
@@ -404,6 +421,8 @@ export function CalendarPage() {
         workouts={workouts}
         initialDate={monthKeyToInitialDate(monthKey)}
         today={systemDateKey()}
+        selectedDate={selectedDate}
+        onSelectDate={setSelectedDate}
         onSelectWorkout={setSelectedSummary}
         onVisibleRangeChange={handleVisibleRangeChange}
       />

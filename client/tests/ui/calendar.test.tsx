@@ -211,6 +211,44 @@ describe("calendar and workout editor UI", () => {
     expect(screen.getByText(/sep 28, 2026/i)).toBeInTheDocument();
   });
 
+  it("shows a selected date's workouts in a compact agenda", async () => {
+    const user = userEvent.setup();
+    vi.mocked(api.getCalendarWorkouts).mockResolvedValue([
+      calendarWorkout,
+      {
+        ...calendarWorkout,
+        id: "workout-2",
+        activityType: "SPORT",
+        scheduledDate: "2026-09-15T18:00:00.000Z",
+        durationMinutes: 75,
+        status: "COMPLETED",
+        completedAt: "2026-09-15T19:00:00.000Z",
+      },
+    ]);
+    renderCalendar();
+
+    const dateButton = await screen.findByRole("button", {
+      name: "View workouts on 2026-09-15",
+    });
+    expect(dateButton).toHaveAttribute("aria-pressed", "false");
+    await user.click(dateButton);
+    expect(
+      screen.getByRole("button", { name: "View workouts on 2026-09-15" }),
+    ).toHaveAttribute("aria-pressed", "true");
+
+    const agenda = screen.getByRole("region", {
+      name: "Workouts for selected date",
+    });
+    expect(within(agenda).getByText("Tuesday, September 15")).toBeInTheDocument();
+    expect(
+      within(agenda).getByRole("button", { name: /strength workout/i }),
+    ).toContainElement(within(agenda).getByText("Planned"));
+    expect(
+      within(agenda).getByRole("button", { name: /sport workout/i }),
+    ).toContainElement(within(agenda).getByText("Completed"));
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
   it("normalizes any selected date to the Monday of its calendar week", () => {
     expect(getMondayDateKey("2026-09-23")).toBe("2026-09-21");
     expect(getMondayDateKey("2026-09-27")).toBe("2026-09-21");
@@ -247,7 +285,9 @@ describe("calendar and workout editor UI", () => {
     );
 
     expect(screen.getByText("Overdue")).toBeInTheDocument();
-    expect(screen.getByText("Planned")).toBeInTheDocument();
+    expect(screen.getByText("Planned")).toHaveClass(
+      "calendar-workout-card__status",
+    );
   });
 
   it("marks each activity type for semantic calendar styling", () => {
@@ -528,7 +568,9 @@ describe("calendar and workout editor UI", () => {
 
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: /strength workout/i }),
+      within(screen.getByTestId("calendar-month-surface")).getByRole("button", {
+        name: /strength workout/i,
+      }),
     ).toBeInTheDocument();
   });
 

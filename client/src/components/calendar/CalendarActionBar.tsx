@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { ArrowRight, Plus, Sparkles } from "lucide-react";
 import type { ApiCycle } from "../../api/contracts";
 
 export type CalendarPanelKey = "add" | "generate" | null;
@@ -20,40 +21,43 @@ export function CalendarActionBar({
   return (
     <section
       aria-label="Calendar actions"
-      className="flex flex-wrap items-start gap-3"
+      className="calendar-action-bar"
     >
-      <div className="flex flex-wrap gap-3">
+      <div className="calendar-action-bar__primary">
         <button
-          className="focus-ring min-h-11 rounded-[var(--radius-control)] bg-gymbud-ink px-4 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:bg-gymbud-surface-muted disabled:text-gymbud-muted"
+          className="calendar-action-button calendar-action-button--add focus-ring"
           type="button"
           disabled={!cycleIsActive}
           aria-expanded={activePanel === "add"}
           onClick={() => onTogglePanel("add")}
         >
-          Add a session
+          <Plus size={18} aria-hidden="true" />
+          <span>Add a session</span>
         </button>
         <button
-          className="focus-ring min-h-11 rounded-[var(--radius-control)] border border-gymbud-ink px-4 text-sm font-semibold text-gymbud-ink disabled:cursor-not-allowed disabled:border-gymbud-border disabled:text-gymbud-muted"
+          className="calendar-action-button calendar-action-button--generate focus-ring"
           type="button"
           disabled={!cycleIsActive}
           aria-expanded={activePanel === "generate"}
           onClick={() => onTogglePanel("generate")}
         >
-          Generate plan
+          <Sparkles size={17} aria-hidden="true" />
+          <span>Generate plan</span>
         </button>
       </div>
-      <div className="ml-auto flex flex-wrap items-center gap-3 text-right">
+      <div className="calendar-action-bar__review">
         {!reviewIsAvailable ?<ReviewHint cycle={cycle} />:null}
         {reviewIsAvailable ? (
           <Link
-            className="focus-ring min-h-11 rounded-[var(--radius-control)] bg-gymbud-accent-strong px-4 py-3 text-sm font-semibold text-white"
+            className="calendar-action-button calendar-action-button--review focus-ring"
             to={`/review/${cycle.id}`}
           >
-            Review cycle
+            <span>Review cycle</span>
+            <ArrowRight size={17} aria-hidden="true" />
           </Link>
         ) : (
           <button
-            className="focus-ring min-h-11 cursor-not-allowed rounded-[var(--radius-control)] bg-gymbud-surface-muted px-4 text-sm font-semibold text-gymbud-muted"
+            className="calendar-action-button calendar-action-button--review focus-ring"
             type="button"
             disabled
           >

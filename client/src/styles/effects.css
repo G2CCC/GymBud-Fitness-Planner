@@ -51,10 +51,6 @@
   --activity-color-soft: var(--color-activity-sport-soft);
 }
 
-.calendar-workout-card--completed {
-  opacity: 0.76;
-}
-
 @media (prefers-reduced-motion: no-preference) {
   .motion-interactive {
     transition:

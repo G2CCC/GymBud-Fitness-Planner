@@ -60,7 +60,7 @@ export function WorkoutCard({
   return (
     <button
       type="button"
-      className={`calendar-workout-card calendar-workout-card--${activityKey} ${statusClass} motion-interactive focus-ring w-full rounded-[var(--radius-control)] border p-3 text-left shadow-sm`}
+      className={`calendar-workout-card calendar-workout-card--event calendar-workout-card--${activityKey} ${statusClass} motion-interactive focus-ring w-full rounded-[var(--radius-control)] border p-3 text-left shadow-sm`}
       data-activity={activityKey}
       data-status={workout.status.toLowerCase()}
       onClick={() => onSelect(workout)}
@@ -74,26 +74,26 @@ export function WorkoutCard({
         ")"
       }
     >
-      <span className="flex items-start justify-between gap-3">
-        <span>
+      <span className="calendar-workout-card__content">
+        <span className="calendar-workout-card__identity">
           <ActivityIdentity
             activityType={workout.activityType}
             activityOption={workout.activityOption}
-            size={18}
+            size={16}
           />
-          <span className="mt-1 block text-xs opacity-80">
+        </span>
+        <span className="calendar-workout-card__meta">
+          <span className="calendar-workout-card__duration">
             {workout.durationMinutes} min
           </span>
-        </span>
-        <span className="flex flex-wrap justify-end gap-1 text-[0.7rem] font-semibold">
-          <span className="rounded-full bg-white/70 px-2 py-1">
+          <span className="calendar-workout-card__badges">
+            <span className="calendar-workout-card__status">
             {statusLabels[workout.status]}
-          </span>
-          {overdue ? (
-            <span className="rounded-full bg-white/70 px-2 py-1 text-gymbud-warning">
-              Overdue
             </span>
-          ) : null}
+            {overdue ? (
+              <span className="calendar-workout-card__overdue">Overdue</span>
+            ) : null}
+          </span>
         </span>
       </span>
     </button>
