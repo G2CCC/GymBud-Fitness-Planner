@@ -328,6 +328,7 @@ export function CalendarPage() {
       <header className="calendar-page__heading">
         <p className="calendar-page__eyebrow">Calendar</p>
         <h1>What's on today?</h1>
+        <p>See your plan at a glance and keep your momentum going.</p>
       </header>
 
       {error ? (
