@@ -40,9 +40,6 @@ export function App() {
             ))}
           </nav>
           <div className="mt-auto grid gap-4">
-            <p className="text-xs leading-5 text-gymbud-muted">
-              Plan deliberately. Train consistently. Review honestly.
-            </p>
             <button
               type="button"
               className="focus-ring min-h-11 rounded-[var(--radius-control)] px-3 py-3 text-left text-sm font-semibold text-gymbud-muted hover:bg-gymbud-surface-muted hover:text-gymbud-ink disabled:cursor-not-allowed disabled:opacity-60"
