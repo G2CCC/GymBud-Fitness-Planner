@@ -160,6 +160,18 @@ beforeEach(() => {
 });
 
 describe("calendar and workout editor UI", () => {
+  it("shows the calendar title without a decorative hero card", async () => {
+    renderCalendar();
+
+    expect(await screen.findByText("Calendar", { exact: true })).toBeInTheDocument();
+    expect(
+      await screen.findByRole("heading", { name: "What's on today?", level: 1 }),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("Training calendar")).not.toBeInTheDocument();
+    expect(screen.queryByText("Plan your next session")).not.toBeInTheDocument();
+    expect(document.querySelector(".calendar-hero")).not.toBeInTheDocument();
+  });
+
   it("keeps Calendar actions visible and opens only one compact panel at a time", async () => {
     const user = userEvent.setup();
     renderCalendar();

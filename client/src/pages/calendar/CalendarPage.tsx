@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { CalendarDays } from "lucide-react";
 import {
   deletePlannedWorkout,
   confirmSingleDayPlan,
@@ -326,16 +325,9 @@ export function CalendarPage() {
 
   return (
     <main className="calendar-page mx-auto grid w-full max-w-7xl gap-6 px-4 py-6 sm:px-8">
-      <header className="calendar-hero">
-        <span className="calendar-hero__icon" aria-hidden="true">
-          <CalendarDays size={25} strokeWidth={1.8} />
-        </span>
-        <div className="calendar-hero__copy">
-          <p className="calendar-hero__eyebrow">Training calendar</p>
-          <h1>Plan your next session</h1>
-          <p>See your training at a glance and keep your momentum going.</p>
-        </div>
-        <span className="calendar-hero__stamp">STAY IN MOTION</span>
+      <header className="calendar-page__heading">
+        <p className="calendar-page__eyebrow">Calendar</p>
+        <h1>What's on today?</h1>
       </header>
 
       {error ? (
