@@ -11,6 +11,7 @@ import { WorkoutPage } from "./pages/workouts/WorkoutPage";
 import { ReviewPage } from "./pages/review/ReviewPage";
 import { ProgressPage } from "./pages/progress/ProgressPage";
 import { ProfilePage } from "./pages/profile/ProfilePage";
+import { NutritionPage } from './pages/nutrition/NutritionPage';
 
 export function LandingRoute() {
   const { state } = useAuth();
@@ -43,6 +44,7 @@ export const router = createBrowserRouter([
       { path: "review/:cycleId", element: <ReviewPage /> },
       { path: "progress", element: <ProgressPage /> },
       { path: "profile", element: <ProfilePage /> },
+      { path: "nutrition", element: <NutritionPage /> },
     ],
   },
 ]);

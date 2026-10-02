@@ -1,4 +1,5 @@
 import { Prisma, PrismaClient } from "@prisma/client";
+import { serializeCycleWrite } from "../cycles/locking";
 import { env } from "../config/env";
 import {
   AiClientError,
@@ -349,6 +350,14 @@ export class WeightService {
         );
       }
 
+      const owner = await tx.scheduledWorkout.findFirst({
+        where: { id: recommendation.workoutId, userId },
+        select: { cycleId: true },
+      });
+      if (!owner) {
+        throw new WeightServiceError("Workout not found", "NOT_FOUND", 404);
+      }
+      await serializeCycleWrite(tx, userId, owner.cycleId);
       const workout = await tx.scheduledWorkout.findFirst({
         where: { id: recommendation.workoutId, userId },
         select: decisionWorkoutSelect,

@@ -54,7 +54,7 @@ beforeEach(() => {
     weeklyTrainingDays: 3,
     sessionDurationMinutes: 60,
     primaryGoal: "FAT_LOSS",
-    gender: "FEMALE",
+    sex: "FEMALE",
     age: 27,
     heightCm: 178,
     weightKg: 82,
@@ -85,8 +85,8 @@ afterEach(() => {
 
 async function saveProfileAndReachChoice(user: ReturnType<typeof userEvent.setup>) {
   renderOnboarding();
-  await screen.findByLabelText(/gender/i);
-  await user.selectOptions(screen.getByLabelText(/gender/i), "MALE");
+  await screen.findByLabelText(/sex/i);
+  await user.selectOptions(screen.getByLabelText(/sex/i), "MALE");
   await user.type(screen.getByLabelText(/^Age/i), "30");
   await user.type(screen.getByLabelText(/Height \(cm\)/i), "180");
   await user.type(screen.getByLabelText(/Body weight \(kg\)/i), "80");
@@ -105,7 +105,7 @@ describe("onboarding profile form", () => {
 
     render(<ProfileForm onSubmit={onSubmit} />);
 
-    await user.selectOptions(screen.getByLabelText(/gender/i), "FEMALE");
+    await user.selectOptions(screen.getByLabelText(/sex/i), "FEMALE");
     await user.type(screen.getByLabelText(/^Age/i), "27");
     await user.type(screen.getByLabelText(/Height \(cm\)/i), "178");
     await user.type(screen.getByLabelText(/Body weight \(kg\)/i), "82");
@@ -115,7 +115,7 @@ describe("onboarding profile form", () => {
 
     expect(onSubmit).toHaveBeenCalledWith(
       expect.objectContaining({
-        gender: "FEMALE",
+        sex: "FEMALE",
         age: 27,
         heightCm: 178,
         weightKg: 82,

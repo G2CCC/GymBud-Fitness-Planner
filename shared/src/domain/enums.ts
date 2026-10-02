@@ -1,8 +1,8 @@
 export const activityTypes = ["STRENGTH", "CARDIO", "SPORT"] as const;
 export type ActivityType = (typeof activityTypes)[number];
 
-export const genders = ["MALE", "FEMALE", "NON_BINARY", "PREFER_NOT_TO_SAY"] as const;
-export type Gender = (typeof genders)[number];
+export const sexes = ["MALE", "FEMALE"] as const;
+export type Sex = (typeof sexes)[number];
 
 export const workoutStatuses = ["PLANNED", "COMPLETED"] as const;
 export type WorkoutStatus = (typeof workoutStatuses)[number];
@@ -12,3 +12,6 @@ export type CycleStatus = (typeof cycleStatuses)[number];
 
 export const weightUnits = ["KG", "LB"] as const;
 export type WeightUnit = (typeof weightUnits)[number];
+
+export const bodyGoals = ["FAT_LOSS", "MUSCLE_GAIN", "MAINTENANCE"] as const;
+export type BodyGoal = (typeof bodyGoals)[number];

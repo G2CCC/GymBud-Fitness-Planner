@@ -1,4 +1,5 @@
 import { Prisma, PrismaClient } from "@prisma/client";
+import { serializeCycleWrite } from "../cycles/locking";
 import {
   addUtcDays,
   activityIconKeySchema,
@@ -37,7 +38,7 @@ const cycleContextSelect = {
           primaryGoal: true,
           weeklyTrainingDays: true,
           sessionDurationMinutes: true,
-          gender: true,
+          sex: true,
           age: true,
           heightCm: true,
           weightKg: true,
@@ -160,7 +161,7 @@ export class PlanService {
       primaryGoal: profile.primaryGoal,
       weeklyTrainingDays: profile.weeklyTrainingDays,
       sessionDurationMinutes: profile.sessionDurationMinutes,
-      gender: profile.gender,
+      sex: profile.sex,
       age: profile.age,
       heightCm: profile.heightCm,
       weightKg: profile.weightKg,
@@ -204,6 +205,7 @@ export class PlanService {
     const response = toPlanResponse(parsed.data);
 
     return this.prisma.$transaction(async (tx) => {
+      await serializeCycleWrite(tx, userId, cycleId);
       const cycle = await this.getCycleContext(tx, userId, cycleId);
       assertDraftCycle(cycle);
 
@@ -307,7 +309,7 @@ export class PlanService {
       focusAreas: parsed.data.focusAreas,
       primaryGoal: profile.primaryGoal,
       sessionDurationMinutes: profile.sessionDurationMinutes,
-      gender: profile.gender,
+      sex: profile.sex,
       age: profile.age,
       heightCm: profile.heightCm,
       weightKg: profile.weightKg,
@@ -361,6 +363,7 @@ export class PlanService {
     }
 
     return this.prisma.$transaction(async (tx) => {
+      await serializeCycleWrite(tx, userId, cycleId);
       const cycle = await this.getCycleContext(tx, userId, cycleId);
       assertActiveCycle(cycle);
       const validScheduledDate = validateSingleDayDate(

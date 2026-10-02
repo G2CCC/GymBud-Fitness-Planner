@@ -2,7 +2,7 @@ import type { AiRequest } from "../client";
 import type {
   CycleTrainingVolume,
 } from "@fitness/shared/domain/reviews/cycle-volume";
-import type { ActivityOptionType, Gender } from "@fitness/shared";
+import type { ActivityOptionType, Sex } from "@fitness/shared";
 
 export const PLAN_PROMPT_VERSION = "plan.v4";
 
@@ -13,7 +13,7 @@ export type PlanPromptInput = {
   primaryGoal: string;
   weeklyTrainingDays: number;
   sessionDurationMinutes: number;
-  gender: Gender;
+  sex: Sex;
   age: number;
   heightCm: number;
   weightKg: number;
@@ -49,7 +49,7 @@ export function buildPlanRequest(input: PlanPromptInput): AiRequest {
       primaryGoal: input.primaryGoal,
       weeklyTrainingDays: input.weeklyTrainingDays,
       sessionDurationMinutes: input.sessionDurationMinutes,
-      gender: input.gender,
+      sex: input.sex,
       age: input.age,
       heightCm: input.heightCm,
       weightKg: input.weightKg,

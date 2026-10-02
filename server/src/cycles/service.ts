@@ -1,4 +1,5 @@
 import { Prisma, PrismaClient } from "@prisma/client";
+import { serializeCycleWrite } from "./locking";
 import {
   addUtcDays,
   closeCycle as closeCycleDomain,
@@ -257,6 +258,7 @@ export class CycleService {
     now = new Date(),
   ): Promise<ClosedCycleResult> {
     return this.prisma.$transaction(async (tx) => {
+      await serializeCycleWrite(tx, userId, cycleId);
       const cycle = await tx.trainingCycle.findFirst({
         where: { id: cycleId, userId },
         include: {

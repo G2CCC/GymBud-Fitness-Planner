@@ -15,7 +15,7 @@ describe.skipIf(!hasDatabase)("catalog API", () => {
   beforeAll(async () => {
     await seedCatalog(db);
     await Promise.all([
-      db.user.create({ data: { id: userId, email: `${userId}@example.test` } }),
+      db.user.create({ data: { id: userId, authUserId: `test:${userId}`, email: `${userId}@example.test` } }),
       db.user.create({ data: { id: otherUserId, email: `${otherUserId}@example.test` } }),
     ]);
     await db.exercise.create({

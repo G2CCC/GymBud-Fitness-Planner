@@ -25,7 +25,7 @@ describe.skipIf(!hasDatabase)("AI weight recommendations", () => {
         profile: {
           create: {
             primaryGoal: "FAT_LOSS",
-            gender: "MALE",
+            sex: "MALE",
             age: 30,
             heightCm: 180,
             weightKg: 80,

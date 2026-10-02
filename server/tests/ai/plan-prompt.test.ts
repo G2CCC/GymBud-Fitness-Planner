@@ -8,7 +8,7 @@ const baseInput = {
   primaryGoal: "FAT_LOSS",
   weeklyTrainingDays: 3,
   sessionDurationMinutes: 60,
-  gender: "MALE" as const,
+  sex: "MALE" as const,
   age: 27,
   heightCm: 178,
   weightKg: 82,
@@ -32,7 +32,7 @@ describe("plan prompt", () => {
     };
 
     expect(context.profile).toMatchObject({
-      gender: "MALE",
+      sex: "MALE",
       age: 27,
       heightCm: 178,
       weightKg: 82,

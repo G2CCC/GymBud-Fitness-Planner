@@ -1,3 +1,4 @@
+import { NutritionError } from "@fitness/shared";
 import { Router, type Response } from "express";
 import {
   backfillCompletionInputSchema,
@@ -147,6 +148,7 @@ function sendValidationError(response: Response, error: z.ZodError) {
 }
 
 function sendRouteError(response: Response, error: unknown) {
+  if(error instanceof NutritionError)return response.status(error.statusCode).json({error:{code:error.code,message:error.message}});
   if (error instanceof WorkoutServiceError) {
     return response.status(error.statusCode).json({
       error: {

@@ -1,12 +1,13 @@
 import type { Request } from "express";
 import { db } from "./db";
+import { ProfileService } from "./profiles/service";
 import { getRequestAuth } from "./auth/types";
 
 const demoProfile = {
-  primaryGoal: "FAT_LOSS",
+  primaryGoal: "FAT_LOSS" as const,
   weeklyTrainingDays: 3,
   sessionDurationMinutes: 60,
-  gender: "MALE" as const,
+  sex: "MALE" as const,
   age: 27,
   heightCm: 178,
   weightKg: 82,
@@ -25,14 +26,7 @@ export async function seedTestUser(userId: string): Promise<{ userId: string }> 
     },
   });
 
-  await db.userProfile.upsert({
-    where: { userId: user.id },
-    update: demoProfile,
-    create: {
-      userId: user.id,
-      ...demoProfile,
-    },
-  });
+  await new ProfileService(db).saveProfile(user.id, { ...demoProfile, recordingTimezone: "UTC" });
 
   return { userId: user.id };
 }

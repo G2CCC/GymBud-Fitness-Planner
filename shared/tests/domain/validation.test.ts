@@ -16,7 +16,7 @@ describe("domain validation", () => {
       weeklyTrainingDays: 3,
       sessionDurationMinutes: 60,
       primaryGoal: "FAT_LOSS",
-      gender: "MALE",
+      sex: "MALE",
       age: 27,
       heightCm: 178,
       weightKg: 82,
@@ -25,7 +25,7 @@ describe("domain validation", () => {
     expect(result).toMatchObject({
       weeklyTrainingDays: 3,
       sessionDurationMinutes: 60,
-      gender: "MALE",
+      sex: "MALE",
     });
   });
 
@@ -49,7 +49,7 @@ describe("domain validation", () => {
         weeklyTrainingDays: 0,
         sessionDurationMinutes: 60,
         primaryGoal: "MUSCLE_GAIN",
-        gender: "MALE",
+        sex: "MALE",
         age: 27,
         heightCm: 178,
         weightKg: 82,
@@ -62,7 +62,7 @@ describe("domain validation", () => {
       weeklyTrainingDays: 3,
       sessionDurationMinutes: 60,
       primaryGoal: "FAT_LOSS",
-      gender: "MALE",
+      sex: "MALE",
       age: 27,
       heightCm: 178,
       weightKg: 82,
@@ -78,7 +78,7 @@ describe("domain validation", () => {
         weeklyTrainingDays: 3,
         sessionDurationMinutes: 60,
         primaryGoal: "FAT_LOSS",
-        gender: "MALE",
+        sex: "MALE",
         age: 27,
         heightCm: 178,
         weightKg: 82,

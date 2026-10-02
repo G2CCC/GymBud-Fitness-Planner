@@ -19,7 +19,7 @@ const profile = {
   weeklyTrainingDays: 4,
   sessionDurationMinutes: 60,
   primaryGoal: "FAT_LOSS",
-  gender: "MALE" as const,
+  sex: "MALE" as const,
   age: 30,
   heightCm: 180,
   weightKg: 80,
@@ -48,7 +48,7 @@ describe("profile page", () => {
     await user.type(age, "31");
     await user.click(screen.getByRole("button", { name: /save profile/i }));
 
-    expect(api.saveProfile).toHaveBeenCalledWith({ ...profile, age: 31 });
+    expect(api.saveProfile).toHaveBeenCalledWith({ ...profile, age: 31, recordingTimezone: Intl.DateTimeFormat().resolvedOptions().timeZone });
     expect(await screen.findByRole("status")).toHaveTextContent(/saved/i);
   });
 

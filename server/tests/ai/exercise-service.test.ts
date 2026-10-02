@@ -24,7 +24,7 @@ describe.skipIf(!hasDatabase)("AI exercise workflows", () => {
         profile: {
           create: {
             primaryGoal: "FAT_LOSS",
-            gender: "MALE",
+            sex: "MALE",
             age: 30,
             heightCm: 180,
             weightKg: 80,
@@ -177,7 +177,7 @@ describe.skipIf(!hasDatabase)("AI exercise workflows", () => {
       new FakeAiClient({
         replacements: [
           {
-            exerciseId: "free-exercise-db-Barbell_Squat",
+            exerciseId: "not-in-catalog",
             reason: "The model selected this gym exercise.",
             sets: [{ setNumber: 1, targetReps: 8 }],
           },

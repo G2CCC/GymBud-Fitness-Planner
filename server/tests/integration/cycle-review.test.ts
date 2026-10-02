@@ -6,6 +6,7 @@ import { cycleReviewResponseSchema } from "../../src/ai/schemas";
 describe("weekly review integration contract", () => {
   it("keeps the weekly review response schema independent of batch reviews", () => {
     const result = cycleReviewResponseSchema.safeParse({
+      nutritionReview: {status:'INSUFFICIENT_DATA',observations:[],suggestions:[]},
       processedSummary: "The week was recorded.",
       conclusions: { status: "CONTINUE", keyFindings: ["Recorded training."], recommendations: ["Continue steadily."] },
     });
@@ -14,10 +15,11 @@ describe("weekly review integration contract", () => {
 
   it("fake AI exposes the weekly feature name", async () => {
     const ai = new FakeAiClient({
+      nutritionReview: {status:'INSUFFICIENT_DATA',observations:[],suggestions:[]},
       processedSummary: "The week was recorded.",
       conclusions: { status: "CONTINUE", keyFindings: ["Recorded training."], recommendations: ["Continue steadily."] },
     });
-    const result = await ai.generateJson({ model: "test", promptVersion: "weekly-review.v1", systemPrompt: "", userPrompt: "{}", metadata: { feature: "weekly-review" } }, cycleReviewResponseSchema);
+    const result = await ai.generateJson({ model: "test", promptVersion: "weekly-review.v2", systemPrompt: "", userPrompt: "{}", metadata: { feature: "weekly-review" } }, cycleReviewResponseSchema);
     expect(result.processedSummary).toContain("week");
   });
 });

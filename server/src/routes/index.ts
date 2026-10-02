@@ -11,6 +11,8 @@ import { activityOptionRouter } from "./activity-options/route";
 import { profileRouter } from "./profile/route";
 import { workoutRouter } from "./workouts/route";
 import { calendarRouter } from "./calendar/route";
+import { foodRouter } from './foods/route';
+import { nutritionRouter } from './nutrition/route';
 
 export const apiRouter = Router();
 apiRouter.use(createAuthMiddleware());
@@ -25,3 +27,5 @@ apiRouter.use("/activity-options", activityOptionRouter);
 apiRouter.use("/profile", profileRouter);
 apiRouter.use("/workouts", workoutRouter);
 apiRouter.use("/calendar", calendarRouter);
+apiRouter.use('/foods', foodRouter);
+apiRouter.use('/nutrition', nutritionRouter);

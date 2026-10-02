@@ -20,7 +20,7 @@ describe("weekly review prompt", () => {
       trainingVolume: volume,
       previousCycle: { cycleNumber: 3, trainingVolume: { ...volume, cycleId: "cycle-3" }, comparison: { completedWorkoutCountDelta: 0, strength: { completedSetCountDelta: 0, actualRepCountDelta: 0, unweightedRepCountDelta: 0, weightedVolumeDelta: { KG: 0, LB: 0 } }, cardio: { actualDurationMinutesDelta: 0, actualDistanceKmDelta: 0 }, sport: { actualDurationMinutesDelta: 0 } } },
     });
-    expect(request.promptVersion).toBe("weekly-review.v1");
+    expect(request.promptVersion).toBe("weekly-review.v2");
     expect(request.userPrompt).toContain("cycle-4");
     expect(request.userPrompt).toContain("cycle-3");
     expect(request.userPrompt).toContain("2160");

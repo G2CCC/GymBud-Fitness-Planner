@@ -7,6 +7,7 @@ import type {
 } from "@fitness/shared";
 import {
   completeWorkout,
+  saveWorkoutLog,
   getWorkout,
   listExercises,
 } from "../../api/client";
@@ -51,6 +52,7 @@ function formatCompletedAt(value: string | null): string | null {
 }
 
 function initialStrengthLog(workout: ApiWorkout): StrengthWorkoutLogInput {
+  if(workout.workoutLog?.exerciseLogs.length)return {exercises:workout.workoutLog.exerciseLogs.map(ex=>({exerciseId:ex.exerciseId,sortOrder:ex.sortOrder,sets:ex.setLogs.map(set=>({setNumber:set.setNumber,reps:set.actualReps,weight:set.actualWeight,weightUnit:set.weightUnit}))}))};
   return {
     exercises: (workout.plannedExercises ?? []).map((exercise) => ({
       exerciseId: exercise.exerciseId,
@@ -70,6 +72,7 @@ export function WorkoutPage() {
   const [workout, setWorkout] = useState<ApiWorkout | null>(null);
   const [exerciseNames, setExerciseNames] = useState<Record<string, string>>({});
   const [backfill, setBackfill] = useState(false);
+  const [editing, setEditing] = useState(false);
   const [log, setLog] = useState<LogState | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -94,8 +97,8 @@ export function WorkoutPage() {
           result.activityType === "STRENGTH"
             ? initialStrengthLog(result)
             : result.activityType === "CARDIO"
-              ? { actualDurationMinutes: result.durationMinutes }
-              : { actualDurationMinutes: result.durationMinutes },
+              ? { ...result.workoutLog?.actualDetails, actualDurationMinutes: result.workoutLog?.actualDetails?.actualDurationMinutes ?? result.durationMinutes } as CardioWorkoutLogInput
+              : { ...result.workoutLog?.actualDetails, actualDurationMinutes: result.workoutLog?.actualDetails?.actualDurationMinutes ?? result.durationMinutes } as SportWorkoutLogInput,
         );
         if (result.activityType === "STRENGTH") {
           const availableExercises = await listExercises();
@@ -150,11 +153,14 @@ export function WorkoutPage() {
     setError(null);
     setSuccess(null);
     try {
-      const updated = await completeWorkout(loadedWorkout.id, {
+      const updated = loadedWorkout.status==='COMPLETED' && !payload.completedAt
+        ? await saveWorkoutLog(loadedWorkout.id,loadedLog)
+        : await completeWorkout(loadedWorkout.id, {
         ...(payload.completedAt ? { completedAt: payload.completedAt } : {}),
         log: loadedLog,
       });
       setWorkout(updated);
+      setEditing(false);
       setSuccess(
         backfill
           ? "The actual completion date and time were saved."
@@ -202,7 +208,7 @@ export function WorkoutPage() {
                 : "Planned for " + formatScheduledDate(workout.scheduledDate)}
             </p>
           </div>
-          {workout.status === "PLANNED" ? (
+          {workout.status === "PLANNED" || editing ? (
             <button
               className="focus-ring min-h-11 rounded-[var(--radius-control)] border border-gymbud-border bg-gymbud-surface px-4 text-sm font-semibold text-gymbud-ink hover:bg-gymbud-surface-muted"
               type="button"
@@ -229,7 +235,7 @@ export function WorkoutPage() {
         </p>
       ) : null}
 
-      {workout.status === "PLANNED" ? (
+      {workout.status === "PLANNED" || editing ? (
         <>
           <section
             aria-label="Workout overview"
@@ -323,6 +329,7 @@ export function WorkoutPage() {
             </span>
           </section>
           <WorkoutLogSummary workout={workout} exerciseNames={exerciseNames} />
+          <button type="button" className="button-primary focus-ring" onClick={()=>{setEditing(true);setBackfill(false);}}>Edit actual log</button>
         </>
       )}
     </main>

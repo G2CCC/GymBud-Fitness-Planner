@@ -13,7 +13,7 @@ test.describe("backfill and cycle close E2E flow", () => {
     await resetE2eData();
   });
 
-  test("requires a backfill timestamp and closes unresolved work in the old cycle", async ({
+  test("requires actual logs and resolving planned workouts before closing", async ({
     playwright,
   }) => {
   const api = await createApiContext(playwright);
@@ -21,34 +21,36 @@ test.describe("backfill and cycle close E2E flow", () => {
 
   try {
     const missingTimestamp = await api.post(
-      `/workouts/${fixture.backfillWorkout.id}/backfill`,
+      `/api/workouts/${fixture.backfillWorkout.id}/backfill`,
       { data: {} },
     );
     expect(missingTimestamp.status()).toBe(400);
 
     const completedAt = new Date(Date.now() - 60 * 60 * 1000).toISOString();
     const backfilled = await api.post(
-      `/workouts/${fixture.backfillWorkout.id}/backfill`,
-      { data: { completedAt } },
+      `/api/workouts/${fixture.backfillWorkout.id}/backfill`,
+      { data: { completedAt, log:{actualDurationMinutes:30} } },
     );
     expect(backfilled.ok()).toBeTruthy();
     expect((await backfilled.json()).data.status).toBe("COMPLETED");
 
+    const blockedReview = await api.post(`/api/cycles/${fixture.cycle.id}/review`,{data:{}});
+    expect((await blockedReview.json()).data).toBeNull();
+    const removed=await api.delete(`/api/workouts/${fixture.unresolvedWorkout.id}`);
+    expect(removed.ok()).toBeTruthy();
     const reviewResponse = await api.post(
-      `/cycles/${fixture.cycle.id}/review`,
+      `/api/cycles/${fixture.cycle.id}/review`,
       { data: {} },
     );
     expect(reviewResponse.ok()).toBeTruthy();
 
     const unresolved = await api.get(
-      `/workouts/${fixture.unresolvedWorkout.id}`,
+      `/api/workouts/${fixture.unresolvedWorkout.id}`,
     );
-    expect((await unresolved.json()).data).toMatchObject({
-      status: "CANCELLED",
-    });
+    expect(unresolved.status()).toBe(404);
 
     const editAfterClose = await api.post(
-      `/workouts/${fixture.unresolvedWorkout.id}/reschedule`,
+      `/api/workouts/${fixture.backfillWorkout.id}/reschedule`,
       { data: { scheduledDate: new Date().toISOString() } },
     );
     expect(editAfterClose.status()).toBe(409);

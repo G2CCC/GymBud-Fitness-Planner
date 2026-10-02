@@ -5,7 +5,7 @@ const requiredProfile = {
   primaryGoal: "FAT_LOSS",
   weeklyTrainingDays: 3,
   sessionDurationMinutes: 60,
-  gender: "MALE" as const,
+  sex: "MALE" as const,
   age: 27,
   heightCm: 178,
   weightKg: 82,
@@ -14,14 +14,14 @@ const requiredProfile = {
 describe("profile validation", () => {
   it("accepts the required demographic planning context", () => {
     expect(profileInputSchema.parse(requiredProfile)).toMatchObject({
-      gender: "MALE",
+      sex: "MALE",
       age: 27,
       heightCm: 178,
       weightKg: 82,
     });
   });
 
-  it.each(["gender", "age", "heightCm", "weightKg"])(
+  it.each(["sex", "age", "heightCm", "weightKg"])(
     "requires %s",
     (field) => {
       const input = { ...requiredProfile };
@@ -51,5 +51,17 @@ describe("profile validation", () => {
     expect(() =>
       profileInputSchema.parse({ ...requiredProfile, [field]: value }),
     ).toThrow();
+  });
+});
+
+ describe("nutrition profile goals", () => {
+  it.each(["FAT_LOSS", "MUSCLE_GAIN", "MAINTENANCE"])("accepts %s", primaryGoal => {
+    expect(profileInputSchema.safeParse({ ...requiredProfile, primaryGoal }).success).toBe(true);
+  });
+  it.each(["NON_BINARY", "PREFER_NOT_TO_SAY"])("rejects unsupported sex %s", sex => {
+    expect(profileInputSchema.safeParse({ ...requiredProfile, sex }).success).toBe(false);
+  });
+  it("rejects an unknown goal", () => {
+    expect(profileInputSchema.safeParse({ ...requiredProfile, primaryGoal: "PERFORMANCE" }).success).toBe(false);
   });
 });

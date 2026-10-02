@@ -9,7 +9,7 @@ describe("single-day Strength plan prompt", () => {
       focusAreas: ["UPPER_BODY", "CORE"],
       primaryGoal: "MUSCLE_GAIN",
       sessionDurationMinutes: 50,
-      gender: "FEMALE",
+      sex: "FEMALE",
       age: 29,
       heightCm: 168,
       weightKg: 64,

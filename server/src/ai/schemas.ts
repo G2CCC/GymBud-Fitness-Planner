@@ -61,6 +61,7 @@ export type WeightDecision = z.infer<typeof weightDecisionSchema>;
 export type SingleDayPlanInput = z.infer<typeof singleDayPlanInputSchema>;
 
 export const cycleReviewResponseSchema = z.object({
+  nutritionReview: z.object({status:z.enum(['INSUFFICIENT_DATA','AVAILABLE']),observations:z.array(z.string().trim().min(1).max(500)).max(10),suggestions:z.array(z.string().trim().min(1).max(500)).max(10)}).strict(),
   processedSummary: z.string().trim().min(1).max(5000),
   conclusions: z.object({
     status: z.enum(["CONTINUE", "ADJUST_PLAN", "RESET_REQUIRED"]),

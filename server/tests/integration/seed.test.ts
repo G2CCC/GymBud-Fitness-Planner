@@ -13,7 +13,7 @@ describe.skipIf(!process.env.DATABASE_URL)("test user persistence", () => {
 
     expect(user?.authUserId).toBe("test:seed-test-user");
     expect(user?.profile).toMatchObject({
-      gender: "MALE",
+      sex: "MALE",
       age: 27,
       heightCm: 178,
       weightKg: 82,

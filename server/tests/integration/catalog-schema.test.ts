@@ -1,8 +1,10 @@
 import "dotenv/config";
-import { afterAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { db } from "../../src/db";
+import { seedCatalog } from '../../src/catalog/seed';
 
 describe.skipIf(!process.env.DATABASE_URL)("catalog schema", () => {
+  beforeAll(() => seedCatalog(db), 30000);
   it("exposes ActivityOption and imported Exercise metadata", async () => {
     const option = await db.activityOption.findUnique({ where: { id: "cardio-rowing-machine" } });
     expect(option?.activityType).toBe("CARDIO");

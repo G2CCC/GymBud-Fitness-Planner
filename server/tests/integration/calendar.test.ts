@@ -29,7 +29,7 @@ describe.skipIf(!hasDatabase)("calendar persistence", () => {
             profile: {
               create: {
                 primaryGoal: "FAT_LOSS",
-                gender: "MALE",
+                sex: "MALE",
                 age: 30,
                 heightCm: 180,
                 weightKg: 80,
@@ -84,7 +84,7 @@ describe.skipIf(!hasDatabase)("calendar persistence", () => {
           cycleId: userCycleId,
           activityType: "CARDIO",
           activityOptionId: "cardio-treadmill-running",
-          scheduledDate: new Date("2026-09-15T00:00:00.000Z"),
+          scheduledDate: new Date("2026-09-30T00:00:00.000Z"),
           durationMinutes: 30,
           status: "PLANNED",
         },

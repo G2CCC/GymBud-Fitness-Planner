@@ -19,7 +19,8 @@
     "db:seed": "tsx prisma/seed.ts",
     "db:studio": "prisma studio --schema prisma/schema.prisma",
     "catalog:build-manifest": "tsx scripts/catalog/build-strength-manifest.ts",
-    "catalog:sync-images": "tsx scripts/sync-exercise-images.ts"
+    "catalog:sync-images": "tsx scripts/sync-exercise-images.ts",
+    "foods:import": "node --import tsx scripts/foods/import.ts"
   },
   "devDependencies": {
     "@playwright/test": "^1.63.0",

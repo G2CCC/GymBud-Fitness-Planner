@@ -1,7 +1,8 @@
 import { z } from "zod";
 import {
   activityTypes,
-  genders,
+  sexes,
+  bodyGoals,
   weightUnits,
   workoutStatuses,
 } from "./enums";
@@ -12,8 +13,9 @@ const dateSchema = z.coerce.date();
 export const profileInputSchema = z.object({
   weeklyTrainingDays: z.number().int().min(1).max(7),
   sessionDurationMinutes: z.number().int().min(10).max(360),
-  primaryGoal: z.string().trim().min(1),
-  gender: z.enum(genders),
+  primaryGoal: z.enum(bodyGoals),
+  recordingTimezone: z.string().refine(isValidTimeZone).optional(),
+  sex: z.enum(sexes),
   age: z.number().int().min(13).max(100),
   heightCm: z.number().min(50).max(250),
   weightKg: z.number().min(20).max(350),

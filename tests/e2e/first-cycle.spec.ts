@@ -20,12 +20,12 @@ test.describe("first cycle E2E flow", () => {
   const api = await createApiContext(playwright);
 
   try {
-    const profileResponse = await api.put("/profile", {
+    const profileResponse = await api.put("/api/profile", {
       data: {
         primaryGoal: "FAT_LOSS",
         weeklyTrainingDays: 3,
         sessionDurationMinutes: 45,
-        gender: "MALE",
+        sex: "MALE",
         age: 27,
         heightCm: 178,
         weightKg: 82,
@@ -33,12 +33,12 @@ test.describe("first cycle E2E flow", () => {
     });
     expect(profileResponse.ok()).toBeTruthy();
 
-    const draftResponse = await api.post("/cycles", {
+    const draftResponse = await api.post("/api/cycles", {
       data: {
         primaryGoal: "FAT_LOSS",
         weeklyTrainingDays: 3,
         sessionDurationMinutes: 45,
-        gender: "MALE",
+        sex: "MALE",
         age: 27,
         heightCm: 178,
         weightKg: 82,
@@ -47,11 +47,11 @@ test.describe("first cycle E2E flow", () => {
     });
     const draft = (await draftResponse.json()).data;
 
-    const generatedResponse = await api.post(`/ai/plans/${draft.id}/generate`);
+    const generatedResponse = await api.post(`/api/ai/plans/${draft.id}/generate`);
     expect(generatedResponse.ok()).toBeTruthy();
     const generatedPlan = (await generatedResponse.json()).data;
 
-    const confirmedResponse = await api.post(`/ai/plans/${draft.id}/confirm`, {
+    const confirmedResponse = await api.post(`/api/ai/plans/${draft.id}/confirm`, {
       data: generatedPlan,
     });
     expect(confirmedResponse.ok()).toBeTruthy();

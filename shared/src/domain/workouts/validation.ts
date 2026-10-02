@@ -106,6 +106,7 @@ export const createWorkoutInputSchema = z.object({
 
 export const backfillCompletionInputSchema = z.object({
   completedAt: z.coerce.date(),
+  log: z.unknown().optional(),
 }).strict();
 
 export const rescheduleWorkoutInputSchema = z.object({

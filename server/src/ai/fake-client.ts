@@ -133,6 +133,7 @@ export function createDeterministicFakeAiClient(): AiClient {
 
     if (feature === "weekly-review") {
       return {
+        nutritionReview: {status:parsePrompt(request).nutritionSummary?.trendEligible?'AVAILABLE':'INSUFFICIENT_DATA',observations:['Nutrition coverage is shown with its sample counts.'],suggestions:['Record portions and confirm completed diary days.']},
         processedSummary: "The actual training volume is ready for review.",
         conclusions: {
           status: "CONTINUE",

@@ -1,0 +1,10 @@
+{
+  "provider": "USDA_SR_LEGACY",
+  "release": "2018-04",
+  "url": "https://fdc.nal.usda.gov/fdc-datasets/FoodData_Central_sr_legacy_food_json_2018-04.zip",
+  "zipSha256": "0fe8ae486a2c8eb42cb96413f058deb51863a46c8fb8eeb4b1fb45006dd338ef",
+  "jsonSha256": "70d4235ae3a2bdf48a7b9eaa1286a83fa67b6f3270436c9ce8b008213f500129",
+  "license": "USDA public domain / CC0",
+  "licenseUrl": "https://fdc.nal.usda.gov/data-documentation.html",
+  "selection": "Explicit reviewed basic foods in selection.json; preserve source names and preparation states. Only approved source portion IDs become ea."
+}

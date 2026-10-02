@@ -18,6 +18,7 @@ export function App() {
   }
   const navigation = [
     { label: "Calendar", to: "/calendar" },
+    { label: "Nutrition", to: "/nutrition" },
     { label: "Progress", to: "/progress" },
     { label: "Profile", to: "/profile" },
   ] as const;
@@ -70,7 +71,7 @@ export function App() {
       </div>
 
       <nav
-        className="glass-surface fixed inset-x-0 bottom-0 z-20 grid grid-cols-3 border-t border-gymbud-border px-2 pb-[env(safe-area-inset-bottom)] lg:hidden"
+        className="glass-surface fixed inset-x-0 bottom-0 z-20 grid grid-cols-4 border-t border-gymbud-border px-2 pb-[env(safe-area-inset-bottom)] lg:hidden"
         aria-label="Mobile navigation"
       >
         {navigation.map((item) => (

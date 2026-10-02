@@ -1,6 +1,7 @@
 import type {
   ActivityType,
-  Gender,
+  Sex,
+  BodyGoal,
   WeightUnit,
   WorkoutStatus,
 } from "./enums";
@@ -8,8 +9,9 @@ import type {
 export type ProfileInput = {
   weeklyTrainingDays: number;
   sessionDurationMinutes: number;
-  primaryGoal: string;
-  gender: Gender;
+  primaryGoal: BodyGoal;
+  recordingTimezone?: string;
+  sex: Sex;
   age: number;
   heightCm: number;
   weightKg: number;

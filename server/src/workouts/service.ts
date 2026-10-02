@@ -1,4 +1,5 @@
 import { Prisma, PrismaClient } from "@prisma/client";
+import { serializeCycleWrite } from "../cycles/locking";
 import {
   backfillCompletionInputSchema,
   cardioWorkoutLogInputSchema,
@@ -12,6 +13,8 @@ import {
 } from "@fitness/shared";
 import { rescheduleWorkoutInputSchema } from "@fitness/shared/domain/workouts/validation";
 import { z } from "zod";
+import {energySelect,energyDto,snapshotWorkoutEnergy} from "./energy";
+import type {EnergyEstimate} from "@fitness/shared";
 
 const workoutSelect = {
   id: true,
@@ -55,6 +58,7 @@ const workoutSelect = {
   },
   workoutLog: {
     select: {
+      ...energySelect,
       actualDetails: true,
       exerciseLogs: {
         orderBy: { sortOrder: "asc" },
@@ -100,6 +104,7 @@ type WorkoutBaseRecord = Prisma.ScheduledWorkoutGetPayload<{
 }>;
 
 export type WorkoutRecord = WorkoutBaseRecord & {
+  energy: EnergyEstimate | null;
   actualDetails: WorkoutActualDetails | null;
   actualExercises: WorkoutActualExercise[];
 };
@@ -128,6 +133,7 @@ type WorkoutActualExercise = {
 };
 
 const workoutDetailLogSelect = {
+  ...energySelect,
   actualDetails: true,
   exerciseLogs: {
     orderBy: { sortOrder: "asc" },
@@ -197,37 +203,25 @@ export class WorkoutService {
   ): Promise<WorkoutRecord> {
     return this.prisma.$transaction(async (tx) => {
       const context = await this.getWritableWorkout(tx, userId, workoutId);
-      const transition = this.runTransition(() =>
-        completeWorkoutState(
-          toTransition(context.workout, context.hasNextCycle),
-          { completedAt: input.completedAt },
-          now,
-        ),
-      );
-
-      const updated = await tx.scheduledWorkout.updateMany({
-        where: {
-          id: workoutId,
-          userId,
-          cycleId: context.workout.cycleId,
-          status: "PLANNED",
-        },
-        data: {
-          status: transition.status,
-          completedAt: transition.completedAt,
-        },
-      });
-
-      assertSingleUpdate(updated.count, "Workout changed while completing");
-
-      if (input.log !== undefined) {
-        await this.saveWorkoutLogInTransaction(
-          tx,
-          userId,
-          { ...context.workout, status: "COMPLETED" },
-          input.log,
-        );
+      const existing = context.workout.workoutLog;
+      const logInput = input.log ?? (existing
+        ? context.workout.activityType === "STRENGTH"
+          ? {exercises:existing.exerciseLogs.map(ex=>({exerciseId:ex.exerciseId,sortOrder:ex.sortOrder,sets:ex.setLogs.map(set=>({setNumber:set.setNumber,reps:set.actualReps,weight:set.actualWeight,weightUnit:set.weightUnit}))}))}
+          : existing.actualDetails
+        : undefined);
+      if(logInput===undefined || logInput===null)throw new WorkoutServiceError("Save actual workout details before completing", "VALIDATION_ERROR",400);
+      parseWorkoutLog(context.workout.activityType,logInput);
+      let completedAt:Date;
+      if(context.workout.status==='COMPLETED'){
+        if(!input.completedAt)throw new WorkoutServiceError('Workout is already completed','INVALID_STATE',409);
+        try{validateCompletionTimestamp(input.completedAt,now);}catch(error){throw new WorkoutServiceError(error instanceof Error?error.message:'Invalid completion time','VALIDATION_ERROR',400);}
+        completedAt=input.completedAt;
+      }else{
+        completedAt=this.runTransition(()=>completeWorkoutState(toTransition(context.workout,context.hasNextCycle),{completedAt:input.completedAt},now)).completedAt;
       }
+      const updated=await tx.scheduledWorkout.updateMany({where:{id:workoutId,userId,cycleId:context.workout.cycleId,status:context.workout.status},data:{status:'COMPLETED',completedAt}});
+      assertSingleUpdate(updated.count,'Workout changed while completing');
+      await this.saveWorkoutLogInTransaction(tx,userId,{...context.workout,status:'COMPLETED',completedAt},logInput,true);
 
       return this.getWorkoutInTransaction(tx, userId, workoutId);
     });
@@ -258,7 +252,7 @@ export class WorkoutService {
     return this.completeWorkout(
       userId,
       workoutId,
-      { completedAt: parsed.data.completedAt },
+      { completedAt: parsed.data.completedAt, log: parsed.data.log },
       now,
     );
   }
@@ -356,6 +350,16 @@ export class WorkoutService {
       }
 
       const plannedExercises = parsed.data.plannedExercises ?? [];
+      await serializeCycleWrite(tx, userId, cycle.id);
+      const active = await tx.trainingCycle.findFirst({
+        where: { id: cycle.id, userId, status: "ACTIVE" },
+        select: { id: true },
+      });
+      if (!active) {
+        throw new WorkoutServiceError(
+          "The cycle does not accept workout writes", "INVALID_STATE", 409,
+        );
+      }
       if (parsed.data.activityType !== "STRENGTH") {
         const activityOption = await tx.activityOption.findUnique({
           where: { id: parsed.data.activityOptionId },
@@ -468,6 +472,7 @@ export class WorkoutService {
     userId: string,
     workout: WritableWorkout,
     input: unknown,
+    reassignDate = false,
   ): Promise<WorkoutLogRecord> {
     const parsed = parseWorkoutLog(workout.activityType, input);
     const workoutLog = await tx.workoutLog.upsert({
@@ -494,6 +499,7 @@ export class WorkoutService {
       });
     }
 
+    await snapshotWorkoutEnergy(tx,userId,workout.id,reassignDate);
     return tx.workoutLog.findUniqueOrThrow({
       where: { id: workoutLog.id },
       include: workoutLogInclude,
@@ -602,6 +608,14 @@ export class WorkoutService {
     userId: string,
     workoutId: string,
   ): Promise<{ workout: WritableWorkout; hasNextCycle: boolean }> {
+    const owner = await tx.scheduledWorkout.findFirst({
+      where: { id: workoutId, userId },
+      select: { cycleId: true },
+    });
+    if (!owner) {
+      throw new WorkoutServiceError("Workout not found", "NOT_FOUND", 404);
+    }
+    await serializeCycleWrite(tx, userId, owner.cycleId);
     const workout = await tx.scheduledWorkout.findFirst({
       where: { id: workoutId, userId },
       select: writableWorkoutSelect,
@@ -661,6 +675,7 @@ export class WorkoutService {
 
     return {
       ...workout,
+      energy: energyDto(log),
       actualDetails: toActualDetails(log?.actualDetails),
       actualExercises: (log?.exerciseLogs ?? []).map((exercise) => ({
         exerciseId: exercise.exerciseId,

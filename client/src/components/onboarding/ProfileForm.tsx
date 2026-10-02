@@ -1,8 +1,9 @@
 import { useState, type FormEvent } from "react";
 import {
-  genders,
+  sexes,
   profileInputSchema,
-  type Gender,
+  type Sex,
+  type BodyGoal,
   type ProfileInput,
 } from "@fitness/shared";
 
@@ -17,8 +18,8 @@ export type ProfileFormProps = {
   submitLabel?: string;
 };
 
-type ProfileFormValue = Omit<ProfileInput, "gender" | "age" | "heightCm" | "weightKg"> & {
-  gender: Gender | "";
+type ProfileFormValue = Omit<ProfileInput, "sex" | "age" | "heightCm" | "weightKg"> & {
+  sex: Sex | "";
   age: number | "";
   heightCm: number | "";
   weightKg: number | "";
@@ -28,7 +29,7 @@ const defaultValue: ProfileFormValue = {
   weeklyTrainingDays: 3,
   sessionDurationMinutes: 60,
   primaryGoal: "FAT_LOSS",
-  gender: "",
+  sex: "",
   age: "",
   heightCm: "",
   weightKg: "",
@@ -66,7 +67,7 @@ export function ProfileForm({
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const parsed = profileInputSchema.safeParse(value);
+    const parsed = profileInputSchema.safeParse({ ...value, recordingTimezone: Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC" });
 
     if (!parsed.success) {
       setError(parsed.error.issues[0]?.message ?? "Check your profile details.");
@@ -124,26 +125,22 @@ export function ProfileForm({
 
       <div className="grid gap-4 sm:grid-cols-2">
         <label className="grid gap-2 text-sm font-medium text-gymbud-ink">
-          Gender <span className="font-normal text-gymbud-muted">Required</span>
+          Sex <span className="font-normal text-gymbud-muted">Required</span>
           <select
             className="focus-ring min-h-11 rounded-[var(--radius-control)] border border-gymbud-border bg-gymbud-surface px-3"
             required
-            value={value.gender}
+            value={value.sex}
             onChange={(event) =>
               update(
-                "gender",
-                event.target.value as Gender | "",
+                "sex",
+                event.target.value as Sex | "",
               )
             }
           >
-            <option value="">Select gender</option>
-            {genders.map((gender) => (
-              <option key={gender} value={gender}>
-                {gender === "NON_BINARY"
-                  ? "Non-binary"
-                  : gender === "PREFER_NOT_TO_SAY"
-                    ? "Prefer not to say"
-                    : gender.charAt(0) + gender.slice(1).toLowerCase()}
+            <option value="">Select sex</option>
+            {sexes.map((sex) => (
+              <option key={sex} value={sex}>
+                {sex.charAt(0) + sex.slice(1).toLowerCase()}
               </option>
             ))}
           </select>
@@ -209,12 +206,11 @@ export function ProfileForm({
           <select
             className="focus-ring min-h-11 rounded-[var(--radius-control)] border border-gymbud-border bg-gymbud-surface px-3"
             value={value.primaryGoal}
-            onChange={(event) => update("primaryGoal", event.target.value)}
+            onChange={(event) => update("primaryGoal", event.target.value as BodyGoal)}
           >
             <option value="FAT_LOSS">Fat loss</option>
             <option value="MUSCLE_GAIN">Muscle gain</option>
-            <option value="PERFORMANCE">Performance</option>
-            <option value="GENERAL_HEALTH">General health</option>
+            <option value="MAINTENANCE">Maintenance</option>
           </select>
         </label>
       </div>

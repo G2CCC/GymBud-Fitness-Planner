@@ -2,7 +2,8 @@ import type {
   ActivityIconKey,
   ActivityType,
   CycleStatus,
-  Gender,
+  Sex,
+  BodyGoal,
   WorkoutStatus,
   WeightUnit,
   StrengthFocusArea,
@@ -11,8 +12,9 @@ import type {
 export type ApiProfile = {
   weeklyTrainingDays: number;
   sessionDurationMinutes: number;
-  primaryGoal: string;
-  gender: Gender;
+  primaryGoal: BodyGoal;
+  recordingTimezone?: string;
+  sex: Sex;
   age: number;
   heightCm: number;
   weightKg: number;
@@ -33,6 +35,7 @@ export type ApiPlannedExercise = {
 };
 
 export type ApiWorkout = {
+  energy?: import("@fitness/shared").EnergyEstimate | null;
   id: string;
   activityType: ActivityType;
   scheduledDate: string;
@@ -197,6 +200,9 @@ export type ApiPlanDraft = {
 };
 
 export type ApiCycleReviewResult = {
+  nutritionSummary?: import("@fitness/shared").NutritionSummary;
+  nutritionComparison?: import("@fitness/shared").NutritionComparison|null;
+  nutritionReview?: {status:"AVAILABLE"|"INSUFFICIENT_DATA";observations:string[];suggestions:string[]};
   reviewId: string;
   cycleId: string;
   cycleNumber: number;

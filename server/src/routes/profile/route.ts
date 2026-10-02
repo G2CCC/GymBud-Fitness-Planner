@@ -2,6 +2,9 @@ import { Router, type Response } from "express";
 import { profileInputSchema } from "@fitness/shared/domain/validation";
 import { getAuthenticatedUserId } from "../../current-user";
 import { db } from "../../db";
+import { NutritionError } from "@fitness/shared";
+import { ProfileService, profileSelect } from "../../profiles/service";
+const profiles = new ProfileService(db);
 
 export const profileRouter = Router();
 
@@ -10,15 +13,7 @@ profileRouter.get("/", async (request, response) => {
     const userId = getAuthenticatedUserId(request);
     const profile = await db.userProfile.findUnique({
       where: { userId },
-      select: {
-        weeklyTrainingDays: true,
-        sessionDurationMinutes: true,
-        primaryGoal: true,
-        gender: true,
-        age: true,
-        heightCm: true,
-        weightKg: true,
-      },
+      select: profileSelect,
     });
 
     return response.json({ data: profile });
@@ -41,20 +36,7 @@ profileRouter.put("/", async (request, response) => {
 
   try {
     const userId = getAuthenticatedUserId(request);
-    const profile = await db.userProfile.upsert({
-      where: { userId },
-      update: parsed.data,
-      create: { userId, ...parsed.data },
-      select: {
-        weeklyTrainingDays: true,
-        sessionDurationMinutes: true,
-        primaryGoal: true,
-        gender: true,
-        age: true,
-        heightCm: true,
-        weightKg: true,
-      },
-    });
+    const profile = await profiles.saveProfile(userId, parsed.data);
 
     return response.json({ data: profile });
   } catch (error) {
@@ -63,6 +45,7 @@ profileRouter.put("/", async (request, response) => {
 });
 
 function sendRouteError(response: Response, error: unknown) {
+  if (error instanceof NutritionError) return response.status(error.statusCode).json({error:{code:error.code,message:error.message}});
   console.error(error);
   return response.status(500).json({
     error: {

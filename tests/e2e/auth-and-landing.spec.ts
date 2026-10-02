@@ -24,7 +24,7 @@ test.describe("public landing and authentication", () => {
       baseURL: "http://localhost:3000/api",
     });
     try {
-      const response = await api.get("/profile");
+      const response = await api.get("/api/profile");
       expect(response.status()).toBe(401);
     } finally {
       await api.dispose();
@@ -46,7 +46,7 @@ test.describe("public landing and authentication", () => {
 
       const api = await createApiContext(playwright);
       try {
-        const response = await api.get("/profile");
+        const response = await api.get("/api/profile");
         expect(response.ok()).toBeTruthy();
         expect((await response.json()).data).toMatchObject({
           primaryGoal: "FAT_LOSS",

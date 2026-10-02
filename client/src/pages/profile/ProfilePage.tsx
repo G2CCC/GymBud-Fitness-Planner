@@ -3,6 +3,7 @@ import type { ProfileInput } from "@fitness/shared";
 import { getProfile, saveProfile } from "../../api/client";
 import type { ApiProfile } from "../../api/contracts";
 import { ProfileForm } from "../../components/onboarding/ProfileForm";
+import { Link } from 'react-router-dom';
 
 export function ProfilePage() {
   const [profile, setProfile] = useState<ProfileInput | undefined>();
@@ -75,6 +76,7 @@ export function ProfilePage() {
 
   return (
     <main className="mx-auto grid max-w-3xl gap-4 px-4 py-6 sm:px-8">
+      <p className="rounded-lg bg-gymbud-surface p-4 text-sm">Body data and your goal set fixed net calorie and macro targets. Updates apply from today onward. <Link className="underline" to="/nutrition">View nutrition targets</Link></p>
       {success ? (
         <p role="status" className="rounded-[var(--radius-control)] bg-gymbud-accent-soft p-3 text-sm text-gymbud-ink">
           {success}

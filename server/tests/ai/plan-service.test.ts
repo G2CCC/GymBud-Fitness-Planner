@@ -90,7 +90,7 @@ describe.skipIf(!hasDatabase)("AI plan persistence", () => {
         profile: {
           create: {
             primaryGoal: "FAT_LOSS",
-            gender: "MALE",
+            sex: "MALE",
             age: 30,
             heightCm: 180,
             weightKg: 80,
@@ -107,7 +107,7 @@ describe.skipIf(!hasDatabase)("AI plan persistence", () => {
         profile: {
           create: {
             primaryGoal: "MUSCLE_GAIN",
-            gender: "FEMALE",
+            sex: "FEMALE",
             age: 28,
             heightCm: 165,
             weightKg: 60,
@@ -275,7 +275,7 @@ describe.skipIf(!hasDatabase)("AI plan persistence", () => {
     });
     const service = new PlanService(
       db,
-      new FakeAiClient(validPlanResponse),
+      new FakeAiClient({ ...validPlanResponse, workouts: validPlanResponse.workouts.map(workout => ({ ...workout, scheduledDate: "2027-01-03T00:00:00Z" })) }),
     );
     const draft = await service.generateDraft(userId, secondCycle.id);
     const invalidDraft = {
@@ -372,7 +372,7 @@ describe.skipIf(!hasDatabase)("AI plan persistence", () => {
         },
         new Date("2027-02-02T12:00:00Z"),
       ),
-    ).rejects.toThrow(/delete the planned workout/i);
+    ).rejects.toThrow(/already has a workout/i);
 
     await db.scheduledWorkout.create({
       data: {
@@ -397,6 +397,6 @@ describe.skipIf(!hasDatabase)("AI plan persistence", () => {
         },
         new Date("2027-02-02T12:00:00Z"),
       ),
-    ).rejects.toThrow(/delete the planned workout/i);
+    ).rejects.toThrow(/already has a workout/i);
   }, integrationTestTimeout);
 });

@@ -304,3 +304,8 @@ describe("workout detail and logging", () => {
     ).toBeInTheDocument();
   });
 });
+
+it('shows partial estimated energy without presenting unknown actions as zero',async()=>{
+ vi.mocked(api.getWorkout).mockResolvedValue({...completedWorkout,energy:{estimatedKcal:12,coverage:'PARTIAL',method:'STRENGTH_REPS',version:'strength-energy-v1',inputs:{}}});
+ renderWorkoutPage();expect(await screen.findByText(/12 kcal/)).toBeVisible();expect(screen.getByText(/Some actions have no supported estimate/)).toBeVisible();
+});

@@ -26,7 +26,7 @@ describe.skipIf(!hasDatabase)("workout persistence", () => {
             profile: {
               create: {
                 primaryGoal: "FAT_LOSS",
-                gender: "MALE",
+                sex: "MALE",
                 age: 30,
                 heightCm: 180,
                 weightKg: 80,
@@ -89,7 +89,7 @@ describe.skipIf(!hasDatabase)("workout persistence", () => {
     const completed = await service.completeWorkout(
       userId,
       strengthWorkoutId,
-      { completedAt },
+      { completedAt, log: {exercises:[{exerciseId:"free-exercise-db-Pushups",sortOrder:1,sets:[{setNumber:1,reps:10,weight:0,weightUnit:"KG"}]}]} },
       new Date("2026-11-04T12:00:00Z"),
     );
 
@@ -118,7 +118,7 @@ describe.skipIf(!hasDatabase)("workout persistence", () => {
             {
               exerciseId: "free-exercise-db-Pushups",
               sortOrder: 1,
-              sets: [{ setNumber: 1, reps: 12 }],
+              sets: [{ setNumber: 1, reps: 12, weight: 0, weightUnit: "KG" }],
             },
           ],
         },
@@ -129,7 +129,7 @@ describe.skipIf(!hasDatabase)("workout persistence", () => {
     expect(completed.status).toBe("COMPLETED");
     expect(completed.workoutLog?.exerciseLogs).toMatchObject([
       {
-        exerciseId: "system-push-up",
+        exerciseId: "free-exercise-db-Pushups",
         sortOrder: 1,
         setLogs: [
           {
@@ -289,7 +289,7 @@ describe.skipIf(!hasDatabase)("workout persistence", () => {
     await service.completeWorkout(
       userId,
       completed.id,
-      { completedAt: new Date("2026-11-10T10:00:00Z") },
+      { completedAt: new Date("2026-11-10T10:00:00Z"), log: {actualDurationMinutes:30} },
       new Date("2026-11-10T12:00:00Z"),
     );
 

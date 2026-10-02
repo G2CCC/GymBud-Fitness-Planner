@@ -26,6 +26,7 @@ describe("primary navigation", () => {
     );
 
     expect(screen.getAllByRole("link", { name: "Calendar" })).toHaveLength(2);
+    expect(screen.getAllByRole("link", { name: "Nutrition" })).toHaveLength(2);
     expect(screen.getAllByRole("link", { name: "Progress" })).toHaveLength(2);
     expect(screen.getAllByRole("link", { name: "Profile" })).toHaveLength(2);
     expect(screen.queryAllByRole("link", { name: "Today" })).toHaveLength(0);

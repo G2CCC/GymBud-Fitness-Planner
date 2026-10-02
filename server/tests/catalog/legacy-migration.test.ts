@@ -74,7 +74,7 @@ describe.skipIf(!hasDatabase)("legacy exercise migration", () => {
         },
       },
     });
-    await db.aiRecommendation.create({
+    await db.aIRecommendation.create({
       data: {
         userId,
         workoutId: workout.id,
@@ -99,9 +99,9 @@ describe.skipIf(!hasDatabase)("legacy exercise migration", () => {
 
     expect(result.deletedExercises).toBe(1);
     expect(result.migratedReferences).toBe(3);
-    expect(await db.plannedExercise.findFirstOrThrow()).toMatchObject({ exerciseId: canonicalId });
-    expect(await db.exerciseLog.findFirstOrThrow()).toMatchObject({ exerciseId: canonicalId });
-    expect(await db.aiRecommendation.findFirstOrThrow()).toMatchObject({ exerciseId: canonicalId });
+    expect(await db.plannedExercise.findFirstOrThrow({ where: { workout: { userId } } })).toMatchObject({ exerciseId: canonicalId });
+    expect(await db.exerciseLog.findFirstOrThrow({ where: { workoutLog: { workout: { userId } } } })).toMatchObject({ exerciseId: canonicalId });
+    expect(await db.aIRecommendation.findFirstOrThrow({ where: { userId } })).toMatchObject({ exerciseId: canonicalId });
     expect(await db.setLog.count()).toBe(originalSetCount);
     expect(await db.exercise.count({ where: { id: legacyId } })).toBe(0);
   });

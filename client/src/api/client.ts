@@ -45,7 +45,7 @@ export class ApiRequestError extends Error {
   }
 }
 
-async function request<T>(
+export async function request<T>(
   path: string,
   init: RequestInit = {},
 ): Promise<T> {
@@ -207,7 +207,7 @@ export type WorkoutLogInput =
 
 export async function completeWorkout(
   workoutId: string,
-  input: { completedAt?: string; log: WorkoutLogInput },
+  input: { completedAt?: string; log?: WorkoutLogInput },
 ): Promise<ApiWorkout> {
   if (input.completedAt) {
     const completedAt = new Date(input.completedAt);
@@ -228,14 +228,16 @@ export async function completeWorkout(
 export async function backfillWorkout(
   workoutId: string,
   completedAt: string,
+  log?: WorkoutLogInput,
 ): Promise<ApiWorkout> {
   const parsed = backfillCompletionInputSchema.parse({
+    log,
     completedAt: new Date(completedAt),
   });
   validateCompletionTimestamp(parsed.completedAt, new Date());
   return request<ApiWorkout>(
     "/workouts/" + workoutId + "/backfill",
-    jsonBody({ completedAt: parsed.completedAt.toISOString() }),
+    jsonBody({ completedAt: parsed.completedAt.toISOString(), log }),
   );
 }
 
@@ -308,4 +310,9 @@ function serializePlanDraft(
       scheduledDate: workout.scheduledDate.toISOString(),
     })),
   };
+}
+
+export async function saveWorkoutLog(workoutId:string,log:WorkoutLogInput):Promise<ApiWorkout>{
+ await request('/workouts/'+workoutId+'/log',{method:'PUT',body:JSON.stringify(log)});
+ return getWorkout(workoutId);
 }

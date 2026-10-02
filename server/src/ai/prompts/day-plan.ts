@@ -1,4 +1,4 @@
-import type { Gender } from "@fitness/shared";
+import type { Sex } from "@fitness/shared";
 import type { AiRequest } from "../client";
 
 export const SINGLE_DAY_PLAN_PROMPT_VERSION = "day-plan.v2";
@@ -9,7 +9,7 @@ export type SingleDayPlanPromptInput = {
   focusAreas: string[];
   primaryGoal: string;
   sessionDurationMinutes: number;
-  gender: Gender;
+  sex: Sex;
   age: number;
   heightCm: number;
   weightKg: number;
@@ -45,7 +45,7 @@ export function buildSingleDayPlanRequest(
       profile: {
         primaryGoal: input.primaryGoal,
         sessionDurationMinutes: input.sessionDurationMinutes,
-        gender: input.gender,
+        sex: input.sex,
         age: input.age,
         heightCm: input.heightCm,
         weightKg: input.weightKg,

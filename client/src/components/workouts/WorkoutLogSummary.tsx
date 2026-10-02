@@ -55,6 +55,11 @@ export function WorkoutLogSummary({
         ) : null}
       </div>
 
+      <div className="rounded-lg bg-gymbud-background p-3 text-sm">
+        <p className="font-semibold">Estimated exercise calories: {workout.energy?.estimatedKcal == null ? 'Unavailable' : `${workout.energy.estimatedKcal} kcal`}</p>
+        <p className="mt-1 text-gymbud-muted">{workout.energy?.coverage==='PARTIAL'?'Some actions have no supported estimate. This is a known subtotal.':workout.energy?.coverage==='COMPLETE'?'Estimated extra energy above resting needs. Actual expenditure varies.':'No supported estimate is available for this session.'}</p>
+        {typeof workout.energy?.inputs.assumption==='string' ? <p className="mt-1 text-gymbud-muted">Assumption: {workout.energy.inputs.assumption}</p> : null}
+      </div>
       {workout.activityType === "STRENGTH" ? (
         exerciseLogs.length > 0 ? (
           <div className="grid gap-3">

@@ -1,6 +1,12 @@
 import { Prisma, PrismaClient } from "@prisma/client";
+import { serializeCycleWrite } from "../cycles/locking";
 import {
   buildCycleTrainingVolume,
+  buildNutritionSummary,
+  compareNutrition,
+  getCycleReviewStatus,
+  type NutritionSummary,
+  type NutritionComparison,
   compareCycleTrainingVolume,
   getNextWeeklyCycleStart,
   startOfLocalDate,
@@ -10,22 +16,85 @@ import { env } from "../config/env";
 import { CycleService, CycleServiceError } from "../cycles/service";
 import { PlanService, PlanServiceError } from "../ai/plan-service";
 import { AiClientError, type AiClient } from "../ai/client";
-import { cycleReviewResponseSchema, planDraftSchema, type CycleReviewResponse, type PlanDraft } from "../ai/schemas";
-import { buildWeeklyReviewRequest, type PreviousCycleReviewContext } from "../ai/prompts/review";
+import {
+  cycleReviewResponseSchema,
+  planDraftSchema,
+  type CycleReviewResponse,
+  type PlanDraft,
+} from "../ai/schemas";
+import {
+  buildWeeklyReviewRequest,
+  type PreviousCycleReviewContext,
+} from "../ai/prompts/review";
+
+import { loadCycleNutrition } from "../nutrition/summary";
+type FrozenNutrition = {
+  summary: NutritionSummary;
+  previousSummary: NutritionSummary | null;
+  comparison: NutritionComparison | null;
+};
 
 const cycleReviewSelect = {
-  id: true, userId: true, status: true, cycleNumber: true, startDate: true,
-  endDate: true, timezone: true, updatedAt: true,
-  reviewSnapshot: { select: { id: true, processedSummary: true, objectiveSummary: true, previousCycleSummary: true, conclusions: true, nextCycleDraft: true, reviewedAt: true } },
-  workouts: { orderBy: { scheduledDate: "asc" }, select: {
-    id: true, activityType: true, scheduledDate: true, status: true, completedAt: true, updatedAt: true,
-    workoutLog: { select: { actualDetails: true, updatedAt: true, exerciseLogs: { orderBy: { sortOrder: "asc" }, select: { setLogs: { orderBy: { setNumber: "asc" }, select: { actualReps: true, actualWeight: true, weightUnit: true } } } } } },
-  } },
+  id: true,
+  userId: true,
+  status: true,
+  cycleNumber: true,
+  startDate: true,
+  endDate: true,
+  timezone: true,
+  updatedAt: true,
+  reviewSnapshot: {
+    select: {
+      id: true,
+      nutritionSummary: true,
+      processedSummary: true,
+      objectiveSummary: true,
+      previousCycleSummary: true,
+      conclusions: true,
+      nextCycleDraft: true,
+      reviewedAt: true,
+    },
+  },
+  workouts: {
+    orderBy: { scheduledDate: "asc" },
+    select: {
+      id: true,
+      activityType: true,
+      scheduledDate: true,
+      status: true,
+      completedAt: true,
+      updatedAt: true,
+      workoutLog: {
+        select: {
+          actualDetails: true,
+          updatedAt: true,
+          exerciseLogs: {
+            orderBy: { sortOrder: "asc" },
+            select: {
+              setLogs: {
+                orderBy: { setNumber: "asc" },
+                select: {
+                  actualReps: true,
+                  actualWeight: true,
+                  weightUnit: true,
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  },
 } satisfies Prisma.TrainingCycleSelect;
 
-type CycleReviewRecord = Prisma.TrainingCycleGetPayload<{ select: typeof cycleReviewSelect }>;
+type CycleReviewRecord = Prisma.TrainingCycleGetPayload<{
+  select: typeof cycleReviewSelect;
+}>;
 
 export type WeeklyReviewResult = {
+  nutritionSummary: NutritionSummary;
+  nutritionComparison: NutritionComparison | null;
+  nutritionReview: CycleReviewResponse["nutritionReview"];
   reviewId: string;
   cycleId: string;
   cycleNumber: number;
@@ -41,13 +110,24 @@ export type WeeklyReviewResult = {
 
 export type NextWeeklyDraft = {
   reviewId: string;
-  cycle: { id: string; status: "DRAFT"; startDate: Date; endDate: Date; timezone: string };
+  cycle: {
+    id: string;
+    status: "DRAFT";
+    startDate: Date;
+    endDate: Date;
+    timezone: string;
+  };
   plan: PlanDraft;
 };
 
 export class CycleReviewServiceError extends Error {
-  constructor(message: string, readonly code: "NOT_FOUND" | "CONFLICT" | "INVALID_STATE" | "AI_ERROR", readonly statusCode: 404 | 409 | 502) {
-    super(message); this.name = "CycleReviewServiceError";
+  constructor(
+    message: string,
+    readonly code: "NOT_FOUND" | "CONFLICT" | "INVALID_STATE" | "AI_ERROR",
+    readonly statusCode: 404 | 409 | 502,
+  ) {
+    super(message);
+    this.name = "CycleReviewServiceError";
   }
 }
 
@@ -60,11 +140,20 @@ export class CycleReviewService {
     private readonly model = env.aiModel,
   ) {}
 
-  async buildTrainingVolume(userId: string, cycleId: string): Promise<CycleTrainingVolume> {
-    return buildCycleTrainingVolume(toTrainingVolumeInput(await this.getCycle(userId, cycleId)));
+  async buildTrainingVolume(
+    userId: string,
+    cycleId: string,
+  ): Promise<CycleTrainingVolume> {
+    return buildCycleTrainingVolume(
+      toTrainingVolumeInput(await this.getCycle(userId, cycleId)),
+    );
   }
 
-  async processDueWeeklyCycle(userId: string, cycleId: string, now = new Date()): Promise<WeeklyReviewResult | null> {
+  async processDueWeeklyCycle(
+    userId: string,
+    cycleId: string,
+    now = new Date(),
+  ): Promise<WeeklyReviewResult | null> {
     let cycle = await this.getCycle(userId, cycleId);
     if (cycle.status === "DRAFT") return null;
     if (cycle.status === "ACTIVE") {
@@ -77,169 +166,562 @@ export class CycleReviewService {
       await this.generateWeeklyReview(userId, cycleId, now);
       cycle = await this.getCycle(userId, cycleId);
     }
-    if (!cycle.reviewSnapshot?.processedSummary) return null;
-    const stored = readStoredNextWeeklyDraft(cycle.reviewSnapshot.nextCycleDraft);
-    if (!stored && buildCycleTrainingVolume(toTrainingVolumeInput(cycle)).completedWorkoutCount > 0) {
+    if (!cycle.reviewSnapshot?.processedSummary) {
+      await this.generateWeeklyReview(userId, cycleId, now);
+      cycle = await this.getCycle(userId, cycleId);
+    }
+    const stored = readStoredNextWeeklyDraft(
+      cycle.reviewSnapshot?.nextCycleDraft,
+    );
+    if (
+      !stored &&
+      buildCycleTrainingVolume(toTrainingVolumeInput(cycle))
+        .completedWorkoutCount > 0
+    ) {
       await this.ensureNextWeeklyDraft(userId, cycleId, now);
       cycle = await this.getCycle(userId, cycleId);
     }
     return this.toWeeklyReviewResult(cycle);
   }
 
-  async generateWeeklyReview(userId: string, cycleId: string, now = new Date()): Promise<WeeklyReviewResult> {
-    let cycle = await this.getCycle(userId, cycleId);
-    if (cycle.status === "DRAFT") throw new CycleReviewServiceError("Only an active or closed cycle can be reviewed", "INVALID_STATE", 409);
-    if (cycle.reviewSnapshot?.processedSummary) return this.toWeeklyReviewResult(cycle);
-
-    if (cycle.status === "ACTIVE") {
-      const reviewStatus = await this.cycleService.getReviewStatus(
-        userId,
-        cycleId,
-        now,
-      );
-      if (!reviewStatus.reviewAvailable) {
-        throw new CycleReviewServiceError(
-          reviewStatus.blockedReason === "PLANNED_WORKOUTS_REMAINING"
-            ? "Complete or delete every planned workout before reviewing the cycle"
-            : "The cycle review is not available until the cycle end date",
-          "CONFLICT",
-          409,
-        );
-      }
-    }
-
-    const volume = buildCycleTrainingVolume(toTrainingVolumeInput(cycle));
-    const previous = await this.getPreviousCycleContext(userId, cycle);
+  async generateWeeklyReview(
+    userId: string,
+    cycleId: string,
+    now = new Date(),
+  ): Promise<WeeklyReviewResult> {
+    const cycle = await this.freezeReview(userId, cycleId, now);
+    if (cycle.reviewSnapshot?.processedSummary)
+      return this.toWeeklyReviewResult(cycle);
+    const snapshot = cycle.reviewSnapshot!;
+    const frozen = snapshot.nutritionSummary as unknown as FrozenNutrition;
+    const volume = snapshot.objectiveSummary as unknown as CycleTrainingVolume;
+    const previous =
+      snapshot.previousCycleSummary as PreviousCycleReviewContext | null;
     let response: CycleReviewResponse;
     try {
-      response = await this.aiClient.generateJson(buildWeeklyReviewRequest({ model: this.model, cycleNumber: requireCycleNumber(cycle), trainingVolume: volume, previousCycle: previous ?? undefined }), cycleReviewResponseSchema);
-    } catch (error) { throw mapAiError(error); }
-
-    if (cycle.status === "ACTIVE") {
-      try { await this.cycleService.close(userId, cycleId, now); }
-      catch (error) { throw mapCycleError(error); }
-      cycle = await this.getCycle(userId, cycleId);
+      response = await this.aiClient.generateJson(
+        buildWeeklyReviewRequest({
+          model: this.model,
+          cycleNumber: requireCycleNumber(cycle),
+          trainingVolume: volume,
+          previousCycle: previous ?? undefined,
+          nutritionSummary: frozen.summary,
+          previousNutritionSummary: frozen.previousSummary ?? undefined,
+        }),
+        cycleReviewResponseSchema,
+      );
+    } catch (error) {
+      throw mapAiError(error);
     }
-    if (!cycle.reviewSnapshot) throw new CycleReviewServiceError("The closed cycle has no review snapshot", "INVALID_STATE", 409);
-
-    const finalVolume = buildCycleTrainingVolume(toTrainingVolumeInput(cycle));
-    const finalPrevious = await this.getPreviousCycleContext(userId, cycle);
-    const conclusions = finalVolume.completedWorkoutCount === 0 ? { ...response.conclusions, status: "RESET_REQUIRED" as const } : response.conclusions;
-    await this.prisma.cycleReviewSnapshot.update({
-      where: { id: cycle.reviewSnapshot.id },
+    const nutritionReview: CycleReviewResponse["nutritionReview"] = frozen
+      .summary.trendEligible
+      ? { ...response.nutritionReview, status: "AVAILABLE" }
+      : {
+          status: "INSUFFICIENT_DATA",
+          observations: [
+            `${frozen.summary.completeFoodDays} complete food days out of ${frozen.summary.periodDays}; not enough recorded days to describe an intake trend.`,
+          ],
+          suggestions: [
+            "Log your food portions and confirm each finished diary day.",
+          ],
+        };
+    const conclusions = {
+      ...response.conclusions,
+      ...(volume.completedWorkoutCount === 0
+        ? { status: "RESET_REQUIRED" as const }
+        : {}),
+      nutritionReview,
+    };
+    // The first successful response wins; concurrent retries never mix input versions.
+    await this.prisma.cycleReviewSnapshot.updateMany({
+      where: { id: snapshot.id, processedSummary: null },
       data: {
         processedSummary: response.processedSummary,
-        objectiveSummary: toJsonValue(finalVolume),
-        previousCycleSummary: finalPrevious ? toJsonValue(finalPrevious) : Prisma.JsonNull,
         conclusions: toJsonValue(conclusions),
-        nextCycleDraft: toJsonValue({ status: finalVolume.completedWorkoutCount === 0 ? "NOT_AVAILABLE" : "PENDING" }),
+        nextCycleDraft: toJsonValue({
+          status:
+            volume.completedWorkoutCount === 0 ? "NOT_AVAILABLE" : "PENDING",
+        }),
         reviewedAt: now,
       },
     });
     return this.toWeeklyReviewResult(await this.getCycle(userId, cycleId));
   }
 
-  async ensureNextWeeklyDraft(userId: string, cycleId: string, now = new Date()): Promise<NextWeeklyDraft | null> {
-    const cycle = await this.getCycle(userId, cycleId);
-    if (cycle.status !== "CLOSED" || !cycle.reviewSnapshot?.processedSummary) throw new CycleReviewServiceError("A completed weekly review is required before generating the next draft", "INVALID_STATE", 409);
-    const volume = buildCycleTrainingVolume(toTrainingVolumeInput(cycle));
-    if (volume.completedWorkoutCount === 0) return null;
-    const stored = readStoredNextWeeklyDraft(cycle.reviewSnapshot.nextCycleDraft);
-    if (stored) return { reviewId: cycle.reviewSnapshot.id, ...stored };
-
-    const profile = await this.prisma.userProfile.findUnique({ where: { userId }, select: { weeklyTrainingDays: true, sessionDurationMinutes: true } });
-    if (!profile) throw new CycleReviewServiceError("The user profile is required before generating a next week", "INVALID_STATE", 409);
-    const timezone = cycle.timezone ?? "UTC";
-    const startDate = getNextWeeklyCycleStart(cycle.endDate, startOfLocalDate(now, timezone));
-    const draft = await this.cycleService.createDraft(userId, { weeklyTrainingDays: profile.weeklyTrainingDays, sessionDurationMinutes: profile.sessionDurationMinutes, timezone }, startDate);
-    let plan: PlanDraft;
-    try {
-      plan = await this.planService.generateDraft(userId, draft.id, { reviewContext: { trainingVolume: volume, processedSummary: cycle.reviewSnapshot.processedSummary, conclusions: cycle.reviewSnapshot.conclusions } });
-    } catch (error) {
-      await this.prisma.trainingCycle.deleteMany({ where: { id: draft.id, userId, status: "DRAFT" } });
-      throw mapAiError(error);
-    }
-    const payload = { status: "READY" as const, cycle: { id: draft.id, status: "DRAFT" as const, startDate: draft.startDate.toISOString(), endDate: draft.endDate.toISOString(), timezone: draft.timezone }, plan };
-    await this.prisma.cycleReviewSnapshot.update({ where: { id: cycle.reviewSnapshot.id }, data: { nextCycleDraft: toJsonValue(payload) } });
-    return { reviewId: cycle.reviewSnapshot.id, cycle: { id: draft.id, status: "DRAFT", startDate: draft.startDate, endDate: draft.endDate, timezone: draft.timezone }, plan };
+  private async freezeReview(
+    userId: string,
+    cycleId: string,
+    now: Date,
+  ): Promise<CycleReviewRecord> {
+    for (let attempt = 0; ; attempt++)
+      try {
+        return await this.prisma.$transaction(
+          async (tx) => {
+            await serializeCycleWrite(tx, userId, cycleId);
+            const cycle = await tx.trainingCycle.findFirst({
+              where: { id: cycleId, userId },
+              select: cycleReviewSelect,
+            });
+            if (!cycle)
+              throw new CycleReviewServiceError(
+                "Training cycle not found",
+                "NOT_FOUND",
+                404,
+              );
+            if (cycle.status === "DRAFT")
+              throw new CycleReviewServiceError(
+                "Only an active or closed cycle can be reviewed",
+                "INVALID_STATE",
+                409,
+              );
+            if (cycle.reviewSnapshot?.nutritionSummary) return cycle;
+            if (cycle.status === "ACTIVE") {
+              const gate = getCycleReviewStatus({
+                cycleStatus: cycle.status,
+                cycleEndDate: cycle.endDate,
+                now,
+                timezone: cycle.timezone ?? "UTC",
+                plannedWorkoutCount: cycle.workouts.filter(
+                  (w) => w.status === "PLANNED",
+                ).length,
+              });
+              if (!gate.reviewAvailable)
+                throw new CycleReviewServiceError(
+                  gate.blockedReason === "PLANNED_WORKOUTS_REMAINING"
+                    ? "Complete or delete every planned workout before reviewing the cycle"
+                    : "The cycle review is not available until the cycle end date",
+                  "CONFLICT",
+                  409,
+                );
+            }
+            const volume = buildCycleTrainingVolume(
+              toTrainingVolumeInput(cycle),
+            );
+            const previous =
+              cycle.cycleNumber !== null && cycle.cycleNumber > 1
+                ? await tx.trainingCycle.findFirst({
+                    where: {
+                      userId,
+                      cycleNumber: cycle.cycleNumber - 1,
+                      status: "CLOSED",
+                    },
+                    select: cycleReviewSelect,
+                  })
+                : null;
+            const previousVolume = previous
+              ? buildCycleTrainingVolume(toTrainingVolumeInput(previous))
+              : null;
+            const previousContext =
+              previous && previousVolume
+                ? {
+                    cycleNumber: requireCycleNumber(previous),
+                    trainingVolume: previousVolume,
+                    comparison: compareCycleTrainingVolume(
+                      volume,
+                      previousVolume,
+                    ),
+                  }
+                : null;
+            const window = {
+              startDate: cycle.startDate.toISOString().slice(0, 10),
+              endDate: cycle.endDate.toISOString().slice(0, 10),
+            };
+            const summary = buildNutritionSummary(
+              await loadCycleNutrition(tx, userId, window),
+              window,
+              now.toISOString(),
+            );
+            const previousStored = previous?.reviewSnapshot
+              ?.nutritionSummary as unknown as FrozenNutrition | null;
+            const previousWindow = previous
+              ? {
+                  startDate: previous.startDate.toISOString().slice(0, 10),
+                  endDate: previous.endDate.toISOString().slice(0, 10),
+                }
+              : null;
+            const previousSummary =
+              previousStored?.summary ??
+              (previousWindow
+                ? buildNutritionSummary(
+                    await loadCycleNutrition(tx, userId, previousWindow),
+                    previousWindow,
+                    now.toISOString(),
+                  )
+                : null);
+            const frozen: FrozenNutrition = {
+              summary,
+              previousSummary,
+              comparison: compareNutrition(summary, previousSummary),
+            };
+            await tx.trainingCycle.update({
+              where: { id: cycle.id },
+              data: {
+                status: "CLOSED",
+                closedAt: cycle.status === "ACTIVE" ? now : undefined,
+              },
+            });
+            await tx.cycleReviewSnapshot.upsert({
+              where: { cycleId },
+              create: {
+                cycleId,
+                objectiveSummary: toJsonValue(volume),
+                previousCycleSummary: previousContext
+                  ? toJsonValue(previousContext)
+                  : Prisma.JsonNull,
+                nutritionSummary: toJsonValue(frozen),
+                conclusions: { status: "PENDING" },
+                nextCycleDraft: { status: "NOT_AVAILABLE" },
+              },
+              update: {
+                objectiveSummary: toJsonValue(volume),
+                previousCycleSummary: previousContext
+                  ? toJsonValue(previousContext)
+                  : Prisma.JsonNull,
+                nutritionSummary: toJsonValue(frozen),
+              },
+            });
+            return tx.trainingCycle.findUniqueOrThrow({
+              where: { id: cycleId },
+              select: cycleReviewSelect,
+            });
+          },
+          {
+            isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead,
+            timeout: 10000,
+          },
+        );
+      } catch (error) {
+        if (
+          error instanceof Prisma.PrismaClientKnownRequestError &&
+          ["P2034", "P2002"].includes(error.code) &&
+          attempt < 2
+        )
+          continue;
+        throw error;
+      }
   }
 
-  async generateNextWeeklyDraft(userId: string, cycleId: string, reviewId: string, now = new Date()): Promise<NextWeeklyDraft> {
+  async ensureNextWeeklyDraft(
+    userId: string,
+    cycleId: string,
+    now = new Date(),
+  ): Promise<NextWeeklyDraft | null> {
     const cycle = await this.getCycle(userId, cycleId);
-    if (cycle.reviewSnapshot?.id !== reviewId) throw new CycleReviewServiceError("Weekly review not found", "NOT_FOUND", 404);
+    if (cycle.status !== "CLOSED" || !cycle.reviewSnapshot?.processedSummary)
+      throw new CycleReviewServiceError(
+        "A completed weekly review is required before generating the next draft",
+        "INVALID_STATE",
+        409,
+      );
+    const volume = cycle.reviewSnapshot
+      ?.objectiveSummary as unknown as CycleTrainingVolume;
+    if (volume.completedWorkoutCount === 0) return null;
+    const stored = readStoredNextWeeklyDraft(
+      cycle.reviewSnapshot.nextCycleDraft,
+    );
+    if (stored) return { reviewId: cycle.reviewSnapshot.id, ...stored };
+
+    const profile = await this.prisma.userProfile.findUnique({
+      where: { userId },
+      select: { weeklyTrainingDays: true, sessionDurationMinutes: true },
+    });
+    if (!profile)
+      throw new CycleReviewServiceError(
+        "The user profile is required before generating a next week",
+        "INVALID_STATE",
+        409,
+      );
+    const timezone = cycle.timezone ?? "UTC";
+    const startDate = getNextWeeklyCycleStart(
+      cycle.endDate,
+      startOfLocalDate(now, timezone),
+    );
+    const draft = await this.cycleService.createDraft(
+      userId,
+      {
+        weeklyTrainingDays: profile.weeklyTrainingDays,
+        sessionDurationMinutes: profile.sessionDurationMinutes,
+        timezone,
+      },
+      startDate,
+    );
+    let plan: PlanDraft;
+    try {
+      plan = await this.planService.generateDraft(userId, draft.id, {
+        reviewContext: {
+          trainingVolume: volume,
+          processedSummary: cycle.reviewSnapshot.processedSummary,
+          conclusions: cycle.reviewSnapshot.conclusions,
+        },
+      });
+    } catch (error) {
+      await this.prisma.trainingCycle.deleteMany({
+        where: { id: draft.id, userId, status: "DRAFT" },
+      });
+      throw mapAiError(error);
+    }
+    const payload = {
+      status: "READY" as const,
+      cycle: {
+        id: draft.id,
+        status: "DRAFT" as const,
+        startDate: draft.startDate.toISOString(),
+        endDate: draft.endDate.toISOString(),
+        timezone: draft.timezone,
+      },
+      plan,
+    };
+    await this.prisma.cycleReviewSnapshot.update({
+      where: { id: cycle.reviewSnapshot.id },
+      data: { nextCycleDraft: toJsonValue(payload) },
+    });
+    return {
+      reviewId: cycle.reviewSnapshot.id,
+      cycle: {
+        id: draft.id,
+        status: "DRAFT",
+        startDate: draft.startDate,
+        endDate: draft.endDate,
+        timezone: draft.timezone,
+      },
+      plan,
+    };
+  }
+
+  async generateNextWeeklyDraft(
+    userId: string,
+    cycleId: string,
+    reviewId: string,
+    now = new Date(),
+  ): Promise<NextWeeklyDraft> {
+    const cycle = await this.getCycle(userId, cycleId);
+    if (cycle.reviewSnapshot?.id !== reviewId)
+      throw new CycleReviewServiceError(
+        "Weekly review not found",
+        "NOT_FOUND",
+        404,
+      );
     const draft = await this.ensureNextWeeklyDraft(userId, cycleId, now);
-    if (!draft) throw new CycleReviewServiceError("This week requires a reset before a next plan can be generated", "INVALID_STATE", 409);
+    if (!draft)
+      throw new CycleReviewServiceError(
+        "This week requires a reset before a next plan can be generated",
+        "INVALID_STATE",
+        409,
+      );
     return draft;
   }
 
-  private async getPreviousCycleContext(userId: string, cycle: CycleReviewRecord): Promise<PreviousCycleReviewContext | null> {
+  private async getPreviousCycleContext(
+    userId: string,
+    cycle: CycleReviewRecord,
+  ): Promise<PreviousCycleReviewContext | null> {
     if (cycle.cycleNumber === null || cycle.cycleNumber <= 1) return null;
-    const previous = await this.prisma.trainingCycle.findFirst({ where: { userId, cycleNumber: cycle.cycleNumber - 1, status: "CLOSED", reviewSnapshot: { is: { processedSummary: { not: null } } } }, select: cycleReviewSelect });
+    const previous = await this.prisma.trainingCycle.findFirst({
+      where: {
+        userId,
+        cycleNumber: cycle.cycleNumber - 1,
+        status: "CLOSED",
+        reviewSnapshot: { is: { processedSummary: { not: null } } },
+      },
+      select: cycleReviewSelect,
+    });
     if (!previous || previous.cycleNumber === null) return null;
-    const trainingVolume = buildCycleTrainingVolume(toTrainingVolumeInput(previous));
-    const currentVolume = buildCycleTrainingVolume(toTrainingVolumeInput(cycle));
-    return { cycleNumber: previous.cycleNumber, trainingVolume, comparison: compareCycleTrainingVolume(currentVolume, trainingVolume) };
+    const trainingVolume = buildCycleTrainingVolume(
+      toTrainingVolumeInput(previous),
+    );
+    const currentVolume = buildCycleTrainingVolume(
+      toTrainingVolumeInput(cycle),
+    );
+    return {
+      cycleNumber: previous.cycleNumber,
+      trainingVolume,
+      comparison: compareCycleTrainingVolume(currentVolume, trainingVolume),
+    };
   }
 
-  private async getCycle(userId: string, cycleId: string): Promise<CycleReviewRecord> {
-    const cycle = await this.prisma.trainingCycle.findFirst({ where: { id: cycleId, userId }, select: cycleReviewSelect });
-    if (!cycle) throw new CycleReviewServiceError("Training cycle not found", "NOT_FOUND", 404);
+  private async getCycle(
+    userId: string,
+    cycleId: string,
+  ): Promise<CycleReviewRecord> {
+    const cycle = await this.prisma.trainingCycle.findFirst({
+      where: { id: cycleId, userId },
+      select: cycleReviewSelect,
+    });
+    if (!cycle)
+      throw new CycleReviewServiceError(
+        "Training cycle not found",
+        "NOT_FOUND",
+        404,
+      );
     return cycle;
   }
 
   private toWeeklyReviewResult(cycle: CycleReviewRecord): WeeklyReviewResult {
-    if (!cycle.reviewSnapshot?.processedSummary) throw new CycleReviewServiceError("The weekly review is not complete", "INVALID_STATE", 409);
-    const volume = buildCycleTrainingVolume(toTrainingVolumeInput(cycle));
-    const draft = readStoredNextWeeklyDraft(cycle.reviewSnapshot.nextCycleDraft);
+    if (!cycle.reviewSnapshot?.processedSummary)
+      throw new CycleReviewServiceError(
+        "The weekly review is not complete",
+        "INVALID_STATE",
+        409,
+      );
+    const volume = cycle.reviewSnapshot
+      ?.objectiveSummary as unknown as CycleTrainingVolume;
+    const draft = readStoredNextWeeklyDraft(
+      cycle.reviewSnapshot.nextCycleDraft,
+    );
+    const frozen = cycle.reviewSnapshot
+      .nutritionSummary as unknown as FrozenNutrition;
     return {
+      nutritionSummary: frozen.summary,
+      nutritionComparison: frozen.comparison,
+      nutritionReview: (
+        cycle.reviewSnapshot.conclusions as unknown as {
+          nutritionReview: CycleReviewResponse["nutritionReview"];
+        }
+      ).nutritionReview,
       reviewId: cycle.reviewSnapshot.id,
       cycleId: cycle.id,
       cycleNumber: requireCycleNumber(cycle),
       cycleStatus: "CLOSED",
       trainingVolume: volume,
-      previousCycle: cycle.reviewSnapshot.previousCycleSummary as PreviousCycleReviewContext | null,
+      previousCycle: cycle.reviewSnapshot
+        .previousCycleSummary as PreviousCycleReviewContext | null,
       processedSummary: cycle.reviewSnapshot.processedSummary,
-      conclusions: cycle.reviewSnapshot.conclusions as CycleReviewResponse["conclusions"],
-      nextCycleEligibility: volume.completedWorkoutCount > 0 ? "READY" : "RESET_REQUIRED",
-      nextWeeklyDraftStatus: volume.completedWorkoutCount === 0 ? "NOT_AVAILABLE" : draft ? "READY" : "PENDING",
-      nextWeeklyDraft: draft ? { reviewId: cycle.reviewSnapshot.id, ...draft } : null,
+      conclusions: cycle.reviewSnapshot
+        .conclusions as CycleReviewResponse["conclusions"],
+      nextCycleEligibility:
+        volume.completedWorkoutCount > 0 ? "READY" : "RESET_REQUIRED",
+      nextWeeklyDraftStatus:
+        volume.completedWorkoutCount === 0
+          ? "NOT_AVAILABLE"
+          : draft
+            ? "READY"
+            : "PENDING",
+      nextWeeklyDraft: draft
+        ? { reviewId: cycle.reviewSnapshot.id, ...draft }
+        : null,
     };
   }
 }
 
-function toTrainingVolumeInput(cycle: CycleReviewRecord): Parameters<typeof buildCycleTrainingVolume>[0] {
-  return { cycleId: cycle.id, startDate: cycle.startDate, endDate: cycle.endDate, workouts: cycle.workouts.map((workout) => ({ id: workout.id, activityType: workout.activityType, status: workout.status, actualDetails: toActualDetails(workout.workoutLog?.actualDetails), actualExercises: (workout.workoutLog?.exerciseLogs ?? []).map((exercise) => ({ sets: exercise.setLogs.map((set) => ({ actualReps: set.actualReps, actualWeight: set.actualWeight, weightUnit: set.weightUnit })) })) })) };
+function toTrainingVolumeInput(
+  cycle: CycleReviewRecord,
+): Parameters<typeof buildCycleTrainingVolume>[0] {
+  return {
+    cycleId: cycle.id,
+    startDate: cycle.startDate,
+    endDate: cycle.endDate,
+    workouts: cycle.workouts.map((workout) => ({
+      id: workout.id,
+      activityType: workout.activityType,
+      status: workout.status,
+      actualDetails: toActualDetails(workout.workoutLog?.actualDetails),
+      actualExercises: (workout.workoutLog?.exerciseLogs ?? []).map(
+        (exercise) => ({
+          sets: exercise.setLogs.map((set) => ({
+            actualReps: set.actualReps,
+            actualWeight: set.actualWeight,
+            weightUnit: set.weightUnit,
+          })),
+        }),
+      ),
+    })),
+  };
 }
 
-function requireCycleNumber(cycle: Pick<CycleReviewRecord, "cycleNumber">): number {
-  if (cycle.cycleNumber === null) throw new CycleReviewServiceError("The cycle number is missing", "INVALID_STATE", 409);
+function requireCycleNumber(
+  cycle: Pick<CycleReviewRecord, "cycleNumber">,
+): number {
+  if (cycle.cycleNumber === null)
+    throw new CycleReviewServiceError(
+      "The cycle number is missing",
+      "INVALID_STATE",
+      409,
+    );
   return cycle.cycleNumber;
 }
 
-function readStoredNextWeeklyDraft(value: Prisma.JsonValue | null | undefined): Omit<NextWeeklyDraft, "reviewId"> | null {
-  if (!value || typeof value !== "object" || Array.isArray(value) || value.status !== "READY") return null;
+function readStoredNextWeeklyDraft(
+  value: Prisma.JsonValue | null | undefined,
+): Omit<NextWeeklyDraft, "reviewId"> | null {
+  if (
+    !value ||
+    typeof value !== "object" ||
+    Array.isArray(value) ||
+    value.status !== "READY"
+  )
+    return null;
   const cycle = value.cycle;
   if (!cycle || typeof cycle !== "object" || Array.isArray(cycle)) return null;
-  if (typeof cycle.id !== "string" || cycle.status !== "DRAFT" || typeof cycle.startDate !== "string" || typeof cycle.endDate !== "string" || typeof cycle.timezone !== "string") return null;
+  if (
+    typeof cycle.id !== "string" ||
+    cycle.status !== "DRAFT" ||
+    typeof cycle.startDate !== "string" ||
+    typeof cycle.endDate !== "string" ||
+    typeof cycle.timezone !== "string"
+  )
+    return null;
   const plan = planDraftSchema.safeParse(value.plan);
   if (!plan.success) return null;
-  return { cycle: { id: cycle.id, status: "DRAFT", startDate: new Date(cycle.startDate), endDate: new Date(cycle.endDate), timezone: cycle.timezone }, plan: plan.data };
+  return {
+    cycle: {
+      id: cycle.id,
+      status: "DRAFT",
+      startDate: new Date(cycle.startDate),
+      endDate: new Date(cycle.endDate),
+      timezone: cycle.timezone,
+    },
+    plan: plan.data,
+  };
 }
 
-function toActualDetails(value: Prisma.JsonValue | null | undefined): { actualDurationMinutes?: number; distanceKm?: number } | null {
+function toActualDetails(
+  value: Prisma.JsonValue | null | undefined,
+): { actualDurationMinutes?: number; distanceKm?: number } | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
-  return { ...(typeof value.actualDurationMinutes === "number" ? { actualDurationMinutes: value.actualDurationMinutes } : {}), ...(typeof value.distanceKm === "number" ? { distanceKm: value.distanceKm } : {}) };
+  return {
+    ...(typeof value.actualDurationMinutes === "number"
+      ? { actualDurationMinutes: value.actualDurationMinutes }
+      : {}),
+    ...(typeof value.distanceKm === "number"
+      ? { distanceKm: value.distanceKm }
+      : {}),
+  };
 }
 
-function toJsonValue(value: unknown): Prisma.InputJsonValue { return JSON.parse(JSON.stringify(value)) as Prisma.InputJsonValue; }
+function toJsonValue(value: unknown): Prisma.InputJsonValue {
+  return JSON.parse(JSON.stringify(value)) as Prisma.InputJsonValue;
+}
 function mapAiError(error: unknown): CycleReviewServiceError {
   if (error instanceof CycleReviewServiceError) return error;
-  if (error instanceof AiClientError) return new CycleReviewServiceError(error.message, "AI_ERROR", error.code === "NOT_CONFIGURED" ? 409 : 502);
-  if (error instanceof PlanServiceError) return new CycleReviewServiceError(error.message, error.code === "AI_ERROR" ? "AI_ERROR" : "CONFLICT", error.statusCode === 502 ? 502 : 409);
-  return new CycleReviewServiceError("AI weekly review failed", "AI_ERROR", 502);
+  if (error instanceof AiClientError)
+    return new CycleReviewServiceError(
+      error.message,
+      "AI_ERROR",
+      error.code === "NOT_CONFIGURED" ? 409 : 502,
+    );
+  if (error instanceof PlanServiceError)
+    return new CycleReviewServiceError(
+      error.message,
+      error.code === "AI_ERROR" ? "AI_ERROR" : "CONFLICT",
+      error.statusCode === 502 ? 502 : 409,
+    );
+  return new CycleReviewServiceError(
+    "AI weekly review failed",
+    "AI_ERROR",
+    502,
+  );
 }
 function mapCycleError(error: unknown): CycleReviewServiceError {
   if (error instanceof CycleReviewServiceError) return error;
-  if (error instanceof CycleServiceError) return new CycleReviewServiceError(error.message, error.code, error.statusCode);
-  return new CycleReviewServiceError("Weekly cycle could not be closed", "CONFLICT", 409);
+  if (error instanceof CycleServiceError)
+    return new CycleReviewServiceError(
+      error.message,
+      error.code,
+      error.statusCode,
+    );
+  return new CycleReviewServiceError(
+    "Weekly cycle could not be closed",
+    "CONFLICT",
+    409,
+  );
 }

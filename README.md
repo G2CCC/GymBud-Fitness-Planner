@@ -155,13 +155,13 @@ npx playwright test --list
 - Cycles are `DRAFT`, `ACTIVE`, or `CLOSED`; there is no pause state.
 - A cycle covers seven inclusive days, and its final day is the end date.
 - A cycle remains active after its end date until the user responds to the
-  review prompt. Review closes the old cycle and auto-cancels unresolved
-  planned workouts in that same cycle.
+  review prompt. Every planned workout must first be completed or deleted;
+  review then closes the cycle and freezes its inputs.
 - Each completed cycle receives one automatic actual-volume review. The
   immediately previous week is used only for shallow comparison.
 - A next-cycle draft is never inserted into the calendar until the user
   explicitly confirms it.
-- Profile gender, age, height, and body weight are required planning context.
+- Profile sex, age, height, and body weight are required planning context.
 - Actual strength-set weight and unit are required; bodyweight or no external
   load is recorded as `0 KG`.
 - Backfilled completion always requires an actual past date and time.
@@ -169,3 +169,101 @@ npx playwright test --list
 More detailed contracts live in [`docs/development`](docs/development) and the
 mobile boundary is described in
 [`docs/mobile-readiness.md`](docs/mobile-readiness.md).
+
+## Nutrition and exercise energy
+
+Nutrition is available at `/nutrition` after saving a profile, even without an
+active training cycle. Choose Male/Female and one goal: fat loss, muscle gain,
+or maintenance. The browser supplies the recording timezone on profile save.
+A day keeps the timezone it had when first recorded.
+
+The fixed **net** target uses `nutrition-v1`: Mifflin resting estimate
+`10 × kg + 6.25 × cm − 5 × age + (5 male / −161 female)`, multiplied by `1.2`
+and the goal factor (`0.90` fat loss, `1.05` muscle gain, `1.00` maintenance),
+rounded to kcal. Protein is `1.8 g/kg` for fat loss/gain or `1.6 g/kg` for
+maintenance; fat supplies 30% of target calories; carbohydrate supplies the
+remainder. Macros round to 0.1 g. Invalid negative/nonfinite results are rejected.
+This release uses one formula and the existing 13–100 profile age validation.
+Targets are estimates, not individualized medical prescriptions.
+
+`Net intake = logged food kcal − completed workout extra-energy estimates`.
+Net intake is derived, never a mutable balance, and can be negative. Macro targets
+do not change with exercise. Profile changes replace today's target or create a
+future-effective version without changing past target dates.
+
+Food logs support four meals and grams, plus verified `ea` portions. They retain
+food names, per-100 g nutrients and portion weights as snapshots. Editing quantity
+uses that snapshot even if the catalog item was subsequently deactivated. A day
+counts toward full-day report averages only after explicit completion; food edits
+reopen it. Empty-day completion requires an extra confirmation. Entry writes use
+a day revision and UUID request token to prevent stale writes and duplicate adds.
+
+### Load the food catalog
+
+Use the PostgreSQL URLs configured for your intended **development** database:
+`DATABASE_URL` and `DIRECT_URL`. Generate Prisma and apply migrations before import.
+Download and extract the official archive linked in
+[`data/foods/source-manifest.json`](data/foods/source-manifest.json), then run:
+
+```bash
+npm run db:generate
+npx prisma migrate deploy --schema prisma/schema.prisma
+npm run foods:import -- --input /path/to/FoodData_Central_sr_legacy_food_json_2018-04.json --release 2018-04
+```
+
+The importer checks the extracted JSON SHA-256, release, selection IDs and names
+before writing. The initial selection is **135 basic foods**, with verified each
+sizes for eggs, apples and bananas. Rerunning preserves source-key IDs. Removed
+items are deactivated instead of deleted. The source archive is not in git.
+See [`docs/data/food-catalog.md`](docs/data/food-catalog.md) for source licensing,
+nutrient IDs, sample values and portion decisions. No separate food API key is
+needed. The GitHub `alyssaq/usda-sqlite` project is a structure reference; this
+release imports USDA's official SR Legacy 2018-04 data, not its older SR28 copy.
+
+### Workout estimates and cycle reports
+
+A completed/backfilled workout requires valid actual logs. Strength uses actual
+nonzero-repetition sets, a 3.5 MET default, 4 seconds per rep, and planned rest
+(or 60 seconds), with no new actual-duration input. Per-action unrounded extra
+energy is summed and rounded once for the workout. Cardio/sport use actual
+minutes and reviewed activity defaults. Estimates subtract the resting 1 MET
+component to avoid counting it twice. Saved body-weight inputs are not rewritten
+when the profile changes. `Plank`, `Pallof Press`, unknown custom exercises and
+Air Bike currently have no supported estimate. Mixed sessions show partial
+coverage. Source assumptions are in
+[`docs/data/exercise-energy.md`](docs/data/exercise-energy.md).
+
+Cycle reports use the cycle's actual inclusive date window. Food means use
+confirmed days; macro gaps also require targets; net comparisons additionally
+require complete exercise coverage. At least 3 complete food days are needed for
+an intake trend, and 3 comparable net days for a net-target trend. Reports compare
+means with sample counts. They never change nutrition targets.
+
+An eligible review closes the cycle and freezes its training/nutrition input in
+one consistent database transaction **before** calling AI. A provider failure
+leaves a closed pending review; use **Retry review** on `/review/:cycleId` to reuse
+the same input. The nutrition diary remains editable independently. Later diary
+changes do not rewrite a saved report.
+
+### Verification and fresh development databases
+
+The nutrition migration intentionally replaces the old free-text goal/gender
+fields. This project has no existing user-data migration requirement. For a
+throwaway local database only, after verifying both URLs point to that disposable
+database, `npx prisma migrate reset --schema prisma/schema.prisma` rebuilds it and
+erases its contents. Never put reset in a production deployment step.
+
+```bash
+npm run typecheck
+npm run typecheck:e2e
+npm test
+npm run build --workspace @fitness/client
+npx prisma validate --schema prisma/schema.prisma
+npx playwright test tests/e2e/nutrition.spec.ts tests/e2e/backfill-and-close.spec.ts
+```
+
+E2E setup deletes only its isolated test user's data and seeds small food
+fixtures. Always point `DATABASE_URL`/`DIRECT_URL` at a disposable test database.
+Install Playwright Chromium with `npx playwright install chromium`; an existing
+compatible executable can be selected with `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH`.
+All application auth/AI environment requirements above still apply outside E2E.

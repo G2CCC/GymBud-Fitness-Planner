@@ -4,7 +4,10 @@ import { confirmNextCyclePlan, generateNextCycleDraft, processWeeklyReview } fro
 import type { ApiCycleReviewResult, ApiNextCycleDraft } from "../../api/contracts";
 import { NextCycleDraftEditor } from "../../components/review/NextCycleDraftEditor";
 
+import {NutritionReview} from "../../components/nutrition/NutritionReview";
+
 export function ReviewPage() {
+  const [retry,setRetry]=useState(0);
   const { cycleId } = useParams<{ cycleId: string }>();
   const [review, setReview] = useState<ApiCycleReviewResult | null>(null);
   const [draft, setDraft] = useState<ApiNextCycleDraft | null>(null);
@@ -15,6 +18,7 @@ export function ReviewPage() {
 
   useEffect(() => {
     if (!cycleId) return;
+    setLoading(true);setError(null);
     void processWeeklyReview(cycleId)
       .then((result) => {
         setReview(result);
@@ -22,11 +26,11 @@ export function ReviewPage() {
       })
       .catch((cause) => setError(cause instanceof Error ? cause.message : "The weekly review could not be loaded."))
       .finally(() => setLoading(false));
-  }, [cycleId]);
+  }, [cycleId,retry]);
 
   if (!cycleId) return <ReviewMessage message="This review link is missing its cycle id." />;
   if (loading) return <ReviewMessage message="Loading your weekly review…" />;
-  if (error && !review) return <ReviewMessage message={error} />;
+  if (error && !review) return <main className="mx-auto grid max-w-2xl gap-4 px-4 py-8"><p role="alert">{error}</p><p>The frozen review can be retried. Your nutrition diary is still available.</p><button className="button-primary focus-ring" onClick={()=>setRetry(n=>n+1)}>Retry review</button><Link className="underline" to="/nutrition">Open nutrition diary</Link></main>;
   const reviewCycleId = cycleId;
 
   async function handleGenerateDraft() {
@@ -68,6 +72,7 @@ export function ReviewPage() {
         {review.previousCycle ? <p className="text-sm text-gymbud-muted">Compared with last week using a shallow volume comparison.</p> : null}
         <div className="grid gap-3 sm:grid-cols-2">{review.conclusions.keyFindings.map((finding) => <p key={finding} className="rounded-[var(--radius-control)] bg-gymbud-surface-muted p-3 text-sm text-gymbud-ink">{finding}</p>)}</div>
       </section> : null}
+      {review?.nutritionSummary&&review.nutritionReview?<NutritionReview summary={review.nutritionSummary} comparison={review.nutritionComparison??null} review={review.nutritionReview}/>:null}
       {review?.nextCycleEligibility === "RESET_REQUIRED" ? <p className="rounded-[var(--radius-card)] bg-gymbud-surface-muted p-4 text-sm text-gymbud-muted">No completed training was recorded this week, so GymBud will wait for a new reset before generating another plan.</p> : null}
       {review && review.nextCycleEligibility === "READY" && !draft ? <button type="button" onClick={() => void handleGenerateDraft()} disabled={submitting} className="focus-ring min-h-11 rounded-[var(--radius-control)] bg-gymbud-accent-strong px-4 font-semibold text-gymbud-accent-contrast disabled:opacity-60">{submitting ? "Generating next week…" : "Generate next week"}</button> : null}
       {draft ? <NextCycleDraftEditor draft={{ cycleId: draft.cycle.id, title: "Next weekly plan", focus: review?.conclusions.recommendations[0] ?? "Continue building consistent training habits.", weeks: 1, plan: draft.plan }} submitting={submitting} onConfirm={(value) => void handleConfirm(value)} /> : null}

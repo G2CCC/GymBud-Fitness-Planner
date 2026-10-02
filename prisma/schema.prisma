@@ -14,11 +14,28 @@ enum ActivityType {
   SPORT
 }
 
-enum Gender {
+enum Sex {
   MALE
   FEMALE
-  NON_BINARY
-  PREFER_NOT_TO_SAY
+}
+
+enum BodyGoal {
+  FAT_LOSS
+  MUSCLE_GAIN
+  MAINTENANCE
+}
+
+enum MealType {
+  BREAKFAST
+  LUNCH
+  DINNER
+  SNACK
+}
+
+enum EnergyCoverage {
+  COMPLETE
+  PARTIAL
+  UNAVAILABLE
 }
 
 enum WorkoutStatus {
@@ -46,16 +63,21 @@ model User {
   cycles            TrainingCycle[]
   scheduledWorkouts ScheduledWorkout[]
   exercises         Exercise[]
+  nutritionTargets NutritionTarget[]
+  nutritionDays NutritionDay[]
+  foodLogs FoodLog[]
   recommendations   AIRecommendation[]
 }
 
 model UserProfile {
   userId                 String   @id
   user                   User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  primaryGoal            String
+  primaryGoal            BodyGoal
   weeklyTrainingDays     Int
   sessionDurationMinutes Int
-  gender                 Gender
+  sex                    Sex
+  recordingTimezone      String @default("UTC")
+  nutritionStartedOn     String? @db.VarChar(10)
   age                    Int
   heightCm               Float
   weightKg               Float
@@ -140,6 +162,13 @@ model WorkoutLog {
   id            String           @id @default(cuid())
   workoutId     String           @unique
   workout       ScheduledWorkout @relation(fields: [workoutId], references: [id], onDelete: Cascade)
+  estimatedCaloriesKcal Int?
+  energyMethod String?
+  energyVersion String?
+  energyInputs Json?
+  energyCoverage EnergyCoverage?
+  completedLocalDate String? @db.VarChar(10)
+  timezone String?
   actualDetails Json?
   createdAt     DateTime         @default(now())
   updatedAt     DateTime         @updatedAt
@@ -241,6 +270,7 @@ model CycleReviewSnapshot {
   id                   String        @id @default(cuid())
   cycleId              String        @unique
   cycle                TrainingCycle @relation(fields: [cycleId], references: [id], onDelete: Cascade)
+  nutritionSummary Json?
   processedSummary     String?
   objectiveSummary     Json
   previousCycleSummary Json?
@@ -249,4 +279,91 @@ model CycleReviewSnapshot {
   reviewedAt           DateTime?
   createdAt            DateTime      @default(now())
   updatedAt            DateTime      @updatedAt
+}
+
+model Food {
+  id String @id @default(cuid())
+  name String
+  sourceProvider String
+  sourceId String
+  sourceRelease String
+  kcalPer100g Decimal @db.Decimal(14,4)
+  proteinPer100g Decimal @db.Decimal(14,4)
+  carbsPer100g Decimal @db.Decimal(14,4)
+  fatPer100g Decimal @db.Decimal(14,4)
+  active Boolean @default(true)
+  portions FoodPortion[]
+  logs FoodLog[]
+  @@unique([sourceProvider, sourceRelease, sourceId])
+  @@index([active, name, id])
+}
+
+model FoodPortion {
+  id String @id @default(cuid())
+  foodId String
+  food Food @relation(fields: [foodId], references: [id], onDelete: Restrict)
+  sourcePortionId String
+  label String
+  quantity Decimal @db.Decimal(14,4)
+  grams Decimal @db.Decimal(14,4)
+  unitGrams Decimal @db.Decimal(14,4)
+  active Boolean @default(true)
+  logs FoodLog[]
+  @@unique([foodId, sourcePortionId])
+}
+
+model NutritionTarget {
+  id String @id @default(cuid())
+  userId String
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  effectiveDate String @db.VarChar(10)
+  kcal Int
+  proteinG Decimal @db.Decimal(12,1)
+  carbsG Decimal @db.Decimal(12,1)
+  fatG Decimal @db.Decimal(12,1)
+  profileSnapshot Json
+  algorithmVersion String
+  @@unique([userId, effectiveDate])
+}
+
+model NutritionDay {
+  id String @id @default(cuid())
+  userId String
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  localDate String @db.VarChar(10)
+  timezone String
+  completedAt DateTime?
+  revision Int @default(0)
+  entries FoodLog[]
+  @@unique([userId, localDate])
+}
+
+model FoodLog {
+  id String @id @default(cuid())
+  userId String
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  dayId String
+  day NutritionDay @relation(fields: [dayId], references: [id], onDelete: Cascade)
+  mealType MealType
+  foodId String
+  food Food @relation(fields: [foodId], references: [id], onDelete: Restrict)
+  portionId String?
+  portion FoodPortion? @relation(fields: [portionId], references: [id], onDelete: Restrict)
+  quantity Decimal @db.Decimal(14,4)
+  unit String
+  grams Decimal @db.Decimal(14,4)
+  nameSnapshot String
+  per100gSnapshot Json
+  unitGramsSnapshot Decimal? @db.Decimal(14,4)
+  kcal Decimal @db.Decimal(14,4)
+  proteinG Decimal @db.Decimal(14,4)
+  carbsG Decimal @db.Decimal(14,4)
+  fatG Decimal @db.Decimal(14,4)
+  clientRequestId String
+  requestFingerprint String
+  deletedAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@unique([userId, clientRequestId])
+  @@index([dayId, deletedAt])
 }
